@@ -260,9 +260,9 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
 .followup-chip{padding:8px 14px;border-radius:12px;border:1.5px solid var(--sand);background:white;font-size:12px;font-weight:600;color:var(--sage-dark);cursor:pointer;transition:all 0.2s}.followup-chip:hover{border-color:var(--sage);background:var(--sage-light)}
 
 /* Save strategy button */
-.save-strat-btn{margin-top:8px;padding:6px 14px;border-radius:10px;border:1.5px solid var(--sage);background:white;color:var(--sage-dark);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:4px}
-.save-strat-btn:hover{background:var(--sage-light)}
-.save-strat-btn.saved{background:var(--sage);color:white;border-color:var(--sage)}
+.save-strat-btn{margin-top:12px;padding:12px 20px;border-radius:12px;border:2px solid var(--sage);background:white;color:var(--sage-dark);font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.save-strat-btn:hover{background:var(--sage-light);transform:translateY(-1px);box-shadow:0 4px 12px rgba(122,158,126,0.2)}
+.save-strat-btn.saved{background:var(--sage);color:white;border-color:var(--sage);pointer-events:none}
 
 /* Chat Input */
 .ci{padding:12px 16px 16px;background:rgba(253,248,240,0.94);backdrop-filter:blur(20px);border-top:1px solid rgba(232,221,208,0.4);flex-shrink:0;margin-bottom:0}
@@ -1034,7 +1034,7 @@ function renderCards(sec,msgIdx){
   if(sec.reinforce)h+='<div class="strat-card strat-reinforce"><div class="strat-card-header"><div class="strat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="#9E8A20"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div><div class="strat-label">Reinforce the win</div></div></div><div class="strat-body">'+esc(sec.reinforce)+'</div></div>';
   if(sec.followup){var chips=sec.followup.split('|').map(function(c){return c.trim()}).filter(function(c){return c});if(chips.length){h+='<div class="followup-wrap">';for(var i=0;i<chips.length;i++)h+='<button class="followup-chip" data-followup="'+chips[i].replace(/"/g,'&quot;')+'">'+esc(chips[i])+'</button>';h+='</div>'}}
   // Save button
-  if(S.user&&sec.strategy)h+='<button class="save-strat-btn" data-msgidx="'+msgIdx+'">&#9733; Save Strategy</button>';
+  if(sec.strategy)h+='<button class="save-strat-btn" data-msgidx="'+msgIdx+'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Save This Strategy</button>';
   h+='</div>';return h;
 }
 
@@ -1089,7 +1089,7 @@ async function saveStrategy(msgIdx){
   if(!msg||!msg.parsed)return;
   var topic=S.msgs.length>0?S.msgs[0].content.substring(0,60):'Strategy';
   var r=await sb.from('saved_strategies').insert({user_id:S.user.id,conversation_id:S.conversationId,title:topic,topic:S.msgs[0]?S.msgs[0].content.split(' ').slice(0,3).join(' '):'General',strategy_data:msg.parsed});
-  if(!r.error){showToast('Strategy saved!');var btn=document.querySelector('.save-strat-btn[data-msgidx="'+msgIdx+'"]');if(btn){btn.classList.add('saved');btn.innerHTML='&#10003; Saved'}}
+  if(!r.error){showToast('Strategy saved! Find it in your Saved Strategies.');var btn=document.querySelector('.save-strat-btn[data-msgidx="'+msgIdx+'"]');if(btn){btn.classList.add('saved');btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Saved &#10003;'}}
   else showToast('Error saving');
 }
 
