@@ -178,6 +178,7 @@
     <div class="sb-item" data-page="districts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>District Leads</div>
     <div class="sb-item" data-page="screener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Screener Leads</div>
     <div class="sb-item" data-page="analytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>District Analytics</div>
+    <div class="sb-item" data-page="referrals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>Referrals</div>
   </aside>
 
   <main class="main">
@@ -285,6 +286,13 @@
         <div class="panel"><div class="panel-hdr"><div class="panel-title">Top Behavioral Concerns</div></div><div class="panel-body" id="analyticsTopics"></div></div>
       </div>
       <div class="panel" style="margin-top:16px"><div class="panel-hdr"><div class="panel-title">Pillar Usage</div></div><div class="panel-body" id="analyticsPillars"></div></div>
+    </div>
+
+    <!-- REFERRALS -->
+    <div id="pgReferrals" class="page">
+      <div class="page-hdr"><div><h1>Referral Program</h1><p>Track referral signups and free month credits</p></div></div>
+      <div class="stats" id="referralStats"></div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">All Referrals</div></div><div class="panel-body" id="referralList"></div></div>
     </div>
 
     <!-- BLOG -->
@@ -434,6 +442,7 @@ async function loadPage(pg){
   else if(pg==='districts') await loadDistricts();
   else if(pg==='screener') await loadScreenerLeads();
   else if(pg==='analytics') await loadAnalytics();
+  else if(pg==='referrals') await loadReferrals();
 }
 
 // ═══ DASHBOARD ═══
@@ -740,6 +749,48 @@ function grantRow(label, actual, target){
   var pct = target && !isNaN(parseInt(target)) ? Math.min(100, Math.round(actual/parseInt(target)*100)) : null;
   var color = pct !== null ? (pct >= 100 ? 'var(--sage)' : pct >= 60 ? 'var(--sunflower)' : 'var(--terracotta)') : 'var(--sage)';
   return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand)"><span style="font-size:13px;color:var(--warm-gray)">'+label+'</span><div style="display:flex;align-items:center;gap:12px"><span style="font-weight:700;font-size:13px">'+actual+(target!=='—'?' / '+target:'')+'</span>'+(pct!==null?'<div style="width:80px;height:6px;background:var(--cream);border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:3px"></div></div>':'')+'</div></div>';
+}
+
+// ═══ REFERRALS ═══
+async function loadReferrals(){
+  var r=await sb.from('referrals').select('*').order('created_at',{ascending:false});
+  var refs=r.data||[];
+  var signups=refs.filter(function(x){return x.status==='signed_up'}).length;
+  var subscribed=refs.filter(function(x){return x.status==='subscribed'}).length;
+
+  // Get top referrers
+  var p=await sb.from('profiles').select('id,name,email,referral_code,referral_credits').gt('referral_credits',0).order('referral_credits',{ascending:false});
+  var topRefs=p.data||[];
+
+  document.getElementById('referralStats').innerHTML=
+    statCard('Total Referrals',refs.length,'')+
+    statCard('Signed Up',signups,'')+
+    statCard('Subscribed',subscribed,'')+
+    statCard('Top Referrers',topRefs.length,'');
+
+  if(!refs.length){
+    document.getElementById('referralList').innerHTML='<div class="empty"><div class="empty-icon">&#127873;</div>No referrals yet. Users can share their referral link from the sidebar menu in the app.</div>';
+    return;
+  }
+
+  var h='';
+  if(topRefs.length){
+    h+='<div style="margin-bottom:16px;padding:14px;background:var(--sage-light);border-radius:12px"><div style="font-weight:700;font-size:13px;color:var(--sage-dark);margin-bottom:8px">Top Referrers</div>';
+    topRefs.forEach(function(u){
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0"><span style="font-size:13px;font-weight:600">'+esc(u.name||u.email||'—')+' <span style="color:var(--warm-gray-light);font-weight:400">('+esc(u.referral_code)+')</span></span><span style="font-weight:800;color:var(--sage-dark)">'+u.referral_credits+' referral'+(u.referral_credits!==1?'s':'')+'</span></div>';
+    });
+    h+='</div>';
+  }
+
+  refs.forEach(function(ref){
+    var d=new Date(ref.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    var badge=ref.status==='subscribed'?'tag-sage':'tag-yellow';
+    h+='<div style="padding:12px;background:var(--cream);border-radius:10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">';
+    h+='<div><div style="font-size:13px"><span style="font-weight:600">Code:</span> '+esc(ref.referral_code)+'</div><div style="font-size:11px;color:var(--warm-gray-light);margin-top:2px">'+d+'</div></div>';
+    h+='<span class="tag '+badge+'" style="text-transform:capitalize">'+esc(ref.status).replace('_',' ')+'</span>';
+    h+='</div>';
+  });
+  document.getElementById('referralList').innerHTML=h;
 }
 
 // ═══ DISTRICT ANALYTICS ═══

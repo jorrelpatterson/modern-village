@@ -365,6 +365,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
 .sb-sub{padding:14px 16px;border-radius:12px;margin-bottom:24px;border:2px solid var(--sand)}
 .sb-item{padding:14px 0;border-bottom:1px solid var(--sand);font-size:15px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}.sb-item:hover{color:var(--sage)}
 .sb-soon{font-size:11px;color:var(--warm-gray-light);font-weight:600;background:var(--cream);padding:2px 8px;border-radius:6px}
+.sb-highlight{background:var(--sage-light);border-radius:12px;margin:4px -10px;padding:14px 10px !important;border:1.5px dashed var(--sage)}
 .sb-logout{padding:14px 0;font-size:15px;cursor:pointer;color:var(--terracotta);font-weight:600;display:flex;align-items:center;gap:8px;margin-top:8px}
 
 /* Overlay Pages */
@@ -1150,6 +1151,111 @@ function enterApp(){
   if(S.child){var p=document.getElementById('ceProfile');p.classList.remove('hidden');p.innerHTML='Coaching for <strong>'+esc(S.child)+'</strong>'+(S.age?' \u00b7 '+esc(S.age):'')+(S.dx?' \u00b7 '+esc(S.dx):'')}
   renderChildSwitcher();
   renderSb();renderSugs();renderProvider();renderTopics();renderCommunityPosts();updateFreeCtr();
+  checkReferralOnSignup();
+}
+
+// ═══ REFERRAL SYSTEM ═══
+function generateReferralCode(){
+  // Generate a short readable code from user id
+  if(!S.user) return '';
+  var chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var code='MV';
+  var seed=S.user.id.replace(/-/g,'');
+  for(var i=0;i<4;i++){
+    var idx=parseInt(seed.charAt(i*2)+seed.charAt(i*2+1),16)%chars.length;
+    code+=chars[idx];
+  }
+  return code;
+}
+
+async function ensureReferralCode(){
+  if(!S.user||!S.profile)return;
+  if(S.profile.referral_code)return S.profile.referral_code;
+  var code=generateReferralCode();
+  // Check for collision
+  var check=await sb.from('profiles').select('id').eq('referral_code',code);
+  if(check.data&&check.data.length>0){code=code+Math.floor(Math.random()*9)}
+  await sb.from('profiles').update({referral_code:code}).eq('id',S.user.id);
+  S.profile.referral_code=code;
+  return code;
+}
+
+async function checkReferralOnSignup(){
+  if(!S.user)return;
+  // Check URL for ref param
+  var params=new URLSearchParams(window.location.search);
+  var refCode=params.get('ref');
+  if(!refCode)return;
+  // Don't self-refer
+  if(S.profile&&S.profile.referral_code===refCode)return;
+  // Don't double-count
+  if(S.profile&&S.profile.referred_by)return;
+  // Find referrer
+  var r=await sb.from('profiles').select('id,referral_credits').eq('referral_code',refCode).single();
+  if(!r.data)return;
+  // Record referral
+  await sb.from('referrals').insert({referrer_id:r.data.id,referred_id:S.user.id,referral_code:refCode,status:'signed_up'});
+  // Credit referrer
+  await sb.from('profiles').update({referral_credits:(r.data.referral_credits||0)+1}).eq('id',r.data.id);
+  // Mark referred user
+  await sb.from('profiles').update({referred_by:refCode}).eq('id',S.user.id);
+}
+
+async function openReferral(){
+  if(!S.user){showAuth(true);return}
+  var code=await ensureReferralCode();
+  var link='https://modernvillage.app/app.html?ref='+code;
+
+  // Get referral count
+  var r=await sb.from('referrals').select('id,status,created_at').eq('referrer_id',S.user.id);
+  var referrals=r.data||[];
+  var signups=referrals.filter(function(x){return x.status==='signed_up'}).length;
+  var converted=referrals.filter(function(x){return x.status==='subscribed'}).length;
+  var credits=S.profile.referral_credits||0;
+
+  var modal=document.getElementById('referralModal');
+  document.getElementById('refCode').textContent=code;
+  document.getElementById('refLink').value=link;
+  document.getElementById('refSignups').textContent=signups;
+  document.getElementById('refConverted').textContent=converted;
+  document.getElementById('refCredits').textContent=credits;
+
+  // Build history
+  var histEl=document.getElementById('refHistory');
+  if(!referrals.length){
+    histEl.innerHTML='<div style="text-align:center;padding:16px;color:var(--warm-gray-light);font-size:13px">No referrals yet. Share your link to get started!</div>';
+  } else {
+    var h='';
+    referrals.forEach(function(ref){
+      var d=new Date(ref.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      var badge=ref.status==='subscribed'?'<span style="background:var(--sage-light);color:var(--sage-dark);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600">Subscribed</span>':'<span style="background:var(--cream);color:var(--warm-gray);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600">Signed up</span>';
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand)"><span style="font-size:13px;color:var(--warm-gray)">'+d+'</span>'+badge+'</div>';
+    });
+    histEl.innerHTML=h;
+  }
+  modal.style.display='flex';
+}
+
+function copyRefLink(){
+  var input=document.getElementById('refLink');
+  navigator.clipboard.writeText(input.value).then(function(){
+    showToast('Link copied!');
+  }).catch(function(){
+    input.select();
+    document.execCommand('copy');
+    showToast('Link copied!');
+  });
+}
+
+function shareRefLink(){
+  var code=S.profile.referral_code||'';
+  var link='https://modernvillage.app/app.html?ref='+code;
+  var text='I use Modern Village for ABA behavioral strategies for my kid — it\'s been a game changer. Try it free and we both get a free month: '+link;
+  if(navigator.share){
+    navigator.share({title:'Modern Village — ABA Parenting Support',text:text,url:link}).catch(function(){});
+  } else {
+    copyRefLink();
+  }
 }
 
 // ═══ SIDEBAR ═══
@@ -1159,8 +1265,8 @@ function renderSb(){
   var displayName=S.name||( S.user?S.user.email:'Guest');
   document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Signed in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+displayName+'</div>'+(S.child?'<div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Parent of '+S.child+(S.age?', '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'')+'</div>':'');
   updateSubSt();
-  var items=[{label:"My Profile",action:"openProfile()"},{label:"Saved Strategies",action:"openStrategies()"},{label:"Progress Dashboard",action:"openProgress()"},{label:"Routine Builder",action:"openRoutines()"},{label:"IEP Toolkit",action:"openIep()"},{label:"Resources",action:"openResources()"},{label:"Behavior Tracker",action:"switchTab('track')"},{label:"Booking History",action:"openBookingHistory()"},{label:"Settings",soon:true}];
-  var h='';for(var i=0;i<items.length;i++){var item=items[i];if(item.soon){h+='<div class="sb-item" onclick="showToast(\'Coming soon!\')"><span>'+item.label+'</span><span class="sb-soon">Soon</span></div>'}else{h+='<div class="sb-item" onclick="closeSb();'+item.action+'"><span>'+item.label+'</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray-light)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>'}}
+  var items=[{label:"My Profile",action:"openProfile()"},{label:"Saved Strategies",action:"openStrategies()"},{label:"Progress Dashboard",action:"openProgress()"},{label:"Routine Builder",action:"openRoutines()"},{label:"IEP Toolkit",action:"openIep()"},{label:"Resources",action:"openResources()"},{label:"Behavior Tracker",action:"switchTab('track')"},{label:"Booking History",action:"openBookingHistory()"},{label:"\ud83c\udf81 Invite Friends — Get 1 Month Free",action:"openReferral()",highlight:true},{label:"Settings",soon:true}];
+  var h='';for(var i=0;i<items.length;i++){var item=items[i];if(item.soon){h+='<div class="sb-item" onclick="showToast(\'Coming soon!\')"><span>'+item.label+'</span><span class="sb-soon">Soon</span></div>'}else{h+='<div class="sb-item'+(item.highlight?' sb-highlight':'')+'" onclick="closeSb();'+item.action+'"><span>'+item.label+'</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray-light)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>'}}
   if(S.user)h+='<div class="sb-logout" onclick="logout()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out</div>';
   document.getElementById('sbMenu').innerHTML=h;
 }
@@ -2889,6 +2995,67 @@ async function saveProfile(){
       <button class="btn btn-p" style="flex:1" onclick="saveChild()">Save</button>
       <button class="btn btn-s" onclick="document.getElementById('addChildModal').style.display='none'">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- REFERRAL MODAL -->
+<div id="referralModal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:24px;padding:32px;max-width:480px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="font-family:'Fraunces',serif;font-size:22px;font-weight:800">&#127873; Invite Friends</h2>
+      <button style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--warm-gray)" onclick="document.getElementById('referralModal').style.display='none'">&times;</button>
+    </div>
+
+    <!-- How it works -->
+    <div style="padding:16px;background:var(--sage-light);border-radius:14px;margin-bottom:20px">
+      <div style="font-weight:700;font-size:14px;color:var(--sage-dark);margin-bottom:8px">How it works</div>
+      <div style="font-size:13px;color:var(--sage-dark);line-height:1.6">
+        1. Share your unique link with a friend<br>
+        2. They sign up using your link<br>
+        3. When they subscribe, <strong>you both get 1 month free</strong>
+      </div>
+    </div>
+
+    <!-- Your code -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--warm-gray);margin-bottom:6px">YOUR REFERRAL CODE</div>
+      <div style="padding:14px;background:var(--cream);border-radius:12px;border:1.5px dashed var(--sand);text-align:center;font-family:'Fraunces',serif;font-size:24px;font-weight:900;letter-spacing:3px;color:var(--charcoal)" id="refCode"></div>
+    </div>
+
+    <!-- Share link -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:700;color:var(--warm-gray);margin-bottom:6px">YOUR REFERRAL LINK</div>
+      <div style="display:flex;gap:8px">
+        <input id="refLink" class="fi" style="flex:1;font-size:13px;padding:10px 12px" readonly>
+        <button class="btn btn-p" style="padding:10px 16px;white-space:nowrap" onclick="copyRefLink()">Copy</button>
+      </div>
+    </div>
+
+    <!-- Share buttons -->
+    <div style="display:flex;gap:8px;margin-bottom:24px">
+      <button class="btn btn-p" style="flex:1" onclick="shareRefLink()">&#128228; Share Link</button>
+      <button class="btn btn-s" style="flex:1" onclick="var l=document.getElementById('refLink').value;window.open('sms:?body='+encodeURIComponent('I use Modern Village for ABA strategies for my kid. Try it free: '+l))">&#128172; Text a Friend</button>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
+      <div style="text-align:center;padding:14px;background:var(--cream);border-radius:12px">
+        <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:800;color:var(--charcoal)" id="refSignups">0</div>
+        <div style="font-size:11px;color:var(--warm-gray);margin-top:2px">Friends joined</div>
+      </div>
+      <div style="text-align:center;padding:14px;background:var(--cream);border-radius:12px">
+        <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:800;color:var(--sage)" id="refConverted">0</div>
+        <div style="font-size:11px;color:var(--warm-gray);margin-top:2px">Subscribed</div>
+      </div>
+      <div style="text-align:center;padding:14px;background:var(--sage-light);border-radius:12px">
+        <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:800;color:var(--sage-dark)" id="refCredits">0</div>
+        <div style="font-size:11px;color:var(--warm-gray);margin-top:2px">Free months earned</div>
+      </div>
+    </div>
+
+    <!-- Referral history -->
+    <div style="font-size:12px;font-weight:700;color:var(--warm-gray);margin-bottom:8px">REFERRAL HISTORY</div>
+    <div id="refHistory" style="background:var(--cream);border-radius:12px;padding:12px;max-height:150px;overflow-y:auto"></div>
   </div>
 </div>
 </body>
