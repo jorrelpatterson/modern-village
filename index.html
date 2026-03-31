@@ -167,12 +167,12 @@ a{text-decoration:none;color:inherit}
 /* RESPONSIVE */
 @media(max-width:900px){
   .hero-inner{grid-template-columns:1fr;gap:40px;text-align:center}
-  .hero h1{font-size:40px}
+  .hero h1{font-size:36px}
   .hero-sub{margin:0 auto 32px}
   .hero-ctas{justify-content:center;flex-wrap:wrap}
   .hero-proof{justify-content:center}
   .hero-visual{order:-1}
-  .phone{width:240px;height:480px}
+  .phone{width:220px;height:440px}
   .problem-grid{grid-template-columns:1fr}
   .pillar{grid-template-columns:1fr!important;gap:32px}
   .pillar:nth-child(even){direction:ltr}
@@ -180,11 +180,19 @@ a{text-decoration:none;color:inherit}
   .ariana-creds{justify-content:center}
   .ariana-stats{justify-content:center}
   .pricing-grid{grid-template-columns:1fr}
-  .district-grid{grid-template-columns:repeat(2,1fr)}
-  .section-title{font-size:32px}
-  .nav-links{display:none}
+  .district-grid{grid-template-columns:1fr}
+  .section{padding:60px 20px}
+  .section-title{font-size:28px}
+  .hero{padding:100px 20px 60px}
+  .nav{padding:12px 16px}
+  .nav.scrolled{padding:10px 16px}
+  .nav-links{display:none;position:absolute;top:100%;left:0;right:0;background:white;flex-direction:column;padding:16px 20px;gap:12px;border-bottom:1px solid var(--sand);box-shadow:0 8px 24px rgba(0,0,0,0.08)}
+  .nav-links.open{display:flex}
   .nav-mobile{display:flex}
+  .nav-cta{width:100%;text-align:center}
   .footer-inner{flex-direction:column;gap:20px;text-align:center}
+  .footer{padding:40px 20px}
+  .pillar-visual-inner{min-height:240px;padding:20px}
 }
 </style>
 </head>
@@ -203,7 +211,7 @@ a{text-decoration:none;color:inherit}
     <a class="nav-link" href="#districts">For Districts</a>
     <a class="nav-cta" href="app.html">Get Started Free</a>
   </div>
-  <button class="nav-mobile" onclick="document.querySelector('.nav-links').style.display=document.querySelector('.nav-links').style.display==='flex'?'none':'flex'"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--charcoal)" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+  <button class="nav-mobile" onclick="document.querySelector('.nav-links').classList.toggle('open')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--charcoal)" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
 </nav>
 
 <!-- HERO -->

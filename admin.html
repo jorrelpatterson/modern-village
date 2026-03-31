@@ -106,7 +106,25 @@
 .empty-icon{font-size:32px;margin-bottom:8px}
 
 /* Responsive */
-@media(max-width:800px){.sidebar{display:none}.main{margin-left:0}.stats{grid-template-columns:repeat(2,1fr)}}
+/* Mobile nav */
+.mobile-hdr{display:none;position:sticky;top:0;z-index:50;padding:12px 16px;background:white;border-bottom:1px solid var(--sand);align-items:center;justify-content:space-between}
+.mobile-hdr-logo{display:flex;align-items:center;gap:8px}
+.mobile-hdr-btn{background:none;border:none;cursor:pointer;padding:4px}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:90}
+
+@media(max-width:800px){
+  .sidebar{display:none;position:fixed;left:0;top:0;bottom:0;width:280px;z-index:100;box-shadow:4px 0 20px rgba(0,0,0,0.1)}
+  .sidebar.mobile-open{display:block}
+  .sb-overlay.mobile-open{display:block}
+  .main{margin-left:0;padding:16px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .mobile-hdr{display:flex}
+  .page-hdr{flex-direction:column;align-items:flex-start;gap:12px}
+  .page-hdr h1{font-size:20px}
+  .tbl{font-size:12px;display:block;overflow-x:auto}
+  .panel-body{padding:14px;overflow-x:auto}
+  div[style*="grid-template-columns: 1fr 1fr"]{grid-template-columns:1fr!important}
+}
 .hidden{display:none}
 </style>
 </head>
@@ -126,6 +144,14 @@
 
 <!-- ADMIN LAYOUT -->
 <div id="adminLayout" class="layout hidden">
+  <div id="sbOverlay" class="sb-overlay" onclick="closeMobileNav()"></div>
+  <div class="mobile-hdr">
+    <div class="mobile-hdr-logo">
+      <div class="sb-logo-icon"><svg width="18" height="18" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 24C8 32 14 38 22 38C30 38 36 32 36 24C36 14 22 6 22 6Z" fill="white" opacity="0.9"/><circle cx="22" cy="24" r="4" fill="white"/></svg></div>
+      <div class="sb-logo-text">MV <span>Admin</span></div>
+    </div>
+    <button class="mobile-hdr-btn" onclick="openMobileNav()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+  </div>
   <aside class="sidebar">
     <div class="sb-logo">
       <div class="sb-logo-icon"><svg width="18" height="18" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 24C8 32 14 38 22 38C30 38 36 32 36 24C36 14 22 6 22 6Z" fill="white" opacity="0.9"/><circle cx="22" cy="24" r="4" fill="white"/></svg></div>
@@ -236,6 +262,15 @@ var providers = [
   {name:"Ariana Roberts",creds:"BCBA",specialty:"Autism spectrum support, early intervention, social skills",rate30:55,rate60:95,npi:"1023648599",active:true}
 ];
 
+function openMobileNav(){
+  document.querySelector('.sidebar').classList.add('mobile-open');
+  document.getElementById('sbOverlay').classList.add('mobile-open');
+}
+function closeMobileNav(){
+  document.querySelector('.sidebar').classList.remove('mobile-open');
+  document.getElementById('sbOverlay').classList.remove('mobile-open');
+}
+
 function doLogin(){
   var p = document.getElementById('loginPass').value;
   if(p === ADMIN_PASS){
@@ -256,6 +291,7 @@ document.querySelectorAll('.sb-item').forEach(function(el){
     document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
     document.getElementById('pg'+pg.charAt(0).toUpperCase()+pg.slice(1)).classList.add('active');
     loadPage(pg);
+    closeMobileNav();
   });
 });
 
