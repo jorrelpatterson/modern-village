@@ -343,7 +343,7 @@ async function loadUsers(){
   var h='';
   r.data.forEach(function(u){
     var d=new Date(u.created_at);
-    h+='<tr><td>'+(u.name?esc(u.name):'<span style="color:var(--warm-gray-light)">—</span>')+'</td><td style="font-size:12px;color:var(--warm-gray-light)">'+esc(u.id.substring(0,8))+'...</td><td>'+(u.child_name?esc(u.child_name):'—')+'</td><td>'+(u.child_age||'—')+'</td><td>'+(u.diagnosis||'—')+'</td><td><span class="tag '+(u.subscription_status==='pro'?'tag-sage':'tag-free')+'">'+(u.subscription_status==='pro'?'Pro':'Free')+'</span></td><td>'+(u.free_messages_used||0)+'</td><td>'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td></tr>';
+    h+='<tr><td>'+(u.name?esc(u.name):'<span style="color:var(--warm-gray-light)">—</span>')+'</td><td style="font-size:12px">'+esc(u.email||'—')+'</td><td>'+(u.child_name?esc(u.child_name):'—')+'</td><td>'+(u.child_age||'—')+'</td><td>'+(u.diagnosis||'—')+'</td><td><span class="tag '+(u.subscription_status==='pro'?'tag-sage':'tag-free')+'">'+(u.subscription_status==='pro'?'Pro':'Free')+'</span></td><td>'+(u.free_messages_used||0)+'</td><td>'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td></tr>';
   });
   document.getElementById('userBody').innerHTML=h||'<tr><td colspan="8" class="empty">No users yet</td></tr>';
 }
