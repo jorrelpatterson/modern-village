@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#7A9E7E">
+<meta name="color-scheme" content="light only">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta property="og:title" content="Modern Village Blog — ABA Parenting Tips & Strategies">
+<meta property="og:description" content="Evidence-based behavioral strategies, IEP advocacy tips, and parenting support from licensed BCBAs.">
+<meta property="og:image" content="https://modernvillage.app/og-image.png">
+<meta property="og:url" content="https://modernvillage.app/blog.html">
+<meta property="og:type" content="website">
+<title>Blog — Modern Village</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{--cream:#FDF8F0;--sage:#7A9E7E;--sage-dark:#5C7F60;--sage-light:#E8F0E8;--terracotta:#C4745A;--sand:#E8DDD0;--sand-dark:#C4B8A8;--charcoal:#2D2D2D;--warm-gray:#4A4540;--warm-gray-light:#706B65}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--charcoal);-webkit-font-smoothing:antialiased}
+
+/* Nav */
+.nav{position:sticky;top:0;z-index:50;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;background:rgba(253,248,240,0.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--sand)}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-icon{width:36px;height:36px;border-radius:10px;background:var(--sage);display:flex;align-items:center;justify-content:center}
+.nav-logo-text{font-family:'Fraunces',serif;font-size:20px;font-weight:800;color:var(--charcoal)}
+.nav-logo-text span{font-weight:400;font-style:italic;opacity:0.5}
+.nav-links{display:flex;gap:24px;align-items:center}
+.nav-links a{text-decoration:none;font-size:14px;font-weight:600;color:var(--warm-gray);transition:color 0.2s}
+.nav-links a:hover{color:var(--sage-dark)}
+.nav-cta{padding:10px 20px;background:var(--sage);color:white;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;transition:all 0.2s}
+.nav-cta:hover{background:var(--sage-dark)}
+
+/* Hero */
+.blog-hero{padding:60px 32px 40px;text-align:center;max-width:700px;margin:0 auto}
+.blog-hero h1{font-family:'Fraunces',serif;font-size:44px;font-weight:900;margin-bottom:12px;letter-spacing:-1px}
+.blog-hero p{font-size:18px;color:var(--warm-gray);line-height:1.6}
+
+/* Categories */
+.cats{display:flex;gap:8px;justify-content:center;padding:0 32px 40px;flex-wrap:wrap}
+.cat{padding:8px 18px;border-radius:20px;border:1.5px solid var(--sand);background:white;font-size:13px;font-weight:600;color:var(--warm-gray);cursor:pointer;transition:all 0.2s}
+.cat:hover{border-color:var(--sage)}
+.cat.on{background:var(--sage);color:white;border-color:var(--sage)}
+
+/* Post Grid */
+.posts{max-width:900px;margin:0 auto;padding:0 32px 60px;display:grid;gap:24px}
+.post-card{background:white;border-radius:20px;padding:32px;border:1px solid var(--sand);transition:all 0.2s;cursor:pointer;display:block;text-decoration:none;color:inherit}
+.post-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,0.06)}
+.post-meta{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.post-cat{padding:4px 12px;border-radius:8px;font-size:11px;font-weight:700;background:var(--sage-light);color:var(--sage-dark)}
+.post-date{font-size:12px;color:var(--warm-gray-light)}
+.post-author{font-size:12px;color:var(--warm-gray-light)}
+.post-title{font-family:'Fraunces',serif;font-size:24px;font-weight:800;margin-bottom:10px;line-height:1.3}
+.post-excerpt{font-size:15px;color:var(--warm-gray);line-height:1.6}
+.post-read{display:inline-flex;align-items:center;gap:6px;margin-top:16px;font-size:14px;font-weight:700;color:var(--sage-dark)}
+.post-read svg{transition:transform 0.2s}
+.post-card:hover .post-read svg{transform:translateX(3px)}
+
+/* Article View */
+.article{display:none;max-width:720px;margin:0 auto;padding:40px 32px 80px}
+.article.open{display:block}
+.article-back{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--sage-dark);text-decoration:none;margin-bottom:24px;cursor:pointer}
+.article-back:hover{color:var(--sage)}
+.article-meta{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.article h1{font-family:'Fraunces',serif;font-size:38px;font-weight:900;line-height:1.2;margin-bottom:16px;letter-spacing:-1px}
+.article-body{font-size:17px;line-height:1.8;color:var(--charcoal)}
+.article-body h2{font-family:'Fraunces',serif;font-size:26px;font-weight:800;margin:36px 0 14px;color:var(--charcoal)}
+.article-body h3{font-family:'Fraunces',serif;font-size:20px;font-weight:700;margin:28px 0 10px;color:var(--charcoal)}
+.article-body p{margin-bottom:18px}
+.article-body ul,.article-body ol{margin:0 0 18px 24px}
+.article-body li{margin-bottom:8px;line-height:1.7}
+.article-body strong{color:var(--charcoal);font-weight:700}
+.article-body a{color:var(--sage-dark);font-weight:600;text-decoration:underline}
+.article-body blockquote{border-left:4px solid var(--sage);padding:16px 20px;margin:20px 0;background:var(--sage-light);border-radius:0 12px 12px 0;font-style:italic;color:var(--warm-gray)}
+
+/* CTA Banner */
+.cta-banner{max-width:720px;margin:0 auto 60px;padding:32px;background:linear-gradient(135deg,var(--sage-light),rgba(122,158,126,0.15));border-radius:20px;text-align:center}
+.cta-banner h3{font-family:'Fraunces',serif;font-size:22px;font-weight:800;margin-bottom:8px}
+.cta-banner p{font-size:15px;color:var(--warm-gray);margin-bottom:16px}
+.cta-banner a{display:inline-block;padding:14px 28px;background:var(--sage);color:white;border-radius:12px;font-weight:700;font-size:15px;text-decoration:none}
+
+/* Footer */
+.footer{padding:40px 32px;text-align:center;border-top:1px solid var(--sand);color:var(--warm-gray-light);font-size:13px}
+.footer a{color:var(--sage-dark);text-decoration:none;font-weight:600}
+
+/* Loading */
+.loading{text-align:center;padding:60px;color:var(--warm-gray-light);font-size:15px}
+
+@media(max-width:768px){
+  .nav{padding:12px 16px}
+  .nav-links{display:none}
+  .blog-hero{padding:40px 20px 24px}
+  .blog-hero h1{font-size:32px}
+  .posts{padding:0 16px 40px}
+  .post-card{padding:24px}
+  .post-title{font-size:20px}
+  .article{padding:24px 16px 60px}
+  .article h1{font-size:28px}
+  .article-body{font-size:16px}
+  .cta-banner{margin:0 16px 40px}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-icon"><svg width="18" height="18" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 24C8 32 14 38 22 38C30 38 36 32 36 24C36 14 22 6 22 6Z" fill="white" opacity="0.9"/><circle cx="22" cy="24" r="4" fill="white"/></svg></div>
+    <div class="nav-logo-text">Modern <span>Village</span></div>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/blog.html" style="color:var(--sage-dark)">Blog</a>
+    <a href="/app.html" class="nav-cta">Try Free</a>
+  </div>
+</nav>
+
+<!-- BLOG LIST -->
+<div id="blogList">
+  <div class="blog-hero">
+    <h1>The Village Voice</h1>
+    <p>Evidence-based strategies, advocacy tips, and real talk from our BCBA team — for parents navigating the hard and beautiful parts of raising neurodivergent kids.</p>
+  </div>
+  <div class="cats" id="catPills"></div>
+  <div class="posts" id="postGrid"><div class="loading">Loading posts...</div></div>
+</div>
+
+<!-- ARTICLE VIEW -->
+<div class="article" id="articleView">
+  <a class="article-back" onclick="showList()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>Back to Blog</a>
+  <div class="article-meta" id="articleMeta"></div>
+  <h1 id="articleTitle"></h1>
+  <div class="article-body" id="articleBody"></div>
+  <div class="cta-banner">
+    <h3>Get strategies like these — personalized for your child</h3>
+    <p>Our AI Coach gives you step-by-step ABA strategy cards based on your child's age, diagnosis, and specific situation.</p>
+    <a href="/app.html">Try the AI Coach Free</a>
+  </div>
+</div>
+
+<div class="footer">
+  <p>&copy; 2026 Modern Village LLC &middot; <a href="/">Home</a> &middot; <a href="/app.html">App</a> &middot; <a href="/blog.html">Blog</a></p>
+  <p style="margin-top:8px">ABA-powered parenting support. It takes a village. Let us be yours.</p>
+</div>
+
+<script>
+var SUPA_URL = "https://jrsiqjfwvunrjiihnsgc.supabase.co";
+var SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyc2lxamZ3dnVucmppaWhuc2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MTUyMDksImV4cCI6MjA5MDQ5MTIwOX0.KLkbX6wjMpIty_gwV3HuE5bs-Wlut-VlRhBGP4VnrO4";
+var sb;
+try{sb=supabase.createClient(SUPA_URL,SUPA_KEY)}catch(e){}
+
+var allPosts=[];
+var currentCat='All';
+
+function esc(t){if(!t)return '';return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+
+// Simple markdown to HTML
+function md(text){
+  if(!text)return '';
+  var h=esc(text);
+  // Headers
+  h=h.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  h=h.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  // Bold
+  h=h.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  // Italic
+  h=h.replace(/\*(.+?)\*/g,'<em>$1</em>');
+  // Links
+  h=h.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2">$1</a>');
+  // Lists
+  h=h.replace(/^- (.+)$/gm,'<li>$1</li>');
+  h=h.replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>');
+  // Paragraphs
+  h=h.split(/\n\n+/).map(function(p){
+    p=p.trim();
+    if(!p)return '';
+    if(p.startsWith('<h')||p.startsWith('<ul')||p.startsWith('<ol'))return p;
+    return '<p>'+p+'</p>';
+  }).join('\n');
+  // Clean up stray newlines in paragraphs
+  h=h.replace(/\n/g,' ');
+  return h;
+}
+
+async function loadPosts(){
+  if(!sb)return;
+  var r=await sb.from('blog_posts').select('*').eq('published',true).order('published_at',{ascending:false});
+  allPosts=r.data||[];
+  renderCats();
+  renderPosts();
+  // Check if URL has a slug
+  var hash=window.location.hash.replace('#','');
+  if(hash){
+    var post=allPosts.find(function(p){return p.slug===hash});
+    if(post)showArticle(post.slug);
+  }
+}
+
+function renderCats(){
+  var cats=['All'];
+  allPosts.forEach(function(p){if(p.category&&cats.indexOf(p.category)===-1)cats.push(p.category)});
+  var h='';
+  cats.forEach(function(c){
+    h+='<button class="cat'+(currentCat===c?' on':'')+'" onclick="filterCat(\''+c+'\')">'+c+'</button>';
+  });
+  document.getElementById('catPills').innerHTML=h;
+}
+
+function filterCat(c){
+  currentCat=c;
+  renderCats();
+  renderPosts();
+}
+
+function renderPosts(){
+  var filtered=currentCat==='All'?allPosts:allPosts.filter(function(p){return p.category===currentCat});
+  if(!filtered.length){
+    document.getElementById('postGrid').innerHTML='<div class="loading">No posts yet. Check back soon!</div>';
+    return;
+  }
+  var h='';
+  filtered.forEach(function(p){
+    var d=p.published_at?new Date(p.published_at):new Date(p.created_at);
+    var ds=d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    var readTime=Math.max(1,Math.round((p.content||'').split(' ').length/200));
+    h+='<a class="post-card" onclick="showArticle(\''+esc(p.slug)+'\')">';
+    h+='<div class="post-meta"><span class="post-cat">'+esc(p.category||'General')+'</span><span class="post-date">'+ds+'</span><span class="post-author">'+esc(p.author)+'</span><span class="post-date">'+readTime+' min read</span></div>';
+    h+='<div class="post-title">'+esc(p.title)+'</div>';
+    h+='<div class="post-excerpt">'+esc(p.excerpt)+'</div>';
+    h+='<div class="post-read">Read more <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
+    h+='</a>';
+  });
+  document.getElementById('postGrid').innerHTML=h;
+}
+
+function showArticle(slug){
+  var post=allPosts.find(function(p){return p.slug===slug});
+  if(!post)return;
+  document.getElementById('blogList').style.display='none';
+  var av=document.getElementById('articleView');
+  av.classList.add('open');
+
+  var d=post.published_at?new Date(post.published_at):new Date(post.created_at);
+  var ds=d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  var readTime=Math.max(1,Math.round((post.content||'').split(' ').length/200));
+
+  document.getElementById('articleMeta').innerHTML='<span class="post-cat">'+esc(post.category||'General')+'</span><span class="post-date">'+ds+'</span><span class="post-author">By '+esc(post.author)+'</span><span class="post-date">'+readTime+' min read</span>';
+  document.getElementById('articleTitle').textContent=post.title;
+  document.getElementById('articleBody').innerHTML=md(post.content);
+
+  // Update page title and meta for SEO
+  document.title=post.meta_title||post.title+' | Modern Village';
+  var metaDesc=document.querySelector('meta[property="og:description"]');
+  if(metaDesc)metaDesc.setAttribute('content',post.meta_description||post.excerpt||'');
+
+  window.location.hash=slug;
+  window.scrollTo(0,0);
+}
+
+function showList(){
+  document.getElementById('blogList').style.display='block';
+  document.getElementById('articleView').classList.remove('open');
+  document.title='Blog — Modern Village';
+  window.location.hash='';
+  window.scrollTo(0,0);
+}
+
+window.addEventListener('hashchange',function(){
+  var hash=window.location.hash.replace('#','');
+  if(hash){
+    var post=allPosts.find(function(p){return p.slug===hash});
+    if(post)showArticle(hash);
+  } else {
+    showList();
+  }
+});
+
+loadPosts();
+</script>
+</body>
+</html>

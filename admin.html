@@ -173,6 +173,7 @@
     <div class="sb-label">Grants</div>
     <div class="sb-item" data-page="grants"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Grant Reporting</div>
     <div class="sb-item" data-page="behavior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>Behavior Data</div>
+    <div class="sb-item" data-page="blog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Blog</div>
   </aside>
 
   <main class="main">
@@ -257,6 +258,41 @@
       </div>
       <div class="panel"><div class="panel-hdr"><div class="panel-title">Recent Logs (All Users)</div></div><div class="panel-body"><table class="tbl"><thead><tr><th>User</th><th>Behavior</th><th>Trigger</th><th>Duration</th><th>Intensity</th><th>Outcome</th><th>Date</th></tr></thead><tbody id="behaviorBody"></tbody></table></div></div>
     </div>
+    <!-- BLOG -->
+    <div id="pgBlog" class="page">
+      <div class="page-hdr"><div><h1>Blog Management</h1><p>Create and manage blog posts</p></div><button class="btn btn-sage" onclick="openBlogEditor()">+ New Post</button></div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">All Posts</div></div><div class="panel-body" id="blogPosts"></div></div>
+    </div>
+
+    <!-- BLOG EDITOR (overlay) -->
+    <div id="blogEditor" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.4);backdrop-filter:blur(6px);overflow-y:auto">
+      <div style="max-width:700px;margin:40px auto;background:white;border-radius:20px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,0.15)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <h2 style="font-family:Fraunces,serif;font-size:22px;font-weight:800" id="blogEditorTitle">New Post</h2>
+          <button style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--warm-gray)" onclick="closeBlogEditor()">&times;</button>
+        </div>
+        <div style="margin-bottom:14px"><label class="fl">Title</label><input id="beTitle" class="fi" placeholder="Post title"></div>
+        <div style="margin-bottom:14px"><label class="fl">Slug (URL-friendly)</label><input id="beSlug" class="fi" placeholder="e.g. aba-strategies-at-home"></div>
+        <div style="display:flex;gap:12px;margin-bottom:14px">
+          <div style="flex:1"><label class="fl">Category</label><select id="beCat" class="fi"><option>Tips</option><option>Strategies</option><option>Guides</option><option>Advocacy</option><option>News</option></select></div>
+          <div style="flex:1"><label class="fl">Author</label><input id="beAuthor" class="fi" value="Ariana Roberts, BCBA"></div>
+        </div>
+        <div style="margin-bottom:14px"><label class="fl">Excerpt (shown on blog listing)</label><textarea id="beExcerpt" class="fi" rows="2" style="resize:none" placeholder="Brief summary..."></textarea></div>
+        <div style="margin-bottom:14px"><label class="fl">Content (Markdown supported)</label><textarea id="beContent" class="fi" rows="14" style="resize:vertical;font-family:monospace;font-size:13px" placeholder="## Your heading&#10;&#10;Write your post content here...&#10;&#10;### Subheading&#10;&#10;- Bullet point&#10;- Another point&#10;&#10;**Bold text** and *italic text*&#10;&#10;[Link text](https://url.com)"></textarea></div>
+        <div style="display:flex;gap:12px;margin-bottom:14px">
+          <div style="flex:1"><label class="fl">Meta Title (SEO)</label><input id="beMetaTitle" class="fi" placeholder="SEO title | Modern Village"></div>
+          <div style="flex:1"><label class="fl">Meta Description (SEO)</label><input id="beMetaDesc" class="fi" placeholder="155 chars max for search results"></div>
+        </div>
+        <div style="margin-bottom:14px"><label class="fl">Tags (comma-separated)</label><input id="beTags" class="fi" placeholder="autism, ABA, parenting"></div>
+        <input type="hidden" id="beId" value="">
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sage" style="flex:1" onclick="saveBlogPost(true)">Publish</button>
+          <button class="btn btn-outline" style="flex:1" onclick="saveBlogPost(false)">Save Draft</button>
+          <button class="btn btn-outline" onclick="closeBlogEditor()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -365,6 +401,7 @@ async function loadPage(pg){
   else if(pg==='community') await loadCommunity();
   else if(pg==='grants') await loadGrants();
   else if(pg==='behavior') await loadBehavior();
+  else if(pg==='blog') await loadBlog();
 }
 
 // ═══ DASHBOARD ═══
@@ -671,6 +708,110 @@ function grantRow(label, actual, target){
   var pct = target && !isNaN(parseInt(target)) ? Math.min(100, Math.round(actual/parseInt(target)*100)) : null;
   var color = pct !== null ? (pct >= 100 ? 'var(--sage)' : pct >= 60 ? 'var(--sunflower)' : 'var(--terracotta)') : 'var(--sage)';
   return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand)"><span style="font-size:13px;color:var(--warm-gray)">'+label+'</span><div style="display:flex;align-items:center;gap:12px"><span style="font-weight:700;font-size:13px">'+actual+(target!=='—'?' / '+target:'')+'</span>'+(pct!==null?'<div style="width:80px;height:6px;background:var(--cream);border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:3px"></div></div>':'')+'</div></div>';
+}
+
+// ═══ BLOG MANAGEMENT ═══
+async function loadBlog(){
+  var r=await sb.from('blog_posts').select('*').order('created_at',{ascending:false});
+  var posts=r.data||[];
+  if(!posts.length){
+    document.getElementById('blogPosts').innerHTML='<div class="empty"><div class="empty-icon">📝</div>No blog posts yet. Click "New Post" to create one.</div>';
+    return;
+  }
+  var h='';
+  posts.forEach(function(p){
+    var d=new Date(p.created_at);
+    var ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    var statusClass=p.published?'tag-sage':'tag-yellow';
+    var statusText=p.published?'Published':'Draft';
+    h+='<div style="padding:14px;background:var(--cream);border-radius:12px;margin-bottom:10px;display:flex;align-items:center;gap:14px">';
+    h+='<div style="flex:1"><div style="font-weight:700;font-size:14px">'+esc(p.title)+'</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">'+esc(p.category||'')+ ' &middot; '+esc(p.author||'')+ ' &middot; '+ds+'</div></div>';
+    h+='<span class="tag '+statusClass+'">'+statusText+'</span>';
+    h+='<button class="btn btn-sm btn-outline" onclick="editBlogPost(\''+p.id+'\')">Edit</button>';
+    h+='<button class="btn btn-sm btn-outline" style="border-color:var(--terracotta);color:var(--terracotta)" onclick="deleteBlogPost(\''+p.id+'\')">Delete</button>';
+    h+='</div>';
+  });
+  document.getElementById('blogPosts').innerHTML=h;
+}
+
+function openBlogEditor(){
+  document.getElementById('blogEditorTitle').textContent='New Post';
+  document.getElementById('beId').value='';
+  document.getElementById('beTitle').value='';
+  document.getElementById('beSlug').value='';
+  document.getElementById('beCat').value='Tips';
+  document.getElementById('beAuthor').value='Ariana Roberts, BCBA';
+  document.getElementById('beExcerpt').value='';
+  document.getElementById('beContent').value='';
+  document.getElementById('beMetaTitle').value='';
+  document.getElementById('beMetaDesc').value='';
+  document.getElementById('beTags').value='';
+  document.getElementById('blogEditor').style.display='block';
+}
+
+function closeBlogEditor(){
+  document.getElementById('blogEditor').style.display='none';
+}
+
+async function editBlogPost(id){
+  var r=await sb.from('blog_posts').select('*').eq('id',id).single();
+  if(!r.data) return;
+  var p=r.data;
+  document.getElementById('blogEditorTitle').textContent='Edit Post';
+  document.getElementById('beId').value=p.id;
+  document.getElementById('beTitle').value=p.title||'';
+  document.getElementById('beSlug').value=p.slug||'';
+  document.getElementById('beCat').value=p.category||'Tips';
+  document.getElementById('beAuthor').value=p.author||'';
+  document.getElementById('beExcerpt').value=p.excerpt||'';
+  document.getElementById('beContent').value=p.content||'';
+  document.getElementById('beMetaTitle').value=p.meta_title||'';
+  document.getElementById('beMetaDesc').value=p.meta_description||'';
+  document.getElementById('beTags').value=p.tags?p.tags.join(', '):'';
+  document.getElementById('blogEditor').style.display='block';
+}
+
+async function saveBlogPost(publish){
+  var id=document.getElementById('beId').value;
+  var title=document.getElementById('beTitle').value.trim();
+  var slug=document.getElementById('beSlug').value.trim()||title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/-+$/,'');
+  if(!title){showToast('Enter a title');return}
+
+  var tags=document.getElementById('beTags').value.split(',').map(function(t){return t.trim()}).filter(function(t){return t});
+
+  var data={
+    title:title,
+    slug:slug,
+    category:document.getElementById('beCat').value,
+    author:document.getElementById('beAuthor').value.trim(),
+    excerpt:document.getElementById('beExcerpt').value.trim(),
+    content:document.getElementById('beContent').value,
+    meta_title:document.getElementById('beMetaTitle').value.trim()||title+' | Modern Village',
+    meta_description:document.getElementById('beMetaDesc').value.trim(),
+    tags:tags.length?tags:null,
+    published:publish,
+    published_at:publish?new Date().toISOString():null,
+    updated_at:new Date().toISOString()
+  };
+
+  var r;
+  if(id){
+    r=await sb.from('blog_posts').update(data).eq('id',id);
+  } else {
+    r=await sb.from('blog_posts').insert(data);
+  }
+
+  if(r.error){showToast('Error saving: '+r.error.message);return}
+  closeBlogEditor();
+  showToast(publish?'Post published!':'Draft saved!');
+  loadBlog();
+}
+
+async function deleteBlogPost(id){
+  if(!confirm('Delete this post permanently?'))return;
+  await sb.from('blog_posts').delete().eq('id',id);
+  showToast('Post deleted');
+  loadBlog();
 }
 
 // ═══ BEHAVIOR DATA ═══
