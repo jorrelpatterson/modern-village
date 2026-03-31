@@ -281,8 +281,8 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
 .strat-step-text{font-size:14px;line-height:1.6}
 .strat-step-quote{display:block;margin-top:6px;padding:8px 14px;background:rgba(122,158,126,0.1);border-radius:10px;border-left:3px solid var(--sage);font-style:italic;font-size:13px;color:var(--sage-dark)}
 .strat-reinforce{background:linear-gradient(135deg,rgba(232,200,74,0.12),rgba(232,200,74,0.06));border-color:rgba(232,200,74,0.3)}.strat-reinforce .strat-icon{background:rgba(232,200,74,0.25)}.strat-reinforce .strat-label{color:#9E8A20}
-.followup-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.followup-chip{padding:8px 14px;border-radius:12px;border:1.5px solid var(--sand);background:white;font-size:12px;font-weight:600;color:var(--sage-dark);cursor:pointer;transition:all 0.2s}.followup-chip:hover{border-color:var(--sage);background:var(--sage-light)}
+.followup-wrap{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.followup-chip{padding:10px 14px;border-radius:12px;border:1.5px solid var(--sand);background:white;font-size:13px;font-weight:500;color:var(--charcoal);cursor:pointer;transition:all 0.2s;text-align:left;width:100%;display:block}.followup-chip:hover{border-color:var(--sage);background:var(--sage-light)}
 
 /* Save strategy button */
 .save-strat-btn{margin-top:12px;padding:12px 20px;border-radius:12px;border:2px solid var(--sage);background:white;color:var(--sage-dark);font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
@@ -1220,7 +1220,7 @@ function renderCards(sec,msgIdx){
   if(sec.assessment)h+='<div class="strat-card strat-assess"><div class="strat-card-header"><div class="strat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6BA3C7" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div><div><div class="strat-label">What\'s happening</div></div></div><div class="strat-body">'+esc(sec.assessment)+'</div></div>';
   if(sec.strategy){var steps=parseSteps(sec.strategy),sh='';for(var i=0;i<steps.length;i++){var st=steps[i],b=esc(st.b),q=st.b.match(/"([^"]+)"/g);if(q)for(var j=0;j<q.length;j++){var c=q[j].replace(/"/g,'');b=b.replace(esc(q[j]),'<span class="strat-step-quote">"'+esc(c)+'"</span>')}sh+='<div class="strat-step"><div class="strat-step-num">'+(i+1)+'</div><div class="strat-step-text">'+(st.t?'<strong>'+esc(st.t)+':</strong> ':'')+b+'</div></div>'}h+='<div class="strat-card strat-strategy"><div class="strat-card-header"><div class="strat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="#5C7F60"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/></svg></div><div><div class="strat-label">Try this now</div><div class="strat-title">Step-by-Step Strategy</div></div></div>'+sh+'</div>'}
   if(sec.reinforce)h+='<div class="strat-card strat-reinforce"><div class="strat-card-header"><div class="strat-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="#9E8A20"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div><div class="strat-label">Reinforce the win</div></div></div><div class="strat-body">'+esc(sec.reinforce)+'</div></div>';
-  if(sec.followup){var chips=sec.followup.split('|').map(function(c){return c.trim()}).filter(function(c){return c});if(chips.length){h+='<div class="followup-wrap">';for(var i=0;i<chips.length;i++)h+='<button class="followup-chip" data-followup="'+chips[i].replace(/"/g,'&quot;')+'">'+esc(chips[i])+'</button>';h+='</div>'}}
+  if(sec.followup){var chips=sec.followup.split('|').map(function(c){return c.trim()}).filter(function(c){return c});if(chips.length){h+='<div style="margin-top:12px;padding:12px;background:rgba(122,158,126,0.06);border-radius:12px;border:1px solid rgba(122,158,126,0.12)"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--sage-dark);margin-bottom:8px">Coach wants to know</div>';for(var i=0;i<chips.length;i++)h+='<button class="followup-chip" data-followup="'+chips[i].replace(/"/g,'&quot;')+'">'+esc(chips[i])+'</button>';h+='</div>'}}
   // Save button
   if(sec.strategy)h+='<button class="save-strat-btn" data-msgidx="'+msgIdx+'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Save This Strategy</button>';
   h+='</div>';return h;
@@ -1286,7 +1286,7 @@ function scrollBot(){setTimeout(function(){var el=document.getElementById('mainS
 
 // Event delegation
 document.addEventListener('click',function(e){
-  var chip=e.target.closest('.followup-chip');if(chip&&chip.dataset.followup){send(chip.dataset.followup);return}
+  var chip=e.target.closest('.followup-chip');if(chip&&chip.dataset.followup){var ta=document.getElementById('cTa');ta.value='';ta.focus();ta.setAttribute('placeholder',chip.dataset.followup);ta.style.borderColor='var(--sage)';setTimeout(function(){ta.style.borderColor=''},2000);document.getElementById('mainScroll').scrollTo(0,document.getElementById('mainScroll').scrollHeight);return}
   var sug=e.target.closest('.sug');if(sug&&sug.dataset.q){send(sug.dataset.q);return}
   var saveBtn=e.target.closest('.save-strat-btn');if(saveBtn&&saveBtn.dataset.msgidx){saveStrategy(parseInt(saveBtn.dataset.msgidx));return}
 });
