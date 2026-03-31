@@ -1137,19 +1137,28 @@ document.getElementById('cTa').addEventListener('keydown',function(e){if(e.key==
 function updSend(){document.getElementById('sendBtn').classList.toggle('on',document.getElementById('cTa').value.trim().length>0)}
 
 // ═══ PROVIDER ═══
-function getNextDates(){var dates=[],now=new Date();for(var i=1;i<=7;i++){var d=new Date(now);d.setDate(d.getDate()+i);if(d.getDay()===0)continue;dates.push({day:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()],num:d.getDate(),month:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()],full:d.toDateString()});if(dates.length>=5)break}return dates}
+function getNextDates(dayMap){
+  var dates=[],now=new Date();
+  for(var i=1;i<=14;i++){
+    var d=new Date(now);d.setDate(d.getDate()+i);
+    var dow=d.getDay();
+    if(dayMap && !dayMap[dow]) continue;
+    dates.push({day:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dow],num:d.getDate(),month:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()],full:d.toDateString(),dow:dow,iso:d.toISOString().split('T')[0]});
+    if(dates.length>=7) break;
+  }
+  return dates;
+}
+
 function renderProvider(){
   selectedProvider=null;
   S.booking={session:null,date:null,time:null,provider:null};
   var h='<div style="margin-bottom:16px"><h2 style="font-family:\'Fraunces\',serif;font-size:24px;font-weight:800">Our Professionals</h2><p style="color:var(--warm-gray);font-size:14px;margin-top:4px">Licensed providers ready to support your family</p></div>';
-  // Provider cards
   var active=PROVIDERS.filter(function(p){return p.active});
   if(!active.length){h+='<div style="text-align:center;padding:40px;color:var(--warm-gray-light)">No providers available yet.</div>';document.getElementById('providerView').innerHTML=h;return}
   for(var i=0;i<active.length;i++){
     var p=active[i];
     var stars='';for(var s=0;s<5;s++)stars+=s<Math.floor(p.rating)?'\u2605':'\u2606';
     var specTags='';p.specialty.forEach(function(sp){specTags+='<span style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;background:var(--sage-light);color:var(--sage-dark)">'+sp+'</span>'});
-    var credTags='';p.creds.forEach(function(c){credTags+='<span class="cred-badge">'+c+'</span>'});
     h+='<div class="provider-hero" style="cursor:pointer;transition:all 0.2s;margin-bottom:16px" onclick="selectProvider(\''+p.id+'\')">';
     h+='<div style="display:flex;align-items:center;gap:16px;margin-bottom:14px"><div class="provider-av" style="width:64px;height:64px;border-radius:18px;margin:0;font-size:22px;background:linear-gradient(135deg,'+p.color+',rgba(212,200,232,0.4))">'+p.initials+'</div><div><div style="font-family:Fraunces,serif;font-size:20px;font-weight:800">'+p.name+'</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px"><span class="cred-badge">'+p.creds.join('</span><span class="cred-badge">')+'</span>'+(p.badge?'<span style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;background:var(--sunflower);color:#5A4A00">'+p.badge+'</span>':'')+'</div></div></div>';
     h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="color:var(--sunflower);font-size:14px;letter-spacing:1px">'+stars+'</span><span style="font-weight:700;font-size:14px">'+p.rating+'</span><span style="font-size:12px;color:var(--warm-gray-light)">('+p.reviews+' reviews)</span></div>';
@@ -1159,40 +1168,179 @@ function renderProvider(){
     h+='<button class="book-btn" onclick="event.stopPropagation();selectProvider(\''+p.id+'\')">Book with '+p.name.split(' ')[0]+'</button>';
     h+='</div>';
   }
+
+  // Show user's upcoming bookings
+  if(S.user) h+='<div id="myBookings"></div>';
   document.getElementById('providerView').innerHTML=h;
+  if(S.user) loadMyBookings();
 }
 
-function selectProvider(id){
+var providerAvailability = {};
+var bookedSlots = {};
+
+async function selectProvider(id){
   var p=PROVIDERS.find(function(pv){return pv.id===id});
   if(!p)return;
   selectedProvider=p;
   S.booking={session:null,date:null,time:null,provider:p};
-  var dates=getNextDates();
-  var dh='',th='';
-  for(var i=0;i<dates.length;i++){var d=dates[i];dh+='<div class="date-opt" onclick="pickDate(this,\''+d.full+'\')"><div class="date-day">'+d.day+'</div><div class="date-num">'+d.num+'</div><div class="date-month">'+d.month+'</div></div>'}
-  for(var i=0;i<TIMES.length;i++)th+='<div class="time-opt" onclick="pickTime(this,\''+TIMES[i]+'\')">'+TIMES[i]+'</div>';
+
+  // Load availability from DB
+  var avail = await sb.from('provider_availability').select('*').eq('provider_id',p.id).eq('active',true);
+  providerAvailability = {};
+  if(avail.data) avail.data.forEach(function(a){providerAvailability[a.day_of_week]=a});
+
+  var dates=getNextDates(providerAvailability);
+  var dh='';
+  for(var i=0;i<dates.length;i++){var d=dates[i];dh+='<div class="date-opt" onclick="pickDate(this,\''+d.full+'\','+d.dow+',\''+d.iso+'\')"><div class="date-day">'+d.day+'</div><div class="date-num">'+d.num+'</div><div class="date-month">'+d.month+'</div></div>'}
+
   var stars='';for(var s=0;s<5;s++)stars+=s<Math.floor(p.rating)?'\u2605':'\u2606';
   document.getElementById('providerView').innerHTML=
     '<div style="margin-bottom:16px"><button style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--sage-dark);padding:4px 0" onclick="renderProvider()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>All Providers</button></div>'+
     '<div class="provider-hero"><div class="provider-av" style="background:linear-gradient(135deg,'+p.color+',rgba(212,200,232,0.4))">'+p.initials+'</div><div class="provider-name">'+p.name+'</div><div class="provider-creds"><span class="cred-badge">'+p.creds.join('</span><span class="cred-badge">')+'</span>'+(p.badge?'<span style="padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;background:var(--sunflower);color:#5A4A00">'+p.badge+'</span>':'')+'</div><div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px"><span style="color:var(--sunflower);font-size:16px">'+stars+'</span><span style="font-weight:700;font-size:15px">'+p.rating+'</span><span style="font-size:13px;color:var(--warm-gray-light)">('+p.reviews+' reviews)</span></div><div class="provider-bio">'+p.bio+'</div><div class="provider-stats"><div class="provider-stat"><div class="provider-stat-val">'+p.families+'+</div><div class="provider-stat-label">Families</div></div><div class="provider-stat"><div class="provider-stat-val">'+p.experience+'</div><div class="provider-stat-label">Experience</div></div><div class="provider-stat"><div class="provider-stat-val">24hr</div><div class="provider-stat-label">Response</div></div></div></div>'+
-    '<div class="book-section" id="bookSection"><h3>Book a Session</h3><div style="font-size:13px;font-weight:600;color:var(--warm-gray);margin-bottom:8px">Session length</div><div class="session-picker"><div class="session-opt" id="ses30" onclick="pickSession(30)"><div class="session-dur">30 min</div><div class="session-price">$'+p.price30+'</div><div class="session-per">check-in</div></div><div class="session-opt" id="ses60" onclick="pickSession(60)"><div class="session-dur">60 min</div><div class="session-price">$'+p.price60+'</div><div class="session-per">full session</div></div></div><div style="font-size:13px;font-weight:600;color:var(--warm-gray);margin-bottom:8px">Select a date</div><div class="date-picker">'+dh+'</div><div style="font-size:13px;font-weight:600;color:var(--warm-gray);margin-bottom:8px">Select a time</div><div class="time-grid">'+th+'</div><div class="book-total" id="bookTotal" style="display:none;justify-content:space-between;align-items:center;padding:16px 20px;background:var(--cream);border-radius:14px;margin-bottom:16px;border:1px solid var(--sand)"><span style="font-size:14px;color:var(--warm-gray)">Total</span><span id="bookTotalPrice" style="font-family:Fraunces,serif;font-size:22px;font-weight:800;color:var(--sage-dark)">$0</span></div><button class="book-btn" id="bookBtn" disabled onclick="confirmBooking()">Select session details</button></div>';
+    '<div class="book-section" id="bookSection"><h3>Book a Session</h3><div style="font-size:13px;font-weight:600;color:var(--warm-gray);margin-bottom:8px">Session length</div><div class="session-picker"><div class="session-opt" id="ses30" onclick="pickSession(30)"><div class="session-dur">30 min</div><div class="session-price">$'+p.price30+'</div><div class="session-per">check-in</div></div><div class="session-opt" id="ses60" onclick="pickSession(60)"><div class="session-dur">60 min</div><div class="session-price">$'+p.price60+'</div><div class="session-per">full session</div></div></div><div style="font-size:13px;font-weight:600;color:var(--warm-gray);margin-bottom:8px">Select a date</div><div class="date-picker">'+dh+'</div><div style="font-size:13px;font-weight:600;color:var(--warm-gray);margin-bottom:8px">Select a time</div><div class="time-grid" id="timeGrid"><div style="text-align:center;padding:20px;color:var(--warm-gray-light);font-size:13px">Select a date to see available times</div></div><div class="book-total" id="bookTotal" style="display:none;justify-content:space-between;align-items:center;padding:16px 20px;background:var(--cream);border-radius:14px;margin-bottom:16px;border:1px solid var(--sand)"><span style="font-size:14px;color:var(--warm-gray)">Total</span><span id="bookTotalPrice" style="font-family:Fraunces,serif;font-size:22px;font-weight:800;color:var(--sage-dark)">$0</span></div><button class="book-btn" id="bookBtn" disabled onclick="confirmBooking()">Select session details</button></div>';
 }
 
 function pickSession(m){S.booking.session=m;document.getElementById('ses30').classList.toggle('sel',m===30);document.getElementById('ses60').classList.toggle('sel',m===60);updateBooking()}
-function pickDate(el,d){S.booking.date=d;var opts=document.querySelectorAll('.date-opt');for(var i=0;i<opts.length;i++)opts[i].classList.remove('sel');el.classList.add('sel');updateBooking()}
-function pickTime(el,t){S.booking.time=t;var opts=document.querySelectorAll('.time-opt');for(var i=0;i<opts.length;i++)opts[i].classList.remove('sel');el.classList.add('sel');updateBooking()}
-function updateBooking(){var b=S.booking,p=selectedProvider;if(!p)return;var ready=b.session&&b.date&&b.time,btn=document.getElementById('bookBtn'),total=document.getElementById('bookTotal');if(b.session){var pr=b.session===30?p.price30:p.price60;total.style.display='flex';document.getElementById('bookTotalPrice').textContent='$'+pr}if(ready){btn.disabled=false;btn.textContent='Book '+b.session+'-min Session \u2014 $'+(b.session===30?p.price30:p.price60)}else{btn.disabled=true;btn.textContent=b.session?'Select date and time':'Select session details'}}
-async function confirmBooking(){
-  var b=S.booking,p=selectedProvider;if(!p)return;
-  var pr=b.session===30?p.price30:p.price60;
-  if(S.user){
-    await sb.from('bookings').insert({user_id:S.user.id,provider_name:p.name,session_type:b.session===30?'30min':'60min',session_date:new Date(b.date).toISOString().split('T')[0],session_time:b.time,amount_cents:pr*100,platform_fee_cents:Math.round(pr*25),status:'confirmed'});
+
+async function pickDate(el,d,dow,iso){
+  S.booking.date=d;S.booking.dateIso=iso;S.booking.time=null;
+  var opts=document.querySelectorAll('.date-opt');for(var i=0;i<opts.length;i++)opts[i].classList.remove('sel');el.classList.add('sel');
+
+  // Load booked slots for this date
+  var bookings = await sb.from('bookings').select('session_time').eq('provider_name',selectedProvider.name).eq('session_date',iso).neq('status','cancelled');
+  bookedSlots = {};
+  if(bookings.data) bookings.data.forEach(function(b){bookedSlots[b.session_time]=true});
+
+  // Generate time slots from availability
+  var avail = providerAvailability[dow];
+  var grid = document.getElementById('timeGrid');
+  if(!avail){grid.innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray-light);font-size:13px">No availability on this day</div>';return}
+
+  var slots=[];
+  var start=parseInt(avail.start_time.split(':')[0]),end=parseInt(avail.end_time.split(':')[0]);
+  var slotMin=avail.slot_minutes||30;
+  for(var h=start;h<end;h++){
+    for(var m=0;m<60;m+=slotMin){
+      var hh=h,ampm='AM';
+      if(hh>=12){ampm='PM';if(hh>12)hh-=12}
+      if(hh===0)hh=12;
+      var mm=m<10?'0'+m:''+m;
+      var label=hh+':'+mm+' '+ampm;
+      var key24=(h<10?'0':'')+h+':'+mm;
+      var isBooked=bookedSlots[label]||bookedSlots[key24];
+      slots.push({label:label,booked:isBooked});
+    }
   }
-  var ds=new Date(b.date).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-  document.getElementById('bookSection').innerHTML='<div class="book-confirm"><div class="book-confirm-check"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#5C7F60" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><h2>You\'re booked!</h2><p>Your session with '+esc(p.name)+' has been confirmed.</p><div class="book-confirm-details"><div class="book-confirm-row"><span>Provider</span><span>'+esc(p.name)+', '+p.creds.join(', ')+'</span></div><div class="book-confirm-row"><span>Date</span><span>'+ds+'</span></div><div class="book-confirm-row"><span>Time</span><span>'+b.time+'</span></div><div class="book-confirm-row"><span>Duration</span><span>'+b.session+' min</span></div><div class="book-confirm-row"><span>Total</span><span style="color:var(--sage-dark)">$'+pr+'</span></div></div><button style="width:100%;padding:14px;border-radius:14px;border:2px solid var(--sage);background:white;color:var(--sage);font-size:15px;font-weight:700;cursor:pointer;margin-top:20px" onclick="renderProvider()">Book Another Session</button></div>';
-  document.getElementById('mainScroll').scrollTop=0;showToast('Session booked!')
+
+  var th='';
+  slots.forEach(function(s){
+    if(s.booked){
+      th+='<div class="time-opt booked" style="opacity:0.4;pointer-events:none;text-decoration:line-through">'+s.label+'</div>';
+    } else {
+      th+='<div class="time-opt" onclick="pickTime(this,\''+s.label+'\')">'+s.label+'</div>';
+    }
+  });
+  grid.innerHTML=th||'<div style="text-align:center;padding:20px;color:var(--warm-gray-light);font-size:13px">No available times</div>';
+  updateBooking();
 }
 
+function pickTime(el,t){S.booking.time=t;var opts=document.querySelectorAll('.time-opt');for(var i=0;i<opts.length;i++)opts[i].classList.remove('sel');el.classList.add('sel');updateBooking()}
+
+function updateBooking(){var b=S.booking,p=selectedProvider;if(!p)return;var ready=b.session&&b.date&&b.time,btn=document.getElementById('bookBtn'),total=document.getElementById('bookTotal');if(b.session){var pr=b.session===30?p.price30:p.price60;total.style.display='flex';document.getElementById('bookTotalPrice').textContent='$'+pr}if(ready){btn.disabled=false;btn.textContent='Book '+b.session+'-min Session \u2014 $'+(b.session===30?p.price30:p.price60)}else{btn.disabled=true;btn.textContent=b.session?'Select date and time':'Select session details'}}
+
+async function confirmBooking(){
+  var b=S.booking,p=selectedProvider;if(!p)return;
+  if(!S.user){showAuth(true);return}
+  var pr=b.session===30?p.price30:p.price60;
+  var btn=document.getElementById('bookBtn');
+  btn.disabled=true;btn.textContent='Booking...';
+
+  var bookingData={
+    user_id:S.user.id,
+    provider_name:p.name,
+    session_type:b.session===30?'30min':'60min',
+    session_date:b.dateIso||new Date(b.date).toISOString().split('T')[0],
+    session_time:b.time,
+    amount_cents:pr*100,
+    platform_fee_cents:Math.round(pr*25),
+    status:'confirmed',
+    confirmation_sent:false
+  };
+
+  var r=await sb.from('bookings').insert(bookingData).select().single();
+  if(r.error){showToast('Error booking. Try again.');btn.disabled=false;btn.textContent='Try Again';return}
+
+  // Send confirmation email
+  sendBookingEmail(r.data.id, S.user.email, S.name||'there', p.name, b.session, b.date, b.time, pr);
+
+  var ds=new Date(b.date).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  document.getElementById('bookSection').innerHTML='<div class="book-confirm"><div class="book-confirm-check"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#5C7F60" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><h2>You\'re booked!</h2><p>Your session with '+esc(p.name)+' has been confirmed.</p><div class="book-confirm-details"><div class="book-confirm-row"><span>Provider</span><span>'+esc(p.name)+', '+p.creds.join(', ')+'</span></div><div class="book-confirm-row"><span>Date</span><span>'+ds+'</span></div><div class="book-confirm-row"><span>Time</span><span>'+b.time+'</span></div><div class="book-confirm-row"><span>Duration</span><span>'+b.session+' min</span></div><div class="book-confirm-row"><span>Total</span><span style="color:var(--sage-dark)">$'+pr+'</span></div></div><div style="font-size:13px;color:var(--warm-gray);text-align:center;margin-top:12px">A confirmation email has been sent to '+esc(S.user.email)+'</div><div style="display:flex;gap:8px;margin-top:20px"><button class="book-btn" style="flex:1" onclick="renderProvider()">Done</button><button style="flex:1;padding:14px;border-radius:14px;border:2px solid var(--terracotta);background:white;color:var(--terracotta);font-size:15px;font-weight:700;cursor:pointer" onclick="cancelBookingPrompt(\''+r.data.id+'\')">Cancel Booking</button></div></div>';
+  document.getElementById('mainScroll').scrollTop=0;showToast('Session booked!');
+}
+
+async function sendBookingEmail(bookingId, email, name, provider, duration, dateStr, time, price){
+  try{
+    var ds=new Date(dateStr).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+    var html='<div style="max-width:500px;margin:0 auto;font-family:-apple-system,sans-serif;background:#FDF8F0;padding:40px 32px;border-radius:16px"><div style="text-align:center;margin-bottom:24px"><div style="display:inline-block;width:48px;height:48px;border-radius:12px;background:#7A9E7E;line-height:48px;text-align:center"><span style="color:white;font-size:20px">\u2713</span></div><h1 style="font-size:24px;font-weight:800;margin:12px 0 0;color:#2D2D2D">Session Confirmed!</h1></div><p style="font-size:15px;color:#4A4540;line-height:1.6;text-align:center">Hi '+esc(name)+', your session is booked.</p><div style="background:white;border-radius:14px;padding:20px;margin:20px 0;border:1px solid #E8DDD0"><table style="width:100%;font-size:14px;border-collapse:collapse"><tr><td style="padding:8px 0;color:#706B65">Provider</td><td style="padding:8px 0;text-align:right;font-weight:700">'+esc(provider)+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Date</td><td style="padding:8px 0;text-align:right;font-weight:700">'+ds+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Time</td><td style="padding:8px 0;text-align:right;font-weight:700">'+time+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Duration</td><td style="padding:8px 0;text-align:right;font-weight:700">'+duration+' min</td></tr><tr style="border-top:1px solid #E8DDD0"><td style="padding:12px 0 0;color:#706B65;font-weight:700">Total</td><td style="padding:12px 0 0;text-align:right;font-weight:800;color:#5C7F60;font-size:18px">$'+price+'</td></tr></table></div><p style="font-size:12px;color:#706B65;text-align:center;margin-top:24px">Need to cancel or reschedule? Open the app at modernvillage.app</p><p style="font-size:11px;color:#706B65;text-align:center;margin-top:16px">Modern Village LLC \u2014 ABA-powered parenting support</p></div>';
+
+    await fetch(API_URL+'email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:email,subject:'Session Confirmed \u2014 '+provider+' on '+ds,html:html})}).catch(function(){});
+
+    await sb.from('bookings').update({confirmation_sent:true}).eq('id',bookingId);
+  }catch(e){console.log('Email send failed',e)}
+}
+
+// ═══ MY BOOKINGS & CANCELLATION ═══
+async function loadMyBookings(){
+  if(!S.user||!sb) return;
+  var r=await sb.from('bookings').select('*').eq('user_id',S.user.id).neq('status','cancelled').order('session_date',{ascending:true});
+  var el=document.getElementById('myBookings');
+  if(!el) return;
+  var upcoming=(r.data||[]).filter(function(b){return new Date(b.session_date+'T23:59:59')>=new Date()});
+  if(!upcoming.length){el.innerHTML='';return}
+
+  var h='<div style="margin-top:24px;margin-bottom:16px"><div style="font-family:Fraunces,serif;font-size:20px;font-weight:800;margin-bottom:4px">Your Upcoming Sessions</div></div>';
+  upcoming.forEach(function(b){
+    var d=new Date(b.session_date+'T12:00:00');
+    var ds=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    h+='<div style="background:white;border-radius:16px;padding:18px;border:1px solid var(--sand);margin-bottom:10px;display:flex;align-items:center;gap:14px">';
+    h+='<div style="width:50px;text-align:center"><div style="font-size:22px;font-weight:800;color:var(--sage-dark)">'+d.getDate()+'</div><div style="font-size:11px;color:var(--warm-gray);text-transform:uppercase">'+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+'</div></div>';
+    h+='<div style="flex:1"><div style="font-weight:700;font-size:14px">'+esc(b.provider_name)+'</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">'+ds+' at '+b.session_time+' \u00b7 '+b.session_type+'</div></div>';
+    h+='<div style="display:flex;gap:6px"><button style="padding:6px 12px;border-radius:8px;border:1.5px solid var(--sage);background:white;color:var(--sage-dark);font-size:11px;font-weight:700;cursor:pointer" onclick="rescheduleBooking(\''+b.id+'\')">Reschedule</button>';
+    h+='<button style="padding:6px 12px;border-radius:8px;border:1.5px solid var(--terracotta);background:white;color:var(--terracotta);font-size:11px;font-weight:700;cursor:pointer" onclick="cancelBookingPrompt(\''+b.id+'\')">Cancel</button></div></div>';
+  });
+  el.innerHTML=h;
+}
+
+function cancelBookingPrompt(bookingId){
+  var h='<div style="position:fixed;inset:0;z-index:250;background:rgba(0,0,0,0.4);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px" id="cancelModal"><div style="background:white;border-radius:20px;padding:28px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.15)">';
+  h+='<div style="font-family:Fraunces,serif;font-size:20px;font-weight:800;margin-bottom:8px">Cancel Session?</div>';
+  h+='<div style="font-size:14px;color:var(--warm-gray);margin-bottom:16px;line-height:1.5">Are you sure? If you need to change the date or time, you can reschedule instead.</div>';
+  h+='<div style="margin-bottom:16px"><label class="fl">Reason (optional)</label><select class="fi" id="cancelReason"><option value="">Select reason</option><option>Schedule conflict</option><option>No longer need</option><option>Financial reasons</option><option>Found another provider</option><option>Other</option></select></div>';
+  h+='<div style="display:flex;gap:8px"><button class="btn btn-p" style="flex:1;background:var(--terracotta);border-color:var(--terracotta)" onclick="doCancelBooking(\''+bookingId+'\')">Yes, Cancel</button><button class="btn btn-outline" style="flex:1" onclick="document.getElementById(\'cancelModal\').remove()">Keep Session</button></div>';
+  h+='</div></div>';
+  document.body.insertAdjacentHTML('beforeend',h);
+}
+
+async function doCancelBooking(bookingId){
+  var reason=document.getElementById('cancelReason')?document.getElementById('cancelReason').value:'';
+  await sb.from('bookings').update({status:'cancelled',cancelled_at:new Date().toISOString(),cancel_reason:reason||null}).eq('id',bookingId);
+  document.getElementById('cancelModal').remove();
+  showToast('Session cancelled');
+  renderProvider();
+}
+
+async function rescheduleBooking(bookingId){
+  // Cancel old booking and start new one
+  await sb.from('bookings').update({status:'cancelled',cancelled_at:new Date().toISOString(),cancel_reason:'Rescheduled'}).eq('id',bookingId);
+  showToast('Select your new date and time');
+  // Open provider booking flow
+  if(selectedProvider){
+    selectProvider(selectedProvider.id);
+  } else {
+    var p=PROVIDERS.find(function(pv){return pv.active});
+    if(p) selectProvider(p.id);
+  }
+}
 // ═══ COMMUNITY ═══
 function renderTopics(){var h='';for(var i=0;i<TOPICS.length;i++){var t=TOPICS[i];h+='<button class="tp '+(S.topic===t?'on':'')+'" onclick="selectTopic(\''+t+'\')">'+t+'</button>'}document.getElementById('topicPills').innerHTML=h}
 function selectTopic(t){S.topic=t;renderTopics();renderCommunityPosts()}
