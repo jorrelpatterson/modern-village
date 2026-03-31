@@ -614,7 +614,7 @@ function updateSubSt(){
 }
 
 // ═══ TAB SWITCHING ═══
-function switchTab(t){S.tab=t;var tabs=document.querySelectorAll('.tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('on');var m={coach:'tCoach',pros:'tPros',community:'tComm',track:'tTrack'};document.getElementById(m[t]).classList.add('on');var btns=document.querySelectorAll('.nb');for(var i=0;i<btns.length;i++){var b=btns[i],a=b.getAttribute('data-t')===t;b.classList.toggle('on',a);var s=b.querySelector('svg'),d=b.querySelector('.ndot');if(a){if(!d){d=document.createElement('div');d.className='ndot';b.appendChild(d)}s.setAttribute('stroke',t==='coach'?'none':'#7A9E7E');if(t==='coach')s.setAttribute('fill','#7A9E7E')}else{if(d)d.remove();s.setAttribute('stroke','#9E9790');s.setAttribute('fill','none')}}document.getElementById('chatBar').style.display=t==='coach'?'block':'none';document.getElementById('mainScroll').scrollTop=0;if(t==='track')loadBehaviorLogs()}
+function switchTab(t){S.tab=t;var tabs=document.querySelectorAll('.tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('on');var m={coach:'tCoach',pros:'tPros',community:'tComm',track:'tTrack'};document.getElementById(m[t]).classList.add('on');var btns=document.querySelectorAll('.nb');for(var i=0;i<btns.length;i++){var b=btns[i],a=b.getAttribute('data-t')===t;b.classList.toggle('on',a);var s=b.querySelector('svg'),d=b.querySelector('.ndot');if(a){if(!d){d=document.createElement('div');d.className='ndot';b.appendChild(d)}s.setAttribute('stroke',t==='coach'?'none':'#7A9E7E');if(t==='coach')s.setAttribute('fill','#7A9E7E')}else{if(d)d.remove();s.setAttribute('stroke','#9E9790');s.setAttribute('fill','none')}}document.getElementById('chatBar').style.display=t==='coach'?'block':'none';document.getElementById('mainScroll').scrollTop=0;if(t==='track')loadLogs()}
 
 // ═══ AI COACH ═══
 function updateFreeCtr(){var el=document.getElementById('freeCtr');if(S.subscribed){el.style.display='none';return}el.style.display='inline-block';var l=S.freeLimit-S.freeUsed;el.innerHTML='<strong>'+l+'</strong> free card'+(l!==1?'s':'')+' left'}
@@ -738,60 +738,52 @@ function renderCommunityPosts(){var filtered=[];for(var i=0;i<POSTS_DATA.length;
 function closeOverlay(id){document.getElementById(id).classList.remove('open')}
 
 // ═══ BEHAVIOR TRACKER ═══
-var trackerState = {intensity:null, outcome:null};
+var trackerState = {outcome:null};
 
 function openTracker(){
   if(!S.user){showAuth(true);return}
-  document.getElementById('trackerPage').classList.add('open');
   loadLogs();
-}
-
-function pickIntensity(el, val){
-  trackerState.intensity = val;
-  var btns = el.parentElement.querySelectorAll('.tf-int-btn');
-  for(var i=0;i<btns.length;i++) btns[i].className='tf-int-btn';
-  el.classList.add('sel-'+val);
 }
 
 function pickOutcome(el, val){
   trackerState.outcome = val;
-  var btns = el.parentElement.querySelectorAll('.tf-out-btn');
-  for(var i=0;i<btns.length;i++) btns[i].className='tf-out-btn';
-  el.classList.add('sel');
+  var btns = el.parentElement.querySelectorAll('.chip');
+  for(var i=0;i<btns.length;i++) btns[i].classList.remove('on');
+  el.classList.add('on');
 }
 
-async function submitLog(){
-  var behavior = document.getElementById('tfBehavior').value.trim();
+async function logBehavior(){
+  if(!S.user){showAuth(true);return}
+  var behavior = document.getElementById('trBehavior').value.trim();
   if(!behavior){showToast('Describe what happened');return}
-  var btn = document.getElementById('logBtn');
+  var btn = document.querySelector('#trackForm .btn-p');
   btn.disabled=true; btn.textContent='Saving...';
 
   var log = {
     user_id: S.user.id,
     behavior: behavior,
-    trigger_desc: document.getElementById('tfTrigger').value.trim()||null,
-    duration_minutes: parseInt(document.getElementById('tfDuration').value)||null,
-    intensity: trackerState.intensity,
-    location: document.getElementById('tfLocation').value.trim()||null,
-    strategy_used: document.getElementById('tfStrategy').value.trim()||null,
+    trigger_desc: document.getElementById('trTrigger').value.trim()||null,
+    duration_minutes: parseInt(document.getElementById('trDuration').value)||null,
+    intensity: document.getElementById('trIntensity').value||null,
+    location: document.getElementById('trLocation').value.trim()||null,
+    strategy_used: document.getElementById('trStrategy').value.trim()||null,
     outcome: trackerState.outcome,
-    notes: document.getElementById('tfNotes').value.trim()||null
+    notes: document.getElementById('trNotes').value.trim()||null
   };
 
   var r = await sb.from('behavior_logs').insert(log);
   if(!r.error){
     showToast('Behavior logged!');
-    document.getElementById('tfBehavior').value='';
-    document.getElementById('tfTrigger').value='';
-    document.getElementById('tfDuration').value='';
-    document.getElementById('tfLocation').value='';
-    document.getElementById('tfStrategy').value='';
-    document.getElementById('tfNotes').value='';
-    trackerState = {intensity:null, outcome:null};
-    var intBtns = document.querySelectorAll('.tf-int-btn');
-    for(var i=0;i<intBtns.length;i++) intBtns[i].className='tf-int-btn';
-    var outBtns = document.querySelectorAll('.tf-out-btn');
-    for(var i=0;i<outBtns.length;i++) outBtns[i].className='tf-out-btn';
+    document.getElementById('trBehavior').value='';
+    document.getElementById('trTrigger').value='';
+    document.getElementById('trDuration').value='';
+    document.getElementById('trIntensity').value='';
+    document.getElementById('trLocation').value='';
+    document.getElementById('trStrategy').value='';
+    document.getElementById('trNotes').value='';
+    trackerState = {outcome:null};
+    var outBtns = document.querySelectorAll('[data-outcome]');
+    for(var i=0;i<outBtns.length;i++) outBtns[i].classList.remove('on');
     loadLogs();
   } else { showToast('Error saving log'); }
   btn.disabled=false; btn.textContent='Log Behavior';
@@ -800,7 +792,7 @@ async function submitLog(){
 async function loadLogs(){
   if(!S.user)return;
   var r = await sb.from('behavior_logs').select('*').eq('user_id',S.user.id).order('logged_at',{ascending:false}).limit(20);
-  var el = document.getElementById('logsList');
+  var el = document.getElementById('trackLogs');
   if(!r.data||r.data.length===0){
     el.innerHTML='<div class="log-empty"><div class="log-empty-icon">\ud83d\udcdd</div><div style="font-size:15px;font-weight:600;margin-bottom:4px">No logs yet</div><div style="font-size:13px">Start logging behaviors to see patterns over time</div></div>';
     return;
