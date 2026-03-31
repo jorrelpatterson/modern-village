@@ -721,21 +721,60 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
           <div id="profAvatar" style="width:72px;height:72px;border-radius:50%;background:var(--terracotta);display:flex;align-items:center;justify-content:center;color:white;font-size:28px;font-weight:800;margin:0 auto 12px">?</div>
           <div id="profEmail" style="font-size:14px;color:var(--warm-gray)"></div>
         </div>
-        <div style="background:white;border-radius:20px;padding:24px;border:1px solid var(--sand);margin-bottom:20px">
-          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:16px">Your Info</div>
+
+        <!-- Parent Info -->
+        <div style="background:white;border-radius:20px;padding:24px;border:1px solid var(--sand);margin-bottom:16px">
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:16px">About You</div>
           <div style="margin-bottom:14px"><label class="fl">Your name</label><input id="profName" class="fi" placeholder="Your name"></div>
+          <div style="display:flex;gap:12px;margin-bottom:14px">
+            <div style="flex:1"><label class="fl">Phone</label><input id="profPhone" class="fi" type="tel" placeholder="(555) 123-4567"></div>
+            <div style="flex:1"><label class="fl">Zip code</label><input id="profZip" class="fi" placeholder="91766" maxlength="5"></div>
+          </div>
+          <div style="margin-bottom:14px"><label class="fl">Relationship to child</label><select id="profRelationship" class="fi"><option value="">Select</option><option>Mother</option><option>Father</option><option>Grandparent</option><option>Guardian</option><option>Foster Parent</option><option>Other</option></select></div>
+        </div>
+
+        <!-- Primary Child -->
+        <div style="background:white;border-radius:20px;padding:24px;border:1px solid var(--sand);margin-bottom:16px">
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:16px">Your Child</div>
           <div style="margin-bottom:14px"><label class="fl">Child's name</label><input id="profChild" class="fi" placeholder="Child's name"></div>
           <div style="display:flex;gap:12px;margin-bottom:14px">
-            <div style="flex:1"><label class="fl">Child's age</label><select id="profAge" class="fi"><option value="">Select</option><option>Under 2</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13-15</option><option>16-18</option></select></div>
-            <div style="flex:1"><label class="fl">Diagnosis</label><select id="profDx" class="fi"><option value="">None / unsure</option><option>Autism (ASD)</option><option>ADHD</option><option>Anxiety</option><option>ODD</option><option>Sensory Processing</option><option>Speech Delay</option><option>Other</option></select></div>
+            <div style="flex:1"><label class="fl">Birthday</label><input id="profBirthday" class="fi" type="date"></div>
+            <div style="flex:1"><label class="fl">Gender</label><select id="profGender" class="fi"><option value="">Select</option><option>Male</option><option>Female</option><option>Non-binary</option><option>Prefer not to say</option></select></div>
           </div>
-          <button class="btn btn-p" style="width:100%" onclick="saveProfile()">Save Changes</button>
+          <div id="profAgeDisplay" style="display:none;padding:10px 14px;background:var(--sage-light);border-radius:10px;font-size:13px;color:var(--sage-dark);font-weight:600;margin-bottom:14px"></div>
+          <div style="display:flex;gap:12px;margin-bottom:14px">
+            <div style="flex:1"><label class="fl">School</label><input id="profSchool" class="fi" placeholder="e.g. Lincoln Elementary"></div>
+            <div style="flex:1"><label class="fl">Grade</label><select id="profGrade" class="fi"><option value="">Select</option><option>Pre-K</option><option>Kindergarten</option><option>1st</option><option>2nd</option><option>3rd</option><option>4th</option><option>5th</option><option>6th</option><option>7th</option><option>8th</option><option>9th</option><option>10th</option><option>11th</option><option>12th</option><option>Not in school</option></select></div>
+          </div>
+          <div style="margin-bottom:14px"><label class="fl">Diagnosis (select all that apply)</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px" id="profDxChips"></div>
+          </div>
         </div>
-        <div style="background:white;border-radius:20px;padding:24px;border:1px solid var(--sand);margin-bottom:20px">
+
+        <!-- Goals -->
+        <div style="background:white;border-radius:20px;padding:24px;border:1px solid var(--sand);margin-bottom:16px">
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:4px">Your Goals</div>
+          <div style="font-size:13px;color:var(--warm-gray);margin-bottom:14px">What do you want to work on? (select all)</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px" id="profGoalChips"></div>
+        </div>
+
+        <!-- Insurance -->
+        <div style="background:white;border-radius:20px;padding:24px;border:1px solid var(--sand);margin-bottom:16px">
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:16px">Insurance (optional)</div>
+          <div style="font-size:13px;color:var(--warm-gray);margin-bottom:14px">For future insurance billing when available</div>
+          <div style="margin-bottom:14px"><label class="fl">Insurance provider</label><select id="profInsurance" class="fi"><option value="">Select</option><option>BlueCross BlueShield</option><option>Aetna</option><option>UnitedHealthcare</option><option>Cigna</option><option>Kaiser Permanente</option><option>Medicaid / Medi-Cal</option><option>Tricare</option><option>Other</option><option>No insurance</option></select></div>
+        </div>
+
+        <button class="btn btn-p" style="width:100%;padding:16px;font-size:16px;margin-bottom:16px" onclick="saveProfile()">Save Changes</button>
+
+        <!-- Subscription -->
+        <div style="background:white;border-radius:20px;padding:24px;border:1px solid var(--sand);margin-bottom:16px">
           <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:12px">Subscription</div>
           <div id="profSubStatus"></div>
         </div>
-        <div style="background:white;border-radius:20px;padding:24px;border:1px solid var(--sand)">
+
+        <!-- Account -->
+        <div style="background:white;border-radius:20px;padding:24px;border:1px solid var(--sand);margin-bottom:20px">
           <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:12px">Account</div>
           <div id="profAccountInfo" style="font-size:14px;color:var(--warm-gray);margin-bottom:16px"></div>
           <button class="btn" style="width:100%;border:2px solid var(--terracotta);color:var(--terracotta);background:white" onclick="logout()">Log Out</button>
@@ -1020,8 +1059,7 @@ function showPw(){document.getElementById('paywall').classList.remove('hidden');
 function dismissPw(){document.getElementById('paywall').classList.add('hidden');if(S.msgs.length)document.getElementById('chatMsgs').classList.remove('hidden');else document.getElementById('coachEmpty').classList.remove('hidden');document.getElementById('chatBar').style.display='block'}
 function subscribe(){S.subscribed=true;if(S.user)sb.from('profiles').update({subscription_status:'pro'}).eq('id',S.user.id);dismissPw();updateFreeCtr();updateSubSt();showToast('Subscribed! Unlimited coaching unlocked.')}
 
-function buildSys(){return 'You are Modern Village Coach, an AI behavior support assistant. A licensed BCBA oversees your clinical accuracy.\nCHILD PROFILE:\n'+(S.name?'- Parent: '+S.name+'\n':'')+(S.child?'- Child: '+S.child+'\n':'')+(S.age?'- Age: '+S.age+'\n':'')+(S.dx?'- Diagnosis: '+S.dx+'\n':'')+(S.focuses.length?'- Focus: '+S.focuses.join(', ')+'\n':'')+'\nFORMAT:\n[EMPATHY] 1-2 warm sentences. Use names. [/EMPATHY]\n[ASSESSMENT] Brief ABA assessment. 2-3 sentences. [/ASSESSMENT]\n[STRATEGY] 3 numbered steps. Bold title: explanation with "quoted scripts". [/STRATEGY]\n[REINFORCE] One reinforcement tip with exact words. [/REINFORCE]\n[FOLLOWUP] 2 questions separated by |. Under 10 words each. [/FOLLOWUP]\n\nRULES: Always use markers. Adapt to age/diagnosis. Never diagnose. For crisis: 988/911 + book a Pro session.'}
-
+function buildSys(){var p=S.profile||{};var goals=p.goals&&p.goals.length?p.goals.join(', '):'';return 'You are Modern Village Coach, an AI behavior support assistant. A licensed BCBA oversees your clinical accuracy.\nCHILD PROFILE:\n'+(S.name?'- Parent: '+S.name+(p.parent_relationship?' ('+p.parent_relationship+')':'')+'\n':'')+(S.child?'- Child: '+S.child+'\n':'')+(S.age?'- Age: '+S.age+'\n':'')+(p.child_gender?'- Gender: '+p.child_gender+'\n':'')+(p.child_grade?'- Grade: '+p.child_grade+'\n':'')+(S.dx?'- Diagnosis: '+S.dx+'\n':'')+(goals?'- Goals: '+goals+'\n':'')+'\nFORMAT:\n[EMPATHY] 1-2 warm sentences. Use names. [/EMPATHY]\n[ASSESSMENT] Brief ABA assessment. 2-3 sentences. [/ASSESSMENT]\n[STRATEGY] 3 numbered steps. Bold title: explanation with "quoted scripts". [/STRATEGY]\n[REINFORCE] One reinforcement tip with exact words. [/REINFORCE]\n[FOLLOWUP] 2 questions separated by |. Under 10 words each. [/FOLLOWUP]\n\nRULES: Always use markers. Adapt to age/diagnosis/goals. Never diagnose. For crisis: 988/911 + book a Pro session.'}
 function parseResp(text){var s={},markers=['EMPATHY','ASSESSMENT','STRATEGY','REINFORCE','FOLLOWUP'];for(var i=0;i<markers.length;i++){var m=markers[i],re=new RegExp('\\['+m+'\\]([\\s\\S]*?)\\[\\/'+m+'\\]','i'),x=text.match(re);if(x)s[m.toLowerCase()]=x[1].trim()}if(!s.empathy&&!s.strategy)s.plain=text;return s}
 function parseSteps(text){var lines=text.split('\n').filter(function(l){return l.trim()}),steps=[];for(var i=0;i<lines.length;i++){var l=lines[i],m=l.match(/^\d+[\.\)]\s*\*?\*?(.+?)\*?\*?:\s*(.+)/);if(m)steps.push({t:m[1].replace(/\*/g,'').trim(),b:m[2].trim()});else if(l.match(/^\d+[\.\)]/))steps.push({t:'',b:l.replace(/^\d+[\.\)]\s*/,'').trim()})}return steps.length?steps:[{t:'',b:text}]}
 
@@ -2132,16 +2170,97 @@ async function loadProgress(){
 }
 
 // ═══ PROFILE ═══
+var DIAGNOSES = ['Autism (ASD)','ADHD','Anxiety','ODD','Sensory Processing','Speech Delay','Developmental Delay','Down Syndrome','Learning Disability','Other'];
+var GOALS = ['Reduce meltdowns','Build daily routines','Improve social skills','Manage transitions','Improve communication','Reduce aggression','Potty training','Sleep issues','School readiness','Self-regulation','Feeding challenges','Sibling relationships'];
+var profSelectedDx = [];
+var profSelectedGoals = [];
+
+function calcAge(birthday){
+  if(!birthday)return '';
+  var b=new Date(birthday);
+  var now=new Date();
+  var years=now.getFullYear()-b.getFullYear();
+  var m=now.getMonth()-b.getMonth();
+  if(m<0||(m===0&&now.getDate()<b.getDate()))years--;
+  if(years<1){var months=Math.max(0,(now.getFullYear()-b.getFullYear())*12+now.getMonth()-b.getMonth());return months+' month'+(months!==1?'s':'');}
+  return years+' year'+(years!==1?'s':'');
+}
+
+function renderDxChips(){
+  var h='';
+  DIAGNOSES.forEach(function(d){
+    var sel=profSelectedDx.indexOf(d)!==-1;
+    h+='<button class="chip'+(sel?' on':'')+'" onclick="toggleProfDx(\''+d.replace(/'/g,"\\'")+'\')">'+d+'</button>';
+  });
+  document.getElementById('profDxChips').innerHTML=h;
+}
+
+function toggleProfDx(d){
+  var idx=profSelectedDx.indexOf(d);
+  if(idx===-1)profSelectedDx.push(d);else profSelectedDx.splice(idx,1);
+  renderDxChips();
+}
+
+function renderGoalChips(){
+  var h='';
+  GOALS.forEach(function(g){
+    var sel=profSelectedGoals.indexOf(g)!==-1;
+    h+='<button class="chip'+(sel?' on':'')+'" onclick="toggleProfGoal(\''+g.replace(/'/g,"\\'")+'\')">'+g+'</button>';
+  });
+  document.getElementById('profGoalChips').innerHTML=h;
+}
+
+function toggleProfGoal(g){
+  var idx=profSelectedGoals.indexOf(g);
+  if(idx===-1)profSelectedGoals.push(g);else profSelectedGoals.splice(idx,1);
+  renderGoalChips();
+}
+
 function openProfile(){
   if(!S.user){showAuth(true);return}
   closeSb();
   document.getElementById('profilePage').classList.add('open');
   document.getElementById('profAvatar').textContent = S.name ? S.name[0].toUpperCase() : (S.user.email[0].toUpperCase());
   document.getElementById('profEmail').textContent = S.user.email;
+
+  // Populate fields from state
   document.getElementById('profName').value = S.name || '';
+  document.getElementById('profPhone').value = S.profile&&S.profile.phone || '';
+  document.getElementById('profZip').value = S.profile&&S.profile.zip_code || '';
+  document.getElementById('profRelationship').value = S.profile&&S.profile.parent_relationship || '';
   document.getElementById('profChild').value = S.child || '';
-  document.getElementById('profAge').value = S.age || '';
-  document.getElementById('profDx').value = S.dx || '';
+  document.getElementById('profBirthday').value = S.profile&&S.profile.child_birthday || '';
+  document.getElementById('profGender').value = S.profile&&S.profile.child_gender || '';
+  document.getElementById('profSchool').value = S.profile&&S.profile.child_school || '';
+  document.getElementById('profGrade').value = S.profile&&S.profile.child_grade || '';
+  document.getElementById('profInsurance').value = S.profile&&S.profile.insurance_provider || '';
+
+  // Show calculated age if birthday is set
+  var bday = document.getElementById('profBirthday').value;
+  var ageDisplay = document.getElementById('profAgeDisplay');
+  if(bday){var ageStr=calcAge(bday);ageDisplay.textContent='Age: '+ageStr;ageDisplay.style.display='block'}
+  else{ageDisplay.style.display='none'}
+
+  // Birthday change listener
+  document.getElementById('profBirthday').onchange=function(){
+    var v=this.value;
+    if(v){ageDisplay.textContent='Age: '+calcAge(v);ageDisplay.style.display='block'}
+    else{ageDisplay.style.display='none'}
+  };
+
+  // Diagnosis chips
+  profSelectedDx = S.dx ? (Array.isArray(S.dx) ? S.dx.slice() : [S.dx]) : [];
+  if(S.profile&&S.profile.diagnosis){
+    if(typeof S.profile.diagnosis==='string'&&S.profile.diagnosis)profSelectedDx=[S.profile.diagnosis];
+    if(Array.isArray(S.profile.diagnosis))profSelectedDx=S.profile.diagnosis.slice();
+  }
+  renderDxChips();
+
+  // Goal chips
+  profSelectedGoals = S.profile&&S.profile.goals ? S.profile.goals.slice() : [];
+  renderGoalChips();
+
+  // Subscription
   var subEl = document.getElementById('profSubStatus');
   if(S.subscribed){
     subEl.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:14px;background:var(--sage-light);border-radius:12px"><div style="width:10px;height:10px;border-radius:50%;background:var(--sage)"></div><div><div style="font-weight:700;color:var(--sage-dark)">Coach Pro \u2014 Active</div><div style="font-size:13px;color:var(--warm-gray)">$19.99/month \u2022 Unlimited coaching</div></div></div>';
@@ -2155,19 +2274,44 @@ function openProfile(){
 async function saveProfile(){
   var name = document.getElementById('profName').value.trim();
   var child = document.getElementById('profChild').value.trim();
-  var age = document.getElementById('profAge').value;
-  var dx = document.getElementById('profDx').value;
-  var r = await sb.from('profiles').update({name:name||null,child_name:child||null,child_age:age||null,diagnosis:dx||null,updated_at:new Date().toISOString()}).eq('id',S.user.id);
+  var birthday = document.getElementById('profBirthday').value || null;
+  var age = birthday ? calcAge(birthday) : '';
+  var dxStr = profSelectedDx.length ? profSelectedDx.join(', ') : null;
+
+  var updateData = {
+    name: name || null,
+    child_name: child || null,
+    child_birthday: birthday,
+    child_age: age || null,
+    child_gender: document.getElementById('profGender').value || null,
+    child_school: document.getElementById('profSchool').value.trim() || null,
+    child_grade: document.getElementById('profGrade').value || null,
+    diagnosis: dxStr,
+    parent_relationship: document.getElementById('profRelationship').value || null,
+    phone: document.getElementById('profPhone').value.trim() || null,
+    zip_code: document.getElementById('profZip').value.trim() || null,
+    insurance_provider: document.getElementById('profInsurance').value || null,
+    goals: profSelectedGoals.length ? profSelectedGoals : null,
+    updated_at: new Date().toISOString()
+  };
+
+  var r = await sb.from('profiles').update(updateData).eq('id', S.user.id);
   if(!r.error){
-    S.name=name;S.child=child;S.age=age;S.dx=dx;
+    S.name=name; S.child=child; S.age=age; S.dx=dxStr;
+    // Reload profile to get updated data
+    await loadProfile();
     var initial=S.name?S.name[0].toUpperCase():S.user.email[0].toUpperCase();
     document.getElementById('hdrAv').textContent=initial;
     document.getElementById('commAv').textContent=initial;
     document.getElementById('profAvatar').textContent=initial;
-    if(S.child){var p=document.getElementById('ceProfile');p.classList.remove('hidden');p.innerHTML='Coaching for <strong>'+S.child+'</strong>'+(S.age?' \u00b7 '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'')}
+    if(S.child){
+      var p=document.getElementById('ceProfile');
+      p.classList.remove('hidden');
+      p.innerHTML='Coaching for <strong>'+S.child+'</strong>'+(S.age?' \u00b7 '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'');
+    }
     renderSb();
-    showToast('Profile updated!');
-  } else { showToast('Error saving'); }
+    showToast('Profile saved!');
+  } else { showToast('Error saving profile'); }
 }
 </script>
 </body>
