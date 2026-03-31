@@ -887,10 +887,10 @@ async function handleAuth(){
       result=await sb.auth.signUp({email:email,password:pass});
       if(result.error)throw result.error;
       S.user=result.data.user;
-      // Update profile with name
+      // Update profile with name and email
       var name=document.getElementById('authName').value.trim();
-      if(name&&S.user){
-        await sb.from('profiles').update({name:name}).eq('id',S.user.id);
+      if(S.user){
+        await sb.from('profiles').update({name:name||null,email:email}).eq('id',S.user.id);
         S.name=name;
       }
       closeAuth();
@@ -899,6 +899,7 @@ async function handleAuth(){
       result=await sb.auth.signInWithPassword({email:email,password:pass});
       if(result.error)throw result.error;
       S.user=result.data.user;
+      await sb.from('profiles').update({email:email}).eq('id',S.user.id);
       await loadProfile();
       closeAuth();
       enterApp();
