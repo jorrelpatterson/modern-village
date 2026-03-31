@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<title>Modern Village — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,100..900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{--cream:#FDF8F0;--sage:#7A9E7E;--sage-dark:#5C7F60;--sage-light:#E8F0E8;--terracotta:#C4745A;--terracotta-light:#F5E6E0;--sand:#E8DDD0;--sand-dark:#C4B8A8;--charcoal:#2D2D2D;--warm-gray:#4A4540;--warm-gray-light:#706B65;--blush:#F0D5C8;--lavender:#D4C8E8;--sunflower:#E8C84A;--sky:#D0E4F0;--sky-dark:#6BA3C7;color-scheme:light}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',sans-serif;background:#F0EBE3;color:var(--charcoal);min-height:100vh}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* Login */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{background:white;border-radius:24px;padding:48px 36px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.08);text-align:center}
+.login-box h1{font-family:'Fraunces',serif;font-size:28px;font-weight:800;margin-bottom:8px}
+.login-box p{color:var(--warm-gray);font-size:14px;margin-bottom:24px}
+.login-input{width:100%;padding:14px 18px;border:2px solid var(--sand);border-radius:12px;font-size:16px;font-family:'DM Sans',sans-serif;margin-bottom:12px;text-align:center;letter-spacing:2px}
+.login-input:focus{outline:none;border-color:var(--sage)}
+.login-btn{width:100%;padding:14px;border:none;border-radius:12px;background:var(--sage);color:white;font-size:16px;font-weight:700;cursor:pointer}
+.login-err{color:var(--terracotta);font-size:13px;margin-top:8px;display:none}
+
+/* Layout */
+.layout{display:flex;min-height:100vh}
+.sidebar{width:240px;background:white;border-right:1px solid var(--sand);padding:20px 0;position:fixed;height:100vh;overflow-y:auto;flex-shrink:0}
+.main{margin-left:240px;flex:1;padding:28px;min-height:100vh}
+.sb-logo{padding:0 20px 20px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--sand)}
+.sb-logo-icon{width:32px;height:32px;border-radius:8px;background:var(--sage);display:flex;align-items:center;justify-content:center}
+.sb-logo-text{font-family:'Fraunces',serif;font-size:17px;font-weight:800}.sb-logo-text span{font-weight:400;font-style:italic;opacity:0.6}
+.sb-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--warm-gray-light);padding:20px 20px 6px}
+.sb-item{padding:9px 20px;font-size:13px;font-weight:500;color:var(--warm-gray);cursor:pointer;display:flex;align-items:center;gap:8px;border-left:3px solid transparent;transition:all 0.15s}
+.sb-item:hover{background:var(--cream);color:var(--charcoal)}
+.sb-item.active{background:var(--sage-light);color:var(--sage-dark);font-weight:700;border-left-color:var(--sage)}
+.sb-item svg{width:16px;height:16px;flex-shrink:0}
+.sb-badge{margin-left:auto;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700;background:var(--terracotta);color:white}
+
+/* Page */
+.page{display:none}.page.active{display:block}
+.page-hdr{margin-bottom:24px;display:flex;justify-content:space-between;align-items:center}
+.page-hdr h1{font-family:'Fraunces',serif;font-size:24px;font-weight:800}
+.page-hdr p{color:var(--warm-gray);font-size:13px;margin-top:2px}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat{background:white;border-radius:14px;padding:18px 20px;border:1px solid var(--sand);animation:fadeUp 0.4s both}
+.stat:nth-child(1){animation-delay:0s}.stat:nth-child(2){animation-delay:0.05s}.stat:nth-child(3){animation-delay:0.1s}.stat:nth-child(4){animation-delay:0.15s}
+.stat-label{font-size:12px;color:var(--warm-gray-light);font-weight:600}
+.stat-val{font-family:'Fraunces',serif;font-size:28px;font-weight:800;margin-top:4px}
+.stat-change{font-size:11px;font-weight:700;margin-top:4px;display:inline-block;padding:2px 6px;border-radius:4px}
+.stat-up{color:var(--sage-dark);background:var(--sage-light)}
+.stat-down{color:var(--terracotta);background:var(--terracotta-light)}
+
+/* Panel */
+.panel{background:white;border-radius:14px;border:1px solid var(--sand);margin-bottom:20px;overflow:hidden}
+.panel-hdr{padding:16px 20px;border-bottom:1px solid var(--sand);display:flex;justify-content:space-between;align-items:center}
+.panel-title{font-family:'Fraunces',serif;font-size:16px;font-weight:800}
+.panel-body{padding:20px}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;font-weight:700;color:var(--warm-gray-light);text-transform:uppercase;letter-spacing:0.5px;padding:10px 14px;border-bottom:2px solid var(--sand)}
+.tbl td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--sand)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--cream)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
+.dot-green{background:#4CAF50}.dot-yellow{background:var(--sunflower)}.dot-gray{background:var(--sand-dark)}
+.tag{padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;display:inline-block}
+.tag-sage{background:var(--sage-light);color:var(--sage-dark)}
+.tag-yellow{background:rgba(232,200,74,0.2);color:#7A6A10}
+.tag-red{background:var(--terracotta-light);color:var(--terracotta)}
+.tag-blue{background:var(--sky);color:var(--sky-dark)}
+.tag-free{background:var(--cream);color:var(--warm-gray)}
+
+/* Bar chart */
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.bar-label{width:120px;font-size:12px;font-weight:600;text-align:right;flex-shrink:0}
+.bar-track{flex:1;height:24px;background:var(--cream);border-radius:6px;overflow:hidden}
+.bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:8px}
+.bar-fill span{font-size:11px;font-weight:700;color:white}
+
+/* Review card */
+.review{padding:16px;background:var(--cream);border-radius:12px;margin-bottom:12px}
+.review-q{font-size:12px;color:var(--warm-gray);margin-bottom:6px;font-style:italic}
+.review-a{font-size:13px;line-height:1.5;margin-bottom:8px}
+.review-actions{display:flex;gap:6px;flex-wrap:wrap}
+.review-btn{padding:5px 12px;border-radius:8px;font-size:11px;font-weight:700;border:1.5px solid var(--sand);background:white;cursor:pointer;transition:all 0.15s}
+.review-btn:hover{transform:translateY(-1px)}
+.review-btn.sel{border-color:var(--sage);background:var(--sage-light);color:var(--sage-dark)}
+
+/* Btn */
+.btn{padding:8px 18px;border-radius:10px;font-size:13px;font-weight:700;border:none;cursor:pointer;transition:all 0.2s}
+.btn-sage{background:var(--sage);color:white}.btn-sage:hover{opacity:0.9}
+.btn-outline{border:2px solid var(--sand);background:white;color:var(--charcoal)}.btn-outline:hover{border-color:var(--sage)}
+.btn-sm{padding:5px 12px;font-size:12px;border-radius:8px}
+
+/* Provider form */
+.form-row{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:600;color:var(--warm-gray);margin-bottom:4px;display:block}
+.form-input{width:100%;padding:10px 14px;border:2px solid var(--sand);border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif}
+.form-input:focus{outline:none;border-color:var(--sage)}
+
+/* Empty */
+.empty{text-align:center;padding:40px;color:var(--warm-gray-light)}
+.empty-icon{font-size:32px;margin-bottom:8px}
+
+/* Responsive */
+@media(max-width:800px){.sidebar{display:none}.main{margin-left:0}.stats{grid-template-columns:repeat(2,1fr)}}
+.hidden{display:none}
+</style>
+</head>
+<body>
+
+<!-- LOGIN GATE -->
+<div id="loginWrap" class="login-wrap">
+  <div class="login-box">
+    <div style="width:48px;height:48px;border-radius:14px;background:var(--sage);display:flex;align-items:center;justify-content:center;margin:0 auto 16px"><svg width="24" height="24" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 24C8 32 14 38 22 38C30 38 36 32 36 24C36 14 22 6 22 6Z" fill="white" opacity="0.9"/><circle cx="22" cy="24" r="4" fill="white"/></svg></div>
+    <h1>Admin Portal</h1>
+    <p>Modern Village management dashboard</p>
+    <input id="loginPass" class="login-input" type="password" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Enter</button>
+    <div id="loginErr" class="login-err">Incorrect password</div>
+  </div>
+</div>
+
+<!-- ADMIN LAYOUT -->
+<div id="adminLayout" class="layout hidden">
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-icon"><svg width="18" height="18" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 24C8 32 14 38 22 38C30 38 36 32 36 24C36 14 22 6 22 6Z" fill="white" opacity="0.9"/><circle cx="22" cy="24" r="4" fill="white"/></svg></div>
+      <div class="sb-logo-text">MV <span>Admin</span></div>
+    </div>
+    <div class="sb-label">Overview</div>
+    <div class="sb-item active" data-page="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</div>
+    <div class="sb-item" data-page="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Users<span class="sb-badge" id="userCount">0</span></div>
+    <div class="sb-label">Clinical</div>
+    <div class="sb-item" data-page="reviews"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>AI Accuracy Review</div>
+    <div class="sb-item" data-page="sessions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>Sessions</div>
+    <div class="sb-label">Platform</div>
+    <div class="sb-item" data-page="providers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Providers</div>
+    <div class="sb-item" data-page="community"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Community</div>
+    <div class="sb-label">Grants</div>
+    <div class="sb-item" data-page="grants"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Grant Reporting</div>
+    <div class="sb-item" data-page="behavior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>Behavior Data</div>
+  </aside>
+
+  <main class="main">
+    <!-- DASHBOARD -->
+    <div id="pgDashboard" class="page active">
+      <div class="page-hdr"><div><h1>Dashboard</h1><p>Real-time platform analytics</p></div><button class="btn btn-outline" onclick="refreshAll()">&#8635; Refresh</button></div>
+      <div class="stats" id="dashStats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="panel"><div class="panel-hdr"><div class="panel-title">Top AI Topics</div></div><div class="panel-body" id="dashTopics"></div></div>
+        <div class="panel"><div class="panel-hdr"><div class="panel-title">Recent Signups</div></div><div class="panel-body" id="dashRecent"></div></div>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div id="pgUsers" class="page">
+      <div class="page-hdr"><div><h1>Users</h1><p>All registered families</p></div></div>
+      <div class="stats" id="userStats"></div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">All Users</div></div><div class="panel-body"><table class="tbl" id="userTable"><thead><tr><th>Name</th><th>Email</th><th>Child</th><th>Age</th><th>Diagnosis</th><th>Plan</th><th>Messages</th><th>Joined</th></tr></thead><tbody id="userBody"></tbody></table></div></div>
+    </div>
+
+    <!-- AI REVIEWS -->
+    <div id="pgReviews" class="page">
+      <div class="page-hdr"><div><h1>AI Accuracy Review</h1><p>Review AI Coach responses for clinical accuracy</p></div></div>
+      <div class="stats" id="reviewStats"></div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">Conversations to Review</div></div><div class="panel-body" id="reviewList"></div></div>
+    </div>
+
+    <!-- SESSIONS -->
+    <div id="pgSessions" class="page">
+      <div class="page-hdr"><div><h1>Sessions</h1><p>All bookings with providers</p></div></div>
+      <div class="stats" id="sessionStats"></div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">Booking History</div></div><div class="panel-body"><table class="tbl"><thead><tr><th>Parent</th><th>Provider</th><th>Date</th><th>Time</th><th>Duration</th><th>Amount</th><th>Status</th></tr></thead><tbody id="sessionBody"></tbody></table></div></div>
+    </div>
+
+    <!-- PROVIDERS -->
+    <div id="pgProviders" class="page">
+      <div class="page-hdr"><div><h1>Provider Management</h1><p>Manage therapists and availability</p></div><button class="btn btn-sage" onclick="showAddProvider()">+ Add Provider</button></div>
+      <div id="providerList"></div>
+      <div id="addProviderForm" class="panel hidden">
+        <div class="panel-hdr"><div class="panel-title">Add New Provider</div></div>
+        <div class="panel-body">
+          <div class="form-row"><label class="form-label">Full Name</label><input id="pName" class="form-input" placeholder="e.g. Dr. Jane Smith"></div>
+          <div class="form-row"><label class="form-label">Credentials</label><input id="pCreds" class="form-input" placeholder="e.g. BCBA, LPC"></div>
+          <div class="form-row"><label class="form-label">Specialty</label><input id="pSpec" class="form-input" placeholder="e.g. Early intervention, social skills"></div>
+          <div style="display:flex;gap:12px">
+            <div class="form-row" style="flex:1"><label class="form-label">30-min Rate ($)</label><input id="pRate30" class="form-input" type="number" placeholder="55"></div>
+            <div class="form-row" style="flex:1"><label class="form-label">60-min Rate ($)</label><input id="pRate60" class="form-input" type="number" placeholder="95"></div>
+          </div>
+          <div class="form-row"><label class="form-label">NPI Number</label><input id="pNPI" class="form-input" placeholder="e.g. 1023648599"></div>
+          <div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-sage" onclick="saveProvider()">Save Provider</button><button class="btn btn-outline" onclick="hideAddProvider()">Cancel</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMMUNITY -->
+    <div id="pgCommunity" class="page">
+      <div class="page-hdr"><div><h1>Community</h1><p>Posts and moderation</p></div></div>
+      <div class="stats" id="commStats"></div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">Recent Posts</div></div><div class="panel-body" id="commPosts"><div class="empty"><div class="empty-icon">💬</div>Community posts will appear here when users start posting.</div></div></div>
+    </div>
+
+    <!-- GRANTS -->
+    <div id="pgGrants" class="page">
+      <div class="page-hdr"><div><h1>Grant Reporting</h1><p>Auto-generated metrics for NEXT for AUTISM &amp; OAR</p></div></div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">NEXT for AUTISM — Key Metrics</div><span class="tag tag-sage">Auto-tracked</span></div><div class="panel-body" id="grantNext"></div></div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">OAR Research — Study Metrics</div><span class="tag tag-blue">Research-grade</span></div><div class="panel-body" id="grantOar"></div></div>
+    </div>
+
+    <!-- BEHAVIOR DATA -->
+    <div id="pgBehavior" class="page">
+      <div class="page-hdr"><div><h1>Behavior Data</h1><p>Aggregate behavioral logging data across all users</p></div></div>
+      <div class="stats" id="behaviorStats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="panel"><div class="panel-hdr"><div class="panel-title">Top Behaviors Reported</div></div><div class="panel-body" id="behaviorTopics"></div></div>
+        <div class="panel"><div class="panel-hdr"><div class="panel-title">Outcome Distribution</div></div><div class="panel-body" id="behaviorOutcomes"></div></div>
+      </div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">Recent Logs (All Users)</div></div><div class="panel-body"><table class="tbl"><thead><tr><th>User</th><th>Behavior</th><th>Trigger</th><th>Duration</th><th>Intensity</th><th>Outcome</th><th>Date</th></tr></thead><tbody id="behaviorBody"></tbody></table></div></div>
+    </div>
+  </main>
+</div>
+
+<script>
+var ADMIN_PASS = "Like1ananimal!";
+var SUPA_URL = "https://jrsiqjfwvunrjiihnsgc.supabase.co";
+var SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyc2lxamZ3dnVucmppaWhuc2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MTUyMDksImV4cCI6MjA5MDQ5MTIwOX0.KLkbX6wjMpIty_gwV3HuE5bs-Wlut-VlRhBGP4VnrO4";
+var sb;
+try { sb = supabase.createClient(SUPA_URL, SUPA_KEY); } catch(e) {}
+
+// Providers stored locally for now (will move to Supabase table later)
+var providers = [
+  {name:"Ariana Roberts",creds:"BCBA",specialty:"Autism spectrum support, early intervention, social skills",rate30:55,rate60:95,npi:"1023648599",active:true}
+];
+
+function doLogin(){
+  var p = document.getElementById('loginPass').value;
+  if(p === ADMIN_PASS){
+    document.getElementById('loginWrap').classList.add('hidden');
+    document.getElementById('adminLayout').classList.remove('hidden');
+    refreshAll();
+  } else {
+    document.getElementById('loginErr').style.display='block';
+  }
+}
+
+// Nav
+document.querySelectorAll('.sb-item').forEach(function(el){
+  el.addEventListener('click', function(){
+    document.querySelectorAll('.sb-item').forEach(function(s){s.classList.remove('active')});
+    el.classList.add('active');
+    var pg = el.dataset.page;
+    document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+    document.getElementById('pg'+pg.charAt(0).toUpperCase()+pg.slice(1)).classList.add('active');
+    loadPage(pg);
+  });
+});
+
+function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML}
+
+async function refreshAll(){
+  loadPage('dashboard');
+}
+
+async function loadPage(pg){
+  if(!sb) return;
+  if(pg==='dashboard') await loadDashboard();
+  else if(pg==='users') await loadUsers();
+  else if(pg==='reviews') await loadReviews();
+  else if(pg==='sessions') await loadSessions();
+  else if(pg==='providers') renderProviders();
+  else if(pg==='grants') await loadGrants();
+  else if(pg==='behavior') await loadBehavior();
+}
+
+// ═══ DASHBOARD ═══
+async function loadDashboard(){
+  var profiles = await sb.from('profiles').select('*',{count:'exact'});
+  var convos = await sb.from('conversations').select('*',{count:'exact'});
+  var bookings = await sb.from('bookings').select('*',{count:'exact'});
+  var logs = await sb.from('behavior_logs').select('*',{count:'exact'});
+
+  var totalUsers = profiles.count||0;
+  var proUsers = profiles.data ? profiles.data.filter(function(p){return p.subscription_status==='pro'}).length : 0;
+  var totalConvos = convos.count||0;
+  var totalBookings = bookings.count||0;
+
+  document.getElementById('userCount').textContent = totalUsers;
+
+  document.getElementById('dashStats').innerHTML =
+    statCard('Total Users', totalUsers, '') +
+    statCard('Pro Subscribers', proUsers, '') +
+    statCard('AI Conversations', totalConvos, '') +
+    statCard('Sessions Booked', totalBookings, '');
+
+  // Topics from conversations
+  var topicCounts = {};
+  if(convos.data){
+    convos.data.forEach(function(c){
+      if(c.topic){
+        var t = c.topic.substring(0,30);
+        topicCounts[t] = (topicCounts[t]||0) + 1;
+      }
+    });
+  }
+  var sorted = Object.entries(topicCounts).sort(function(a,b){return b[1]-a[1]}).slice(0,6);
+  var maxCount = sorted.length ? sorted[0][1] : 1;
+  var topicsHtml = '';
+  var colors = ['var(--terracotta)','var(--sage)','var(--sky-dark)','var(--sunflower)','var(--lavender)','var(--blush)'];
+  sorted.forEach(function(t,i){
+    var pct = Math.round(t[1]/maxCount*100);
+    topicsHtml += '<div class="bar-row"><div class="bar-label">'+esc(t[0])+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+(colors[i]||'var(--sage)')+'"><span>'+t[1]+'</span></div></div></div>';
+  });
+  document.getElementById('dashTopics').innerHTML = topicsHtml || '<div class="empty">No conversations yet</div>';
+
+  // Recent signups
+  var recent = profiles.data ? profiles.data.sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at)}).slice(0,5) : [];
+  var recentHtml = '';
+  recent.forEach(function(u){
+    var d = new Date(u.created_at);
+    var ds = d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    recentHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand)"><div><div style="font-weight:600;font-size:13px">'+(u.name||'Anonymous')+'</div><div style="font-size:11px;color:var(--warm-gray-light)">'+(u.child_name?'Parent of '+u.child_name:'')+'</div></div><div style="display:flex;align-items:center;gap:8px"><span class="tag '+(u.subscription_status==='pro'?'tag-sage':'tag-free')+'">'+(u.subscription_status==='pro'?'Pro':'Free')+'</span><span style="font-size:11px;color:var(--warm-gray-light)">'+ds+'</span></div></div>';
+  });
+  document.getElementById('dashRecent').innerHTML = recentHtml || '<div class="empty">No users yet</div>';
+}
+
+function statCard(label, val, change){
+  return '<div class="stat"><div class="stat-label">'+label+'</div><div class="stat-val">'+val+'</div>'+(change?'<div class="stat-change stat-up">'+change+'</div>':'')+'</div>';
+}
+
+// ═══ USERS ═══
+async function loadUsers(){
+  var r = await sb.from('profiles').select('*').order('created_at',{ascending:false});
+  if(!r.data)return;
+  var total=r.data.length, pro=0, free=0;
+  r.data.forEach(function(u){if(u.subscription_status==='pro')pro++;else free++});
+  document.getElementById('userStats').innerHTML =
+    statCard('Total',total,'')+statCard('Pro',pro,'')+statCard('Free',free,'')+statCard('Conversion',total?Math.round(pro/total*100)+'%':'0%','');
+
+  var h='';
+  r.data.forEach(function(u){
+    var d=new Date(u.created_at);
+    h+='<tr><td>'+(u.name?esc(u.name):'<span style="color:var(--warm-gray-light)">—</span>')+'</td><td style="font-size:12px;color:var(--warm-gray-light)">'+esc(u.id.substring(0,8))+'...</td><td>'+(u.child_name?esc(u.child_name):'—')+'</td><td>'+(u.child_age||'—')+'</td><td>'+(u.diagnosis||'—')+'</td><td><span class="tag '+(u.subscription_status==='pro'?'tag-sage':'tag-free')+'">'+(u.subscription_status==='pro'?'Pro':'Free')+'</span></td><td>'+(u.free_messages_used||0)+'</td><td>'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td></tr>';
+  });
+  document.getElementById('userBody').innerHTML=h||'<tr><td colspan="8" class="empty">No users yet</td></tr>';
+}
+
+// ═══ AI REVIEWS ═══
+async function loadReviews(){
+  var r = await sb.from('conversations').select('*').order('created_at',{ascending:false}).limit(20);
+  var reviewed = await sb.from('admin_reviews').select('conversation_id');
+  var reviewedIds = reviewed.data ? reviewed.data.map(function(x){return x.conversation_id}) : [];
+
+  var pending=0, done=reviewedIds.length;
+  if(r.data) r.data.forEach(function(c){if(reviewedIds.indexOf(c.id)===-1)pending++});
+
+  document.getElementById('reviewStats').innerHTML =
+    statCard('Pending Review',pending,'')+statCard('Reviewed',done,'')+statCard('Total Conversations',r.data?r.data.length:0,'')+statCard('Accuracy Rate','—','');
+
+  var h='';
+  if(r.data){
+    r.data.forEach(function(c){
+      var isReviewed = reviewedIds.indexOf(c.id)!==-1;
+      var msgs = c.messages || [];
+      var userMsg = msgs.find(function(m){return m.role==='user'});
+      var aiMsg = msgs.find(function(m){return m.role==='assistant'});
+      if(!userMsg||!aiMsg) return;
+      h+='<div class="review"><div class="review-q">Parent: "'+esc(userMsg.content.substring(0,100))+(userMsg.content.length>100?'...':'')+'"</div>';
+      h+='<div class="review-a">AI: '+esc(aiMsg.content.substring(0,200))+(aiMsg.content.length>200?'...':'')+'</div>';
+      if(isReviewed){
+        h+='<span class="tag tag-sage">✓ Reviewed</span>';
+      } else {
+        h+='<div class="review-actions">';
+        h+='<button class="review-btn" onclick="submitReview(\''+c.id+'\',\'accurate\',\'safe\',\'aligned\')">✓ Accurate & Safe</button>';
+        h+='<button class="review-btn" onclick="submitReview(\''+c.id+'\',\'partially_accurate\',\'safe\',\'partially_aligned\')">⚠ Partially Accurate</button>';
+        h+='<button class="review-btn" onclick="submitReview(\''+c.id+'\',\'inaccurate\',\'needs_review\',\'not_aligned\')">✗ Needs Revision</button>';
+        h+='</div>';
+      }
+      h+='</div>';
+    });
+  }
+  document.getElementById('reviewList').innerHTML = h || '<div class="empty"><div class="empty-icon">✅</div>No conversations to review</div>';
+}
+
+async function submitReview(convId, accuracy, safety, aba){
+  await sb.from('admin_reviews').insert({conversation_id:convId,reviewer:'Ariana Roberts',accuracy:accuracy,safety:safety,aba_aligned:aba});
+  loadReviews();
+}
+
+// ═══ SESSIONS ═══
+async function loadSessions(){
+  var r = await sb.from('bookings').select('*').order('created_at',{ascending:false});
+  if(!r.data)return;
+  var total=r.data.length, revenue=0, fees=0;
+  r.data.forEach(function(b){revenue+=b.amount_cents;fees+=b.platform_fee_cents});
+
+  document.getElementById('sessionStats').innerHTML =
+    statCard('Total Sessions',total,'')+statCard('Revenue','$'+(revenue/100).toFixed(0),'')+statCard('Platform Fees','$'+(fees/100).toFixed(0),'')+statCard('Provider Earnings','$'+((revenue-fees)/100).toFixed(0),'');
+
+  var h='';
+  r.data.forEach(function(b){
+    var d=new Date(b.session_date);
+    var statusClass=b.status==='completed'?'tag-sage':b.status==='confirmed'?'tag-yellow':'tag-free';
+    h+='<tr><td style="font-size:12px">'+b.user_id.substring(0,8)+'...</td><td>'+esc(b.provider_name)+'</td><td>'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td><td>'+b.session_time+'</td><td>'+(b.session_type==='30min'?'30':'60')+' min</td><td>$'+(b.amount_cents/100).toFixed(0)+'</td><td><span class="tag '+statusClass+'">'+b.status+'</span></td></tr>';
+  });
+  document.getElementById('sessionBody').innerHTML=h||'<tr><td colspan="7" class="empty">No sessions yet</td></tr>';
+}
+
+// ═══ PROVIDERS ═══
+function renderProviders(){
+  var h='';
+  providers.forEach(function(p,i){
+    h+='<div class="panel" style="margin-bottom:14px"><div class="panel-body"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800">'+esc(p.name)+'</div><div style="display:flex;gap:6px;margin-top:4px">'+p.creds.split(',').map(function(c){return '<span class="tag tag-sage">'+c.trim()+'</span>'}).join('')+'</div><div style="font-size:13px;color:var(--warm-gray);margin-top:6px">'+esc(p.specialty)+'</div><div style="font-size:12px;color:var(--warm-gray-light);margin-top:4px">NPI: '+p.npi+' | $'+p.rate30+'/30min | $'+p.rate60+'/60min</div></div><div style="display:flex;gap:6px;align-items:center"><span class="tag '+(p.active?'tag-sage':'tag-free')+'">'+(p.active?'Active':'Inactive')+'</span><button class="btn btn-sm btn-outline" onclick="toggleProvider('+i+')">'+(p.active?'Deactivate':'Activate')+'</button></div></div></div></div>';
+  });
+  document.getElementById('providerList').innerHTML=h||'<div class="empty">No providers added</div>';
+}
+
+function showAddProvider(){document.getElementById('addProviderForm').classList.remove('hidden')}
+function hideAddProvider(){document.getElementById('addProviderForm').classList.add('hidden')}
+function saveProvider(){
+  var name=document.getElementById('pName').value.trim();
+  var creds=document.getElementById('pCreds').value.trim();
+  if(!name||!creds)return;
+  providers.push({
+    name:name,creds:creds,
+    specialty:document.getElementById('pSpec').value.trim(),
+    rate30:parseInt(document.getElementById('pRate30').value)||55,
+    rate60:parseInt(document.getElementById('pRate60').value)||95,
+    npi:document.getElementById('pNPI').value.trim(),
+    active:true
+  });
+  hideAddProvider();renderProviders();
+  document.getElementById('pName').value='';document.getElementById('pCreds').value='';
+  document.getElementById('pSpec').value='';document.getElementById('pRate30').value='';
+  document.getElementById('pRate60').value='';document.getElementById('pNPI').value='';
+}
+function toggleProvider(i){providers[i].active=!providers[i].active;renderProviders()}
+
+// ═══ GRANTS ═══
+async function loadGrants(){
+  var profiles=await sb.from('profiles').select('*',{count:'exact'});
+  var bookings=await sb.from('bookings').select('*',{count:'exact'});
+  var surveys=await sb.from('survey_responses').select('*',{count:'exact'});
+  var logs=await sb.from('behavior_logs').select('*',{count:'exact'});
+  var convos=await sb.from('conversations').select('*',{count:'exact'});
+
+  var totalUsers=profiles.count||0;
+  var totalBookings=bookings.count||0;
+  var totalSurveys=surveys.count||0;
+  var totalLogs=logs.count||0;
+  var totalConvos=convos.count||0;
+
+  document.getElementById('grantNext').innerHTML=
+    grantRow('Families Served',totalUsers,'200')+
+    grantRow('Professional Sessions',totalBookings,'50')+
+    grantRow('AI Coach Conversations',totalConvos,'—')+
+    grantRow('Behavior Logs Collected',totalLogs,'—')+
+    grantRow('Surveys Completed',totalSurveys,'—')+
+    '<div style="margin-top:16px;padding:12px 16px;background:var(--sage-light);border-radius:10px;font-size:12px;color:var(--sage-dark)">All metrics auto-tracked from platform usage. Export as PDF for grant submission.</div>';
+
+  document.getElementById('grantOar').innerHTML=
+    grantRow('Enrolled Participants',totalUsers,'50')+
+    grantRow('AI Interactions Logged',totalConvos,'200+')+
+    grantRow('PSI-SF Surveys',totalSurveys,'baseline + 6wk + 12wk')+
+    grantRow('Behavior Logs',totalLogs,'—')+
+    grantRow('Sessions with PI',totalBookings,'—')+
+    '<div style="margin-top:16px;padding:12px 16px;background:var(--sky);border-radius:10px;font-size:12px;color:var(--sky-dark)">Research-grade data. Ariana reviews AI accuracy via the Review panel.</div>';
+}
+
+function grantRow(label, actual, target){
+  var pct = target && !isNaN(parseInt(target)) ? Math.min(100, Math.round(actual/parseInt(target)*100)) : null;
+  var color = pct !== null ? (pct >= 100 ? 'var(--sage)' : pct >= 60 ? 'var(--sunflower)' : 'var(--terracotta)') : 'var(--sage)';
+  return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand)"><span style="font-size:13px;color:var(--warm-gray)">'+label+'</span><div style="display:flex;align-items:center;gap:12px"><span style="font-weight:700;font-size:13px">'+actual+(target!=='—'?' / '+target:'')+'</span>'+(pct!==null?'<div style="width:80px;height:6px;background:var(--cream);border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:3px"></div></div>':'')+'</div></div>';
+}
+
+// ═══ BEHAVIOR DATA ═══
+async function loadBehavior(){
+  var r = await sb.from('behavior_logs').select('*').order('logged_at',{ascending:false}).limit(50);
+  if(!r.data)return;
+  var total=r.data.length;
+  var improved=0,noChange=0,escalated=0;
+  var behaviorCounts={};
+  r.data.forEach(function(l){
+    if(l.outcome==='improved')improved++;
+    else if(l.outcome==='no_change')noChange++;
+    else if(l.outcome==='escalated')escalated++;
+    if(l.behavior){var b=l.behavior.substring(0,25);behaviorCounts[b]=(behaviorCounts[b]||0)+1}
+  });
+
+  document.getElementById('behaviorStats').innerHTML=
+    statCard('Total Logs',total,'')+statCard('Improved',improved,'')+statCard('No Change',noChange,'')+statCard('Escalated',escalated,'');
+
+  // Top behaviors
+  var sorted=Object.entries(behaviorCounts).sort(function(a,b){return b[1]-a[1]}).slice(0,6);
+  var max=sorted.length?sorted[0][1]:1;
+  var bh='';
+  var colors=['var(--terracotta)','var(--sage)','var(--sky-dark)','var(--sunflower)','var(--lavender)','var(--blush)'];
+  sorted.forEach(function(t,i){
+    var pct=Math.round(t[1]/max*100);
+    bh+='<div class="bar-row"><div class="bar-label">'+esc(t[0])+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+(colors[i]||'var(--sage)')+'"><span>'+t[1]+'</span></div></div></div>';
+  });
+  document.getElementById('behaviorTopics').innerHTML=bh||'<div class="empty">No data yet</div>';
+
+  // Outcome pie (simple bars)
+  var outTotal=improved+noChange+escalated||1;
+  document.getElementById('behaviorOutcomes').innerHTML=
+    '<div class="bar-row"><div class="bar-label">Improved</div><div class="bar-track"><div class="bar-fill" style="width:'+Math.round(improved/outTotal*100)+'%;background:var(--sage)"><span>'+improved+'</span></div></div></div>'+
+    '<div class="bar-row"><div class="bar-label">No Change</div><div class="bar-track"><div class="bar-fill" style="width:'+Math.round(noChange/outTotal*100)+'%;background:var(--sunflower)"><span>'+noChange+'</span></div></div></div>'+
+    '<div class="bar-row"><div class="bar-label">Escalated</div><div class="bar-track"><div class="bar-fill" style="width:'+Math.round(escalated/outTotal*100)+'%;background:var(--terracotta)"><span>'+escalated+'</span></div></div></div>';
+
+  // Recent logs table
+  var h='';
+  r.data.forEach(function(l){
+    var d=new Date(l.logged_at);
+    var intClass=l.intensity==='severe'?'tag-red':l.intensity==='moderate'?'tag-yellow':'tag-sage';
+    var outClass=l.outcome==='improved'?'tag-sage':l.outcome==='escalated'?'tag-red':'tag-yellow';
+    h+='<tr><td style="font-size:11px">'+l.user_id.substring(0,8)+'...</td><td>'+esc(l.behavior||'—')+'</td><td>'+(l.trigger_desc?esc(l.trigger_desc.substring(0,30)):'—')+'</td><td>'+(l.duration_minutes?l.duration_minutes+'m':'—')+'</td><td>'+(l.intensity?'<span class="tag '+intClass+'">'+l.intensity+'</span>':'—')+'</td><td>'+(l.outcome?'<span class="tag '+outClass+'">'+l.outcome.replace('_',' ')+'</span>':'—')+'</td><td>'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td></tr>';
+  });
+  document.getElementById('behaviorBody').innerHTML=h||'<tr><td colspan="7" class="empty">No logs yet</td></tr>';
+}
+</script>
+</body>
+</html>
