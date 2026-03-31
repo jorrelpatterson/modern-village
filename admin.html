@@ -227,9 +227,15 @@
 
     <!-- COMMUNITY -->
     <div id="pgCommunity" class="page">
-      <div class="page-hdr"><div><h1>Community</h1><p>Posts and moderation</p></div></div>
+      <div class="page-hdr"><div><h1>Community Moderation</h1><p>Posts, comments, and reports</p></div></div>
       <div class="stats" id="commStats"></div>
-      <div class="panel"><div class="panel-hdr"><div class="panel-title">Recent Posts</div></div><div class="panel-body" id="commPosts"><div class="empty"><div class="empty-icon">💬</div>Community posts will appear here when users start posting.</div></div></div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn btn-sage btn-sm" id="commFilterAll" onclick="filterComm('all')" style="opacity:1">All Posts</button>
+        <button class="btn btn-outline btn-sm" id="commFilterFlagged" onclick="filterComm('flagged')">⚠ Flagged</button>
+        <button class="btn btn-outline btn-sm" id="commFilterReported" onclick="filterComm('reported')">🚩 Reported</button>
+      </div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">Posts</div></div><div class="panel-body" id="commPosts"></div></div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">Reports</div><span class="tag tag-red" id="reportCount">0</span></div><div class="panel-body" id="commReports"></div></div>
     </div>
 
     <!-- GRANTS -->
@@ -310,6 +316,7 @@ async function loadPage(pg){
   else if(pg==='reviews') await loadReviews();
   else if(pg==='sessions') await loadSessions();
   else if(pg==='providers') renderProviders();
+  else if(pg==='community') await loadCommunity();
   else if(pg==='grants') await loadGrants();
   else if(pg==='behavior') await loadBehavior();
 }
@@ -476,6 +483,112 @@ function saveProvider(){
   document.getElementById('pRate60').value='';document.getElementById('pNPI').value='';
 }
 function toggleProvider(i){providers[i].active=!providers[i].active;renderProviders()}
+
+// ═══ COMMUNITY MODERATION ═══
+var commFilter = 'all';
+
+function filterComm(f){
+  commFilter=f;
+  document.getElementById('commFilterAll').className='btn btn-'+(f==='all'?'sage':'outline')+' btn-sm';
+  document.getElementById('commFilterFlagged').className='btn btn-'+(f==='flagged'?'sage':'outline')+' btn-sm';
+  document.getElementById('commFilterReported').className='btn btn-'+(f==='reported'?'sage':'outline')+' btn-sm';
+  loadCommunity();
+}
+
+async function loadCommunity(){
+  // Load posts
+  var posts = await sb.from('community_posts').select('*').order('created_at',{ascending:false}).limit(50);
+  // Load reports
+  var reports = await sb.from('content_reports').select('*').order('created_at',{ascending:false}).limit(30);
+  // Load comments count
+  var comments = await sb.from('community_comments').select('*',{count:'exact'});
+
+  var totalPosts = posts.data?posts.data.length:0;
+  var flaggedPosts = posts.data?posts.data.filter(function(p){return p.status==='flagged'}).length:0;
+  var hiddenPosts = posts.data?posts.data.filter(function(p){return p.status==='hidden'}).length:0;
+  var pendingReports = reports.data?reports.data.filter(function(r){return r.status==='pending'}).length:0;
+
+  document.getElementById('commStats').innerHTML =
+    statCard('Total Posts',totalPosts,'')+statCard('Flagged',flaggedPosts,'')+statCard('Hidden',hiddenPosts,'')+statCard('Pending Reports',pendingReports,'');
+  document.getElementById('reportCount').textContent=pendingReports;
+
+  // Get reported post/comment IDs
+  var reportedIds = {};
+  if(reports.data) reports.data.forEach(function(r){if(r.status==='pending')reportedIds[r.content_id]=true});
+
+  // Filter posts
+  var filtered = posts.data || [];
+  if(commFilter==='flagged') filtered=filtered.filter(function(p){return p.status==='flagged'});
+  else if(commFilter==='reported') filtered=filtered.filter(function(p){return reportedIds[p.id]});
+
+  // Render posts
+  var h='';
+  if(!filtered.length) h='<div class="empty">No posts match this filter</div>';
+  filtered.forEach(function(p){
+    var d=new Date(p.created_at);
+    var ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    var statusClass=p.status==='active'?'tag-sage':p.status==='flagged'?'tag-yellow':'tag-red';
+    var isReported=reportedIds[p.id];
+
+    h+='<div style="padding:14px;background:'+(isReported?'var(--terracotta-light)':'var(--cream)')+';border-radius:12px;margin-bottom:10px'+(p.status==='hidden'?';opacity:0.5':'')+'">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;font-size:13px">'+esc(p.author_name||'Anonymous')+'</span><span class="tag '+statusClass+'">'+p.status+'</span>'+(isReported?'<span class="tag tag-red">🚩 Reported</span>':'')+'</div><span style="font-size:11px;color:var(--warm-gray-light)">'+ds+'</span></div>';
+    h+='<div style="font-size:13px;line-height:1.5;margin-bottom:8px">'+esc(p.content)+'</div>';
+    if(p.flagged_words&&p.flagged_words.length) h+='<div style="font-size:11px;color:var(--terracotta);margin-bottom:6px">Flagged words: '+p.flagged_words.join(', ')+'</div>';
+    h+='<div style="display:flex;gap:6px">';
+    if(p.status!=='active') h+='<button class="btn btn-sm btn-sage" onclick="moderatePost(\''+p.id+'\',\'active\')">Approve</button>';
+    if(p.status!=='hidden') h+='<button class="btn btn-sm btn-outline" style="border-color:var(--terracotta);color:var(--terracotta)" onclick="moderatePost(\''+p.id+'\',\'hidden\')">Hide</button>';
+    h+='<button class="btn btn-sm btn-outline" style="border-color:var(--terracotta);color:var(--terracotta)" onclick="deletePost(\''+p.id+'\')">Delete</button>';
+    h+='</div></div>';
+  });
+  document.getElementById('commPosts').innerHTML=h;
+
+  // Render reports
+  var rh='';
+  var pendingReportsArr = (reports.data||[]).filter(function(r){return r.status==='pending'});
+  if(!pendingReportsArr.length) rh='<div class="empty">No pending reports</div>';
+  pendingReportsArr.forEach(function(r){
+    var d=new Date(r.created_at);
+    var ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    rh+='<div style="padding:14px;background:var(--terracotta-light);border-radius:12px;margin-bottom:10px">';
+    rh+='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-weight:700;font-size:13px">'+esc(r.content_type)+' report</span><span style="font-size:11px;color:var(--warm-gray-light)">'+ds+'</span></div>';
+    rh+='<div style="font-size:13px;color:var(--warm-gray);margin-bottom:8px">Reason: '+esc(r.reason)+'</div>';
+    rh+='<div style="display:flex;gap:6px">';
+    rh+='<button class="btn btn-sm btn-outline" style="border-color:var(--terracotta);color:var(--terracotta)" onclick="moderateContent(\''+r.content_type+'\',\''+r.content_id+'\',\'hidden\',\''+r.id+'\')">Hide Content</button>';
+    rh+='<button class="btn btn-sm btn-outline" onclick="dismissReport(\''+r.id+'\')">Dismiss</button>';
+    rh+='</div></div>';
+  });
+  document.getElementById('commReports').innerHTML=rh;
+}
+
+async function moderatePost(postId, status){
+  await sb.from('community_posts').update({status:status}).eq('id',postId);
+  showToast('Post '+status);
+  loadCommunity();
+}
+
+async function deletePost(postId){
+  if(!confirm('Permanently delete this post and all its comments?')) return;
+  await sb.from('community_comments').delete().eq('post_id',postId);
+  await sb.from('community_posts').delete().eq('id',postId);
+  showToast('Post deleted');
+  loadCommunity();
+}
+
+async function moderateContent(type, contentId, status, reportId){
+  var table = type==='post' ? 'community_posts' : 'community_comments';
+  await sb.from(table).update({status:status}).eq('id',contentId);
+  await sb.from('content_reports').update({status:'reviewed'}).eq('id',reportId);
+  showToast('Content hidden');
+  loadCommunity();
+}
+
+async function dismissReport(reportId){
+  await sb.from('content_reports').update({status:'dismissed'}).eq('id',reportId);
+  showToast('Report dismissed');
+  loadCommunity();
+}
+
+function showToast(m){var e=document.querySelector('.toast');if(e)e.remove();var t=document.createElement('div');t.className='toast';t.textContent=m;t.style.cssText='position:fixed;bottom:40px;left:50%;transform:translateX(-50%);padding:10px 20px;background:var(--charcoal);color:white;border-radius:10px;font-size:13px;font-weight:600;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,0.2)';document.body.appendChild(t);setTimeout(function(){t.remove()},2500)}
 
 // ═══ GRANTS ═══
 async function loadGrants(){
