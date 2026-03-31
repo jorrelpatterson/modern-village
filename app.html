@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Modern Village</title>
 <meta name="theme-color" content="#7A9E7E">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://jrsiqjfwvunrjiihnsgc.supabase.co https://village-api.jorrelpatterson.workers.dev https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://doxy.me; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:; font-src https://fonts.gstatic.com;">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:title" content="Modern Village — AI Behavior Coach">
 <meta property="og:description" content="Instant ABA strategy cards for parents. 24/7 AI coaching, licensed BCBAs, and a parent community.">
@@ -834,6 +835,42 @@ var API_URL = "https://village-api.jorrelpatterson.workers.dev/";
 var sb;
 try { sb = supabase.createClient(SUPA_URL, SUPA_KEY); } catch(e) { console.error('Supabase init failed:', e); }
 
+// ═══ SECURITY: Auth token helper ═══
+async function getAuthToken(){
+  if(!sb) return null;
+  var s=await sb.auth.getSession();
+  return s.data.session?s.data.session.access_token:null;
+}
+
+async function authFetch(url, opts){
+  var token=await getAuthToken();
+  if(!opts) opts={};
+  if(!opts.headers) opts.headers={};
+  opts.headers['Content-Type']='application/json';
+  if(token) opts.headers['Authorization']='Bearer '+token;
+  return fetch(url,opts);
+}
+
+// ═══ SECURITY: Audit logging ═══
+async function auditLog(action, resourceType, resourceId, details){
+  if(!S.user||!sb) return;
+  sb.from('audit_logs').insert({user_id:S.user.id,action:action,resource_type:resourceType,resource_id:resourceId,details:details||null}).then(function(){});
+}
+
+// ═══ SECURITY: Session timeout (30 min idle) ═══
+var SESSION_TIMEOUT = 30*60*1000;
+var lastActivity = Date.now();
+function resetActivity(){lastActivity=Date.now()}
+document.addEventListener('click',resetActivity);
+document.addEventListener('keydown',resetActivity);
+document.addEventListener('scroll',resetActivity);
+setInterval(function(){
+  if(S.user && Date.now()-lastActivity > SESSION_TIMEOUT){
+    logout();
+    showToast('Session expired due to inactivity');
+  }
+},60000);
+
 // ═══ STATE ═══
 var S = {
   user: null, profile: null,
@@ -855,7 +892,7 @@ var BADGE_COLORS = {"Village Elder":"#7A9E7E","New Member":"#C4B8A8","Advocate":
 
 // ═══ HELPERS ═══
 function showToast(m){var e=document.querySelector('.toast');if(e)e.remove();var t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.classList.add('out')},2000);setTimeout(function(){t.remove()},2500)}
-function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML.replace(/\n/g,'<br>')}
+function esc(t){if(!t)return '';return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;').replace(/\n/g,'<br>')}
 function now(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
 
 // ═══ AUTH ═══
@@ -890,7 +927,7 @@ async function handleAuth(){
   var errEl=document.getElementById('authError');
   errEl.style.display='none';
   if(!email||!pass){errEl.textContent='Please fill in all fields';errEl.style.display='block';return}
-  if(pass.length<6){errEl.textContent='Password must be at least 6 characters';errEl.style.display='block';return}
+  if(pass.length<8){errEl.textContent='Password must be at least 8 characters';errEl.style.display='block';return}
   var btn=document.getElementById('authSubmit');
   btn.disabled=true;btn.textContent='Please wait...';
   try{
@@ -942,6 +979,7 @@ async function loadProfile(){
     S.focuses=r.data.focus_areas||[];
     S.subscribed=r.data.subscription_status==='pro';
     S.freeUsed=r.data.free_messages_used||0;
+    auditLog('view_profile','profiles',S.user.id);
   }
 }
 
@@ -1030,24 +1068,34 @@ function renderSugs(){var sugs=[{cat:"Meltdown",color:"var(--terracotta)",q:"My 
 function canSend(){return S.subscribed||S.freeUsed<S.freeLimit}
 function showPw(){document.getElementById('paywall').classList.remove('hidden');document.getElementById('coachEmpty').classList.add('hidden');document.getElementById('chatBar').style.display='none'}
 function dismissPw(){document.getElementById('paywall').classList.add('hidden');if(S.msgs.length)document.getElementById('chatMsgs').classList.remove('hidden');else document.getElementById('coachEmpty').classList.remove('hidden');document.getElementById('chatBar').style.display='block'}
-function subscribe(){S.subscribed=true;if(S.user)sb.from('profiles').update({subscription_status:'pro'}).eq('id',S.user.id);dismissPw();updateFreeCtr();updateSubSt();showToast('Subscribed! Unlimited coaching unlocked.')}
+function subscribe(){
+  // PLACEHOLDER: When Stripe is connected, this redirects to Stripe checkout
+  // For now, show a message that payment is coming soon
+  showToast('Payment coming soon! Use a promo code to get access.');
+}
 
-var PROMO_CODES = {
-  'VILLAGE2026': {plan:'pro',label:'Pro Access'},
-  'ARIANATEAM': {plan:'pro',label:'Team Pro Access'},
-  'FOUNDER': {plan:'pro',label:'Founder Access'}
-};
-
-function redeemCode(){
+// Promo codes validated server-side via worker
+async function redeemCode(){
   var input=document.getElementById('promoInput');
   var code=input.value.trim().toUpperCase();
   if(!code){showToast('Enter a code');return}
-  var promo=PROMO_CODES[code];
-  if(!promo){showToast('Invalid code');input.value='';return}
-  S.subscribed=true;
-  if(S.user)sb.from('profiles').update({subscription_status:'pro',promo_code:code}).eq('id',S.user.id);
-  dismissPw();updateFreeCtr();updateSubSt();
-  showToast(promo.label+' activated!');
+  if(!S.user){showAuth(true);return}
+
+  try{
+    var r=await authFetch(API_URL+'validate-code',{method:'POST',body:JSON.stringify({code:code})});
+    var data=await r.json();
+    if(data.valid){
+      S.subscribed=true;
+      await loadProfile();
+      dismissPw();updateFreeCtr();updateSubSt();
+      showToast(data.label+' activated!');
+    } else {
+      showToast('Invalid or expired code');
+      input.value='';
+    }
+  }catch(e){
+    showToast('Error validating code');
+  }
 }
 
 function buildSys(){var p=S.profile||{};var goals=p.goals&&p.goals.length?p.goals.join(', '):'';return 'You are Modern Village Coach, an AI behavior support assistant. A licensed BCBA oversees your clinical accuracy.\nCHILD PROFILE:\n'+(S.name?'- Parent: '+S.name+(p.parent_relationship?' ('+p.parent_relationship+')':'')+'\n':'')+(S.child?'- Child: '+S.child+'\n':'')+(S.age?'- Age: '+S.age+'\n':'')+(p.child_gender?'- Gender: '+p.child_gender+'\n':'')+(p.child_grade?'- Grade: '+p.child_grade+'\n':'')+(S.dx?'- Diagnosis: '+S.dx+'\n':'')+(goals?'- Goals: '+goals+'\n':'')+'\nFORMAT:\n[EMPATHY] 1-2 warm sentences. Use names. [/EMPATHY]\n[ASSESSMENT] Brief ABA assessment. 2-3 sentences. [/ASSESSMENT]\n[STRATEGY] 3 numbered steps. Bold title: explanation with "quoted scripts". [/STRATEGY]\n[REINFORCE] One reinforcement tip with exact words. [/REINFORCE]\n[FOLLOWUP] 2 questions separated by |. Under 10 words each. [/FOLLOWUP]\n\nRULES: Always use markers. Adapt to age/diagnosis/goals. Never diagnose. For crisis: 988/911 + book a Pro session.'}
@@ -1085,7 +1133,7 @@ async function send(text){
   S.typing=true;renderChat();scrollBot();
   try{
     var apiMsgs=[];for(var i=0;i<S.msgs.length;i++)apiMsgs.push({role:S.msgs[i].role==='user'?'user':'assistant',content:S.msgs[i].content});
-    var r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,system:buildSys(),messages:apiMsgs})});
+    var r=await authFetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,system:buildSys(),messages:apiMsgs})});
     var d=await r.json();var raw='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)raw+=d.content[i].text;
     if(!raw)raw="I'm here to help!";
     S.msgs.push({role:'assistant',content:raw,time:now(),parsed:parseResp(raw)});
@@ -1276,6 +1324,7 @@ async function confirmBooking(){
   var ds=new Date(b.date).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
   document.getElementById('bookSection').innerHTML='<div class="book-confirm"><div class="book-confirm-check"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#5C7F60" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><h2>You\'re booked!</h2><p>Your video session with '+esc(p.name)+' has been confirmed.</p><div class="book-confirm-details"><div class="book-confirm-row"><span>Provider</span><span>'+esc(p.name)+', '+p.creds.join(', ')+'</span></div><div class="book-confirm-row"><span>Date</span><span>'+ds+'</span></div><div class="book-confirm-row"><span>Time</span><span>'+b.time+'</span></div><div class="book-confirm-row"><span>Duration</span><span>'+b.session+' min</span></div><div class="book-confirm-row"><span>Total</span><span style="color:var(--sage-dark)">$'+pr+'</span></div></div><a href="'+p.videoUrl+'" target="_blank" style="display:block;width:100%;padding:16px;background:var(--sage);color:white;text-align:center;border-radius:14px;font-size:16px;font-weight:700;text-decoration:none;margin-top:16px">📹 Join Video Session</a><div style="font-size:12px;color:var(--warm-gray);text-align:center;margin-top:6px">Open this link at your appointment time. Powered by Doxy.me (HIPAA-compliant).</div><div style="font-size:13px;color:var(--warm-gray);text-align:center;margin-top:12px">A confirmation email with the video link has been sent to '+esc(S.user.email)+'</div><div style="display:flex;gap:8px;margin-top:20px"><button class="book-btn" style="flex:1" onclick="renderProvider()">Done</button><button style="flex:1;padding:14px;border-radius:14px;border:2px solid var(--terracotta);background:white;color:var(--terracotta);font-size:15px;font-weight:700;cursor:pointer" onclick="cancelBookingPrompt(\''+r.data.id+'\')">Cancel Booking</button></div></div>';
   document.getElementById('mainScroll').scrollTop=0;showToast('Session booked!');
+  auditLog('create_booking','bookings',r.data.id,{provider:p.name,date:b.dateIso,time:b.time,amount:pr});
 }
 
 async function sendBookingEmail(bookingId, email, name, provider, duration, dateStr, time, price){
@@ -1285,12 +1334,12 @@ async function sendBookingEmail(bookingId, email, name, provider, duration, date
     var videoUrl=p&&p.videoUrl?p.videoUrl:'https://doxy.me/v2/check-in/arianaroberts/';
     var html='<div style="max-width:500px;margin:0 auto;font-family:-apple-system,sans-serif;background:#FDF8F0;padding:40px 32px;border-radius:16px"><div style="text-align:center;margin-bottom:24px"><div style="display:inline-block;width:48px;height:48px;border-radius:12px;background:#7A9E7E;line-height:48px;text-align:center"><span style="color:white;font-size:20px">\u2713</span></div><h1 style="font-size:24px;font-weight:800;margin:12px 0 0;color:#2D2D2D">Video Session Confirmed!</h1></div><p style="font-size:15px;color:#4A4540;line-height:1.6;text-align:center">Hi '+esc(name)+', your session is booked.</p><div style="background:white;border-radius:14px;padding:20px;margin:20px 0;border:1px solid #E8DDD0"><table style="width:100%;font-size:14px;border-collapse:collapse"><tr><td style="padding:8px 0;color:#706B65">Provider</td><td style="padding:8px 0;text-align:right;font-weight:700">'+esc(provider)+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Date</td><td style="padding:8px 0;text-align:right;font-weight:700">'+ds+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Time</td><td style="padding:8px 0;text-align:right;font-weight:700">'+time+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Duration</td><td style="padding:8px 0;text-align:right;font-weight:700">'+duration+' min</td></tr><tr style="border-top:1px solid #E8DDD0"><td style="padding:12px 0 0;color:#706B65;font-weight:700">Total</td><td style="padding:12px 0 0;text-align:right;font-weight:800;color:#5C7F60;font-size:18px">$'+price+'</td></tr></table></div><div style="text-align:center;margin:24px 0"><a href="'+videoUrl+'" style="display:inline-block;padding:16px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-size:16px;font-weight:700">\uD83D\uDCF9 Join Video Session</a></div><div style="text-align:center;font-size:12px;color:#706B65;margin-bottom:8px">Open this link at your appointment time</div><div style="text-align:center;font-size:11px;color:#9E9790">HIPAA-compliant video powered by Doxy.me</div><p style="font-size:12px;color:#706B65;text-align:center;margin-top:24px">Need to cancel or reschedule? Open the app at modernvillage.app</p><p style="font-size:11px;color:#706B65;text-align:center;margin-top:16px">Modern Village LLC \u2014 ABA-powered parenting support</p></div>';
 
-    await fetch(API_URL+'email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:email,subject:'Session Confirmed \u2014 '+provider+' on '+ds,html:html})}).catch(function(){});
+    await authFetch(API_URL+'email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:email,subject:'Session Confirmed \u2014 '+provider+' on '+ds,html:html})}).catch(function(){});
 
     // Send provider notification
     if(p&&p.email){
       var provHtml='<div style="max-width:500px;margin:0 auto;font-family:-apple-system,sans-serif;background:#FDF8F0;padding:40px 32px;border-radius:16px"><div style="text-align:center;margin-bottom:24px"><div style="display:inline-block;width:48px;height:48px;border-radius:12px;background:#D4C8E8;line-height:48px;text-align:center"><span style="color:white;font-size:20px">\uD83D\uDCC5</span></div><h1 style="font-size:24px;font-weight:800;margin:12px 0 0;color:#2D2D2D">New Session Booked!</h1></div><p style="font-size:15px;color:#4A4540;line-height:1.6;text-align:center">A parent just booked a video session with you.</p><div style="background:white;border-radius:14px;padding:20px;margin:20px 0;border:1px solid #E8DDD0"><table style="width:100%;font-size:14px;border-collapse:collapse"><tr><td style="padding:8px 0;color:#706B65">Parent</td><td style="padding:8px 0;text-align:right;font-weight:700">'+esc(name||'Not provided')+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Email</td><td style="padding:8px 0;text-align:right;font-weight:700">'+esc(email)+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Date</td><td style="padding:8px 0;text-align:right;font-weight:700">'+ds+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Time</td><td style="padding:8px 0;text-align:right;font-weight:700">'+time+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Duration</td><td style="padding:8px 0;text-align:right;font-weight:700">'+duration+' min</td></tr><tr style="border-top:1px solid #E8DDD0"><td style="padding:12px 0 0;color:#706B65;font-weight:700">Session Fee</td><td style="padding:12px 0 0;text-align:right;font-weight:800;color:#5C7F60;font-size:18px">$'+price+'</td></tr></table></div><div style="text-align:center;margin:20px 0"><a href="'+videoUrl+'" style="display:inline-block;padding:14px 28px;background:#D4C8E8;color:#4A3670;text-decoration:none;border-radius:12px;font-size:15px;font-weight:700">Open Doxy.me Waiting Room</a></div><p style="font-size:12px;color:#706B65;text-align:center;margin-top:24px">Log in to the admin portal at modernvillage.app/admin.html to manage bookings.</p><p style="font-size:11px;color:#706B65;text-align:center;margin-top:16px">Modern Village LLC</p></div>';
-      await fetch(API_URL+'email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:p.email,subject:'New Booking \u2014 '+esc(name||'A parent')+' on '+ds+' at '+time,html:provHtml})}).catch(function(){});
+      await authFetch(API_URL+'email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:p.email,subject:'New Booking \u2014 '+esc(name||'A parent')+' on '+ds+' at '+time,html:provHtml})}).catch(function(){});
     }
 
     await sb.from('bookings').update({confirmation_sent:true}).eq('id',bookingId);
@@ -1349,7 +1398,7 @@ async function doCancelBooking(bookingId){
     if(p&&p.email){
       var ds=new Date(b.session_date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
       var cancelHtml='<div style="max-width:500px;margin:0 auto;font-family:-apple-system,sans-serif;background:#FDF8F0;padding:40px 32px;border-radius:16px"><div style="text-align:center;margin-bottom:24px"><div style="display:inline-block;width:48px;height:48px;border-radius:12px;background:#C4745A;line-height:48px;text-align:center"><span style="color:white;font-size:20px">\u2717</span></div><h1 style="font-size:24px;font-weight:800;margin:12px 0 0;color:#2D2D2D">Session Cancelled</h1></div><p style="font-size:15px;color:#4A4540;line-height:1.6;text-align:center">A parent has cancelled their session.</p><div style="background:white;border-radius:14px;padding:20px;margin:20px 0;border:1px solid #E8DDD0"><table style="width:100%;font-size:14px;border-collapse:collapse"><tr><td style="padding:8px 0;color:#706B65">Date</td><td style="padding:8px 0;text-align:right;font-weight:700">'+ds+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Time</td><td style="padding:8px 0;text-align:right;font-weight:700">'+b.session_time+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Duration</td><td style="padding:8px 0;text-align:right;font-weight:700">'+b.session_type+'</td></tr>'+(reason?'<tr><td style="padding:8px 0;color:#706B65">Reason</td><td style="padding:8px 0;text-align:right;font-weight:700">'+esc(reason)+'</td></tr>':'')+'</table></div><p style="font-size:12px;color:#706B65;text-align:center">This time slot is now available for other bookings.</p><p style="font-size:11px;color:#706B65;text-align:center;margin-top:16px">Modern Village LLC</p></div>';
-      fetch(API_URL+'email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:p.email,subject:'Session Cancelled \u2014 '+ds+' at '+b.session_time,html:cancelHtml})}).catch(function(){});
+      authFetch(API_URL+'email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:p.email,subject:'Session Cancelled \u2014 '+ds+' at '+b.session_time,html:cancelHtml})}).catch(function(){});
     }
   }
   renderProvider();
@@ -1731,6 +1780,7 @@ async function logBehavior(){
   var r = await sb.from('behavior_logs').insert(log);
   if(!r.error){
     showToast('Behavior logged!');
+    auditLog('create_behavior_log','behavior_logs',null,{behavior:log.behavior});
     document.getElementById('trBehavior').value='';
     document.getElementById('trTrigger').value='';
     document.getElementById('trDuration').value='';
@@ -2016,7 +2066,7 @@ async function generateLetter(){
   prompt+='\n\nWrite the complete letter ready to print. Include the date. Be professional but firm. Reference IDEA rights where appropriate. Keep it concise (under 300 words).';
 
   try{
-    var r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'You are a parent advocacy assistant. Write formal letters for parents navigating the special education system. Always reference IDEA (Individuals with Disabilities Education Act) rights. Be professional, clear, and firm. Output only the letter text, no commentary.',messages:[{role:'user',content:prompt}]})});
+    var r=await authFetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'You are a parent advocacy assistant. Write formal letters for parents navigating the special education system. Always reference IDEA (Individuals with Disabilities Education Act) rights. Be professional, clear, and firm. Output only the letter text, no commentary.',messages:[{role:'user',content:prompt}]})});
     var d=await r.json();var text='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)text+=d.content[i].text;
     resultEl.innerHTML='<div class="iep-section" style="margin-top:16px"><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:12px">Your Letter</div><div style="background:var(--cream);border-radius:14px;padding:20px;font-size:14px;line-height:1.7;white-space:pre-wrap" id="iepGenLetter">'+esc(text)+'</div><div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-p" style="flex:1" onclick="copyIepLetter()">📋 Copy Letter</button><button class="btn btn-outline" style="flex:1" onclick="renderLetterWizard()">✏️ Edit & Regenerate</button></div></div>';
   }catch(e){
@@ -2055,7 +2105,7 @@ async function generatePrep(){
   var prompt='Create an IEP meeting prep kit for a parent.\n\nMeeting type: '+(type||'IEP meeting')+'\nChild: '+(child||'my child')+'\nDiagnosis: '+(iepData.dx||'not specified')+'\nConcerns: '+concerns+(wins?'\nPositives: '+wins:'')+'\n\nProvide:\n1. TALKING POINTS: 3-4 bullet points the parent should bring up, written as first-person statements\n2. QUESTIONS TO ASK: 5 specific questions tailored to their concerns\n3. WHAT TO BRING: Checklist of documents relevant to this specific meeting\n4. WATCH OUT FOR: 2-3 things the school might say and how to respond\n\nKeep each section concise. Use plain language.';
 
   try{
-    var r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:'You are a parent advocacy assistant helping parents prepare for IEP meetings. Be practical, warm, and empowering. Format with clear section headers.',messages:[{role:'user',content:prompt}]})});
+    var r=await authFetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:'You are a parent advocacy assistant helping parents prepare for IEP meetings. Be practical, warm, and empowering. Format with clear section headers.',messages:[{role:'user',content:prompt}]})});
     var d=await r.json();var text='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)text+=d.content[i].text;
     resultEl.innerHTML='<div class="iep-section" style="margin-top:16px"><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:12px">Your Prep Kit</div><div style="background:var(--cream);border-radius:14px;padding:20px;font-size:14px;line-height:1.7;white-space:pre-wrap" id="iepGenPrep">'+esc(text)+'</div><button class="btn btn-p" style="width:100%;margin-top:12px" onclick="navigator.clipboard.writeText(document.getElementById(\'iepGenPrep\').textContent).then(function(){showToast(\'Copied!\')})">📋 Copy Prep Kit</button></div>';
   }catch(e){
@@ -2080,7 +2130,7 @@ async function generateExplain(){
   var resultEl=document.getElementById('iepExplainResult');
 
   try{
-    var r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:'You are a parent advocate helping explain IEP documents in plain English. The parent has no special education background. Explain what the text means simply. If it contains a goal, explain: what skill is being worked on, how it will be measured, and what success looks like. If it contains legal language, explain what it means for their child. Be warm and supportive. Use bullet points for clarity.',messages:[{role:'user',content:'Please explain this IEP text in plain English:\n\n'+text}]})});
+    var r=await authFetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:'You are a parent advocate helping explain IEP documents in plain English. The parent has no special education background. Explain what the text means simply. If it contains a goal, explain: what skill is being worked on, how it will be measured, and what success looks like. If it contains legal language, explain what it means for their child. Be warm and supportive. Use bullet points for clarity.',messages:[{role:'user',content:'Please explain this IEP text in plain English:\n\n'+text}]})});
     var d=await r.json();var explanation='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)explanation+=d.content[i].text;
     resultEl.innerHTML='<div class="iep-section" style="margin-top:16px"><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:12px">Here\'s What It Means</div><div style="background:var(--sage-light);border-radius:14px;padding:20px;font-size:14px;line-height:1.7;white-space:pre-wrap">'+esc(explanation)+'</div></div>';
   }catch(e){
@@ -2142,7 +2192,7 @@ async function generateGoals(){
   var prompt='Suggest 5-6 specific, measurable IEP goals for this child:\n\nChild: '+(child||'the child')+'\nAge/Grade: '+(age||'not specified')+'\nDiagnosis: '+(dx||'not specified')+'\nAreas of need: '+(areas.length?areas.join(', '):'general')+(challenges?'\nSpecific challenges: '+challenges:'')+'\n\nEach goal should:\n- Be measurable with a clear target (percentages, frequencies)\n- Include the condition and criteria\n- Be realistic for school implementation\n- Include the area label (Behavior, Social, Communication, etc.)\n\nFormat each goal as:\nAREA: [goal text]\n\nKeep goals practical and parent-friendly.';
 
   try{
-    var r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'You are an IEP goal specialist. Write specific, measurable, achievable IEP goals. Use standard IEP goal format with conditions, behaviors, and criteria. Make them parent-friendly.',messages:[{role:'user',content:prompt}]})});
+    var r=await authFetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'You are an IEP goal specialist. Write specific, measurable, achievable IEP goals. Use standard IEP goal format with conditions, behaviors, and criteria. Make them parent-friendly.',messages:[{role:'user',content:prompt}]})});
     var d=await r.json();var text='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)text+=d.content[i].text;
     resultEl.innerHTML='<div class="iep-section" style="margin-top:16px"><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:12px">Suggested Goals</div><div style="font-size:13px;color:var(--warm-gray);margin-bottom:14px">Discuss these with your IEP team — they can adapt them to your child\'s specific needs</div><div style="background:var(--cream);border-radius:14px;padding:20px;font-size:14px;line-height:1.7;white-space:pre-wrap" id="iepGenGoals">'+esc(text)+'</div><button class="btn btn-p" style="width:100%;margin-top:12px" onclick="navigator.clipboard.writeText(document.getElementById(\'iepGenGoals\').textContent).then(function(){showToast(\'Copied!\')})">📋 Copy Goals</button></div>';
   }catch(e){

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light only">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://jrsiqjfwvunrjiihnsgc.supabase.co https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://fonts.gstatic.com;">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <title>Modern Village — Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,100..900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -137,10 +138,11 @@
   <div class="login-box">
     <div style="width:48px;height:48px;border-radius:14px;background:var(--sage);display:flex;align-items:center;justify-content:center;margin:0 auto 16px"><svg width="24" height="24" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 24C8 32 14 38 22 38C30 38 36 32 36 24C36 14 22 6 22 6Z" fill="white" opacity="0.9"/><circle cx="22" cy="24" r="4" fill="white"/></svg></div>
     <h1>Admin Portal</h1>
-    <p>Modern Village management dashboard</p>
-    <input id="loginPass" class="login-input" type="password" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="login-btn" onclick="doLogin()">Enter</button>
-    <div id="loginErr" class="login-err">Incorrect password</div>
+    <p>Sign in with your admin account</p>
+    <input id="loginEmail" class="login-input" type="email" placeholder="Email address" onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+    <input id="loginPass" class="login-input" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div id="loginErr" class="login-err">Access denied</div>
   </div>
 </div>
 
@@ -259,13 +261,12 @@
 </div>
 
 <script>
-var ADMIN_PASS = "IttakesaVill@ge!";
 var SUPA_URL = "https://jrsiqjfwvunrjiihnsgc.supabase.co";
 var SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyc2lxamZ3dnVucmppaWhuc2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MTUyMDksImV4cCI6MjA5MDQ5MTIwOX0.KLkbX6wjMpIty_gwV3HuE5bs-Wlut-VlRhBGP4VnrO4";
 var sb;
 try { sb = supabase.createClient(SUPA_URL, SUPA_KEY); } catch(e) {}
+var adminUser = null;
 
-// Providers stored locally for now (will move to Supabase table later)
 var providers = [
   {name:"Ariana Roberts",creds:"BCBA",specialty:"Autism spectrum support, early intervention, social skills",rate30:55,rate60:95,npi:"1023648599",active:true}
 ];
@@ -279,16 +280,61 @@ function closeMobileNav(){
   document.getElementById('sbOverlay').classList.remove('mobile-open');
 }
 
-function doLogin(){
-  var p = document.getElementById('loginPass').value;
-  if(p === ADMIN_PASS){
-    document.getElementById('loginWrap').classList.add('hidden');
-    document.getElementById('adminLayout').classList.remove('hidden');
-    refreshAll();
-  } else {
-    document.getElementById('loginErr').style.display='block';
+async function doLogin(){
+  var email = document.getElementById('loginEmail').value.trim();
+  var pass = document.getElementById('loginPass').value;
+  var errEl = document.getElementById('loginErr');
+  errEl.style.display='none';
+
+  if(!email || !pass){errEl.textContent='Enter email and password';errEl.style.display='block';return}
+
+  var result = await sb.auth.signInWithPassword({email:email, password:pass});
+  if(result.error){errEl.textContent='Invalid credentials';errEl.style.display='block';return}
+
+  // Check admin role
+  var profile = await sb.from('profiles').select('is_admin').eq('id',result.data.user.id).single();
+  if(!profile.data || !profile.data.is_admin){
+    errEl.textContent='Access denied. Admin privileges required.';
+    errEl.style.display='block';
+    await sb.auth.signOut();
+    return;
+  }
+
+  adminUser = result.data.user;
+  document.getElementById('loginWrap').classList.add('hidden');
+  document.getElementById('adminLayout').classList.remove('hidden');
+  refreshAll();
+}
+
+// Auto-login if session exists
+async function checkSession(){
+  if(!sb) return;
+  var session = await sb.auth.getSession();
+  if(session.data.session){
+    var profile = await sb.from('profiles').select('is_admin').eq('id',session.data.session.user.id).single();
+    if(profile.data && profile.data.is_admin){
+      adminUser = session.data.session.user;
+      document.getElementById('loginWrap').classList.add('hidden');
+      document.getElementById('adminLayout').classList.remove('hidden');
+      refreshAll();
+    }
   }
 }
+checkSession();
+
+// Session timeout (30 min)
+var adminLastActivity = Date.now();
+document.addEventListener('click',function(){adminLastActivity=Date.now()});
+document.addEventListener('keydown',function(){adminLastActivity=Date.now()});
+setInterval(function(){
+  if(adminUser && Date.now()-adminLastActivity > 30*60*1000){
+    sb.auth.signOut();
+    adminUser=null;
+    document.getElementById('loginWrap').classList.remove('hidden');
+    document.getElementById('adminLayout').classList.add('hidden');
+    showToast('Session expired');
+  }
+},60000);
 
 // Nav
 document.querySelectorAll('.sb-item').forEach(function(el){
@@ -303,7 +349,7 @@ document.querySelectorAll('.sb-item').forEach(function(el){
   });
 });
 
-function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML}
+function esc(t){if(!t)return '';return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
 
 async function refreshAll(){
   loadPage('dashboard');
