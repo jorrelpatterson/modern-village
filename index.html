@@ -205,6 +205,60 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
 .sb-item{padding:14px 0;border-bottom:1px solid var(--sand);font-size:15px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}.sb-item:hover{color:var(--sage)}
 .sb-soon{font-size:11px;color:var(--warm-gray-light);font-weight:600;background:var(--cream);padding:2px 8px;border-radius:6px}
 .sb-logout{padding:14px 0;font-size:15px;cursor:pointer;color:var(--terracotta);font-weight:600;display:flex;align-items:center;gap:8px;margin-top:8px}
+
+/* Overlay Pages */
+.overlay-page{position:fixed;inset:0;z-index:90;background:var(--cream);display:none;flex-direction:column;overflow:hidden}
+.overlay-page.open{display:flex}
+.overlay-hdr{padding:14px 20px;background:white;border-bottom:1px solid var(--sand);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.overlay-back{background:none;border:none;cursor:pointer;padding:4px;display:flex}
+.overlay-title{font-family:'Fraunces',serif;font-size:20px;font-weight:800;flex:1}
+.overlay-body{flex:1;overflow-y:auto;padding:16px}
+.overlay-inner{max-width:600px;margin:0 auto}
+
+/* Tracker */
+.tracker-form{background:white;border-radius:20px;padding:24px;border:1px solid var(--sand);margin-bottom:20px}
+.tracker-form h3{font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:16px}
+.tf-row{margin-bottom:16px}
+.tf-row label{display:block;font-size:13px;font-weight:600;color:var(--warm-gray);margin-bottom:6px}
+.tf-row input,.tf-row select,.tf-row textarea{width:100%;padding:12px 16px;border-radius:12px;border:2px solid var(--sand);font-size:15px;font-family:'DM Sans',sans-serif;background:white;color:var(--charcoal)}
+.tf-row input:focus,.tf-row select:focus,.tf-row textarea:focus{border-color:var(--sage)}
+.tf-row textarea{resize:none;min-height:60px}
+.tf-row select{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239E9790' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 16px center}
+.tf-intensity{display:flex;gap:8px}
+.tf-int-btn{flex:1;padding:10px;border-radius:10px;border:2px solid var(--sand);background:white;font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all 0.2s}
+.tf-int-btn.sel-mild{border-color:var(--sage);background:var(--sage-light);color:var(--sage-dark)}
+.tf-int-btn.sel-moderate{border-color:var(--sunflower);background:rgba(232,200,74,0.15);color:#7A6A10}
+.tf-int-btn.sel-severe{border-color:var(--terracotta);background:var(--terracotta-light);color:var(--terracotta)}
+.tf-outcome{display:flex;gap:8px}
+.tf-out-btn{flex:1;padding:10px;border-radius:10px;border:2px solid var(--sand);background:white;font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all 0.2s}
+.tf-out-btn.sel{border-color:var(--sage);background:var(--sage-light);color:var(--sage-dark)}
+.log-btn{width:100%;padding:16px;border-radius:14px;border:none;background:var(--sage);color:white;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(122,158,126,0.4);margin-top:8px}
+.log-btn:disabled{opacity:0.5;cursor:default}
+
+/* Log cards */
+.log-card{background:white;border-radius:16px;padding:16px 20px;border:1px solid var(--sand);margin-bottom:12px}
+.log-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.log-card-behavior{font-weight:700;font-size:15px}
+.log-card-time{font-size:12px;color:var(--warm-gray-light)}
+.log-card-detail{font-size:13px;color:var(--warm-gray);line-height:1.5}
+.log-card-tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.log-tag{padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700}
+.log-tag-mild{background:var(--sage-light);color:var(--sage-dark)}
+.log-tag-moderate{background:rgba(232,200,74,0.15);color:#7A6A10}
+.log-tag-severe{background:var(--terracotta-light);color:var(--terracotta)}
+.log-tag-improved{background:var(--sage-light);color:var(--sage-dark)}
+.log-tag-no_change{background:var(--cream);color:var(--warm-gray)}
+.log-tag-escalated{background:var(--terracotta-light);color:var(--terracotta)}
+.log-empty{text-align:center;padding:40px 20px;color:var(--warm-gray-light)}
+.log-empty-icon{font-size:40px;margin-bottom:12px}
+
+/* Saved Strategies */
+.strat-saved-card{background:white;border-radius:16px;padding:16px 20px;border:1px solid var(--sand);margin-bottom:12px;cursor:pointer;transition:all 0.2s}
+.strat-saved-card:hover{border-color:var(--sage);box-shadow:0 4px 16px rgba(0,0,0,0.05)}
+.strat-saved-title{font-weight:700;font-size:15px;margin-bottom:4px}
+.strat-saved-date{font-size:12px;color:var(--warm-gray-light)}
+.strat-saved-preview{font-size:13px;color:var(--warm-gray);margin-top:8px;line-height:1.5}
+.strat-delete{background:none;border:none;color:var(--warm-gray-light);font-size:12px;cursor:pointer;padding:4px 8px;border-radius:6px;margin-top:6px}.strat-delete:hover{color:var(--terracotta);background:var(--terracotta-light)}
 </style>
 </head>
 <body>
@@ -254,6 +308,66 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
 
 <!-- APP -->
 <div id="app" class="app hidden">
+
+  <!-- BEHAVIOR TRACKER PAGE -->
+  <div id="trackerPage" class="overlay-page">
+    <div class="overlay-hdr">
+      <button class="overlay-back" onclick="closeOverlay('trackerPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="overlay-title">Behavior Tracker</div>
+    </div>
+    <div class="overlay-body">
+      <div class="overlay-inner">
+        <div class="tracker-form">
+          <h3>Log a Behavior</h3>
+          <div class="tf-row"><label>What happened?</label><input id="tfBehavior" type="text" placeholder="e.g. Meltdown at dinner, hitting sibling"></div>
+          <div class="tf-row"><label>What triggered it?</label><input id="tfTrigger" type="text" placeholder="e.g. Told no to screen time, transition"></div>
+          <div class="tf-row"><label>How long did it last? (minutes)</label><input id="tfDuration" type="number" placeholder="e.g. 15" min="1"></div>
+          <div class="tf-row"><label>Intensity</label>
+            <div class="tf-intensity">
+              <button class="tf-int-btn" onclick="pickIntensity(this,'mild')">Mild</button>
+              <button class="tf-int-btn" onclick="pickIntensity(this,'moderate')">Moderate</button>
+              <button class="tf-int-btn" onclick="pickIntensity(this,'severe')">Severe</button>
+            </div>
+          </div>
+          <div class="tf-row"><label>Where?</label><input id="tfLocation" type="text" placeholder="e.g. Home, school, store"></div>
+          <div class="tf-row"><label>Strategy used (if any)</label><input id="tfStrategy" type="text" placeholder="e.g. Deep breaths, First-Then board"></div>
+          <div class="tf-row"><label>Outcome</label>
+            <div class="tf-outcome">
+              <button class="tf-out-btn" onclick="pickOutcome(this,'improved')">Improved</button>
+              <button class="tf-out-btn" onclick="pickOutcome(this,'no_change')">No Change</button>
+              <button class="tf-out-btn" onclick="pickOutcome(this,'escalated')">Escalated</button>
+            </div>
+          </div>
+          <div class="tf-row"><label>Notes (optional)</label><textarea id="tfNotes" placeholder="Anything else worth noting..."></textarea></div>
+          <button class="log-btn" id="logBtn" onclick="submitLog()">Log Behavior</button>
+        </div>
+        <h3 style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:16px">Recent Logs</h3>
+        <div id="logsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAVED STRATEGIES PAGE -->
+  <div id="strategiesPage" class="overlay-page">
+    <div class="overlay-hdr">
+      <button class="overlay-back" onclick="closeOverlay('strategiesPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="overlay-title">Saved Strategies</div>
+    </div>
+    <div class="overlay-body">
+      <div class="overlay-inner" id="savedStrategiesList"></div>
+    </div>
+  </div>
+
+  <!-- BOOKING HISTORY PAGE -->
+  <div id="bookingHistoryPage" class="overlay-page">
+    <div class="overlay-hdr">
+      <button class="overlay-back" onclick="closeOverlay('bookingHistoryPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="overlay-title">Booking History</div>
+    </div>
+    <div class="overlay-body">
+      <div class="overlay-inner" id="bookingHistoryList"></div>
+    </div>
+  </div>
   <div id="sbWrap" class="sb-wrap"><div class="sb-bg" onclick="closeSb()"></div>
     <div class="sb"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px"><div class="sb-title">Modern <span>Village</span></div><button class="sb-close" onclick="closeSb()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="sb-profile" id="sbProf"></div><div class="sb-sub" id="sbSub"></div><div id="sbMenu"></div></div>
@@ -265,6 +379,37 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     <div id="tCoach" class="tab on"><div id="coachEmpty" class="ce"><div class="ce-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/><path d="M19 15L19.75 17.25L22 18L19.75 18.75L19 21L18.25 18.75L16 18L18.25 17.25L19 15Z" opacity="0.6"/></svg></div><h2>Modern Village Coach</h2><p>ABA-powered behavior strategies delivered as step-by-step cards.</p><div id="ceProfile" class="ce-profile hidden"></div><div id="freeCtr" class="free-ctr"></div><div id="sugs" style="margin-top:20px;display:flex;flex-direction:column;gap:8px"></div><div class="ariana-banner" onclick="switchTab('pros')"><div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--lavender),rgba(212,200,232,0.6));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;flex-shrink:0">AR</div><div style="flex:1"><div style="font-weight:700;font-size:14px">Need deeper support? Book with Ariana Roberts</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">BCBA — from $55/session</div></div><div style="color:var(--warm-gray-light);font-size:18px">&rarr;</div></div></div><div id="chatMsgs" class="msgs hidden"></div><div id="paywall" class="paywall hidden"><div class="paywall-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/></svg></div><h3>Unlock Unlimited Coaching</h3><p>Upgrade for unlimited ABA strategy cards.</p><div class="pw-price">$19<span style="font-size:18px;font-weight:500">.99</span></div><div class="pw-period">per month &middot; cancel anytime</div><ul class="pw-feats"><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Unlimited strategy cards</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Save &amp; revisit strategies</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Behavior tracking</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Available 24/7</li></ul><button class="pw-btn" onclick="subscribe()">Start Modern Village Coach &mdash; $19.99/mo</button><button class="pw-skip" onclick="dismissPw()">Maybe later</button></div></div>
     <div id="tPros" class="tab"><div id="providerView"></div></div>
     <div id="tComm" class="tab"><div style="margin-bottom:16px"><h2 style="font-family:'Fraunces',serif;font-size:24px;font-weight:800">Your Village</h2><p style="color:var(--warm-gray);font-size:14px;margin-top:4px">Real parents. Real stories. Real support.</p></div><div id="topicPills" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin-bottom:8px"></div><div style="background:white;border-radius:16px;padding:14px 20px;margin-bottom:16px;border:1px solid var(--sand);display:flex;align-items:center;gap:12px;cursor:pointer"><div class="hdr-av" id="commAv" style="width:36px;height:36px;font-size:14px">?</div><span style="color:var(--warm-gray-light);font-size:14px">Share a win, ask a question, or just vent...</span></div><div id="communityPosts" style="display:flex;flex-direction:column;gap:12px"></div></div>
+
+    <!-- BEHAVIOR TRACKER -->
+    <div id="tTrack" class="tab">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div><h2 style="font-family:'Fraunces',serif;font-size:24px;font-weight:800">Behavior Tracker</h2><p style="color:var(--warm-gray);font-size:14px;margin-top:4px">Log incidents. See patterns. Share with Ariana.</p></div>
+      </div>
+      <!-- Log Form -->
+      <div id="trackForm" style="background:white;border-radius:20px;padding:24px;border:1px solid var(--sand);margin-bottom:20px">
+        <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:16px">Log a Behavior</div>
+        <div style="margin-bottom:14px"><label class="fl">What happened?</label><input id="trBehavior" class="fi" placeholder="e.g. Meltdown, hitting, screaming"></div>
+        <div style="margin-bottom:14px"><label class="fl">What triggered it?</label><input id="trTrigger" class="fi" placeholder="e.g. Told to turn off iPad, transition to bath"></div>
+        <div style="display:flex;gap:12px;margin-bottom:14px">
+          <div style="flex:1"><label class="fl">Duration (min)</label><input id="trDuration" class="fi" type="number" placeholder="e.g. 10"></div>
+          <div style="flex:1"><label class="fl">Intensity</label><select id="trIntensity" class="fi"><option value="">Select</option><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option></select></div>
+        </div>
+        <div style="margin-bottom:14px"><label class="fl">Where?</label><input id="trLocation" class="fi" placeholder="e.g. Home, school, store"></div>
+        <div style="margin-bottom:14px"><label class="fl">Strategy used (if any)</label><input id="trStrategy" class="fi" placeholder="e.g. Visual timer, deep breaths, First-Then"></div>
+        <div style="margin-bottom:14px"><label class="fl">Outcome</label>
+          <div style="display:flex;gap:8px">
+            <button class="chip" data-outcome="improved" onclick="pickOutcome(this,'improved')">&#x2191; Improved</button>
+            <button class="chip" data-outcome="no_change" onclick="pickOutcome(this,'no_change')">&#x2194; No Change</button>
+            <button class="chip" data-outcome="escalated" onclick="pickOutcome(this,'escalated')">&#x2193; Escalated</button>
+          </div>
+        </div>
+        <div style="margin-bottom:16px"><label class="fl">Notes (optional)</label><textarea id="trNotes" class="fi" rows="2" placeholder="Anything else to remember..." style="resize:none"></textarea></div>
+        <button class="btn btn-p" style="width:100%" onclick="logBehavior()">Log Behavior</button>
+      </div>
+      <!-- Recent Logs -->
+      <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:12px">Recent Logs</div>
+      <div id="trackLogs" style="display:flex;flex-direction:column;gap:10px"><div style="text-align:center;padding:32px;color:var(--warm-gray-light);font-size:14px">No behaviors logged yet. Start tracking to see patterns.</div></div>
+    </div>
   </div></div>
 
   <div id="chatBar" class="ci"><div class="ci-in"><textarea id="cTa" class="ci-ta" placeholder="Describe what's happening..." rows="1"></textarea><button id="sendBtn" class="ci-btn" onclick="send()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div></div>
@@ -273,6 +418,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     <button class="nb on" data-t="coach" onclick="switchTab('coach')"><div class="ndot"></div><svg width="22" height="22" viewBox="0 0 24 24" fill="#7A9E7E" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/></svg><span class="nl">Coach</span></button>
     <button class="nb" data-t="pros" onclick="switchTab('pros')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="nl">Ariana</span></button>
     <button class="nb" data-t="community" onclick="switchTab('community')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="nl">Community</span></button>
+    <button class="nb" data-t="track" onclick="switchTab('track')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2" stroke-linecap="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><span class="nl">Track</span></button>
   </div></nav>
 </div>
 
@@ -456,8 +602,8 @@ function renderSb(){
   var displayName=S.name||( S.user?S.user.email:'Guest');
   document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Signed in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+displayName+'</div>'+(S.child?'<div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Parent of '+S.child+(S.age?', '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'')+'</div>':'');
   updateSubSt();
-  var items=[{label:"My Profile",soon:true},{label:"Saved Strategies",soon:true},{label:"Behavior Tracker",soon:true},{label:"Booking History",soon:true},{label:"Settings",soon:true}];
-  var h='';for(var i=0;i<items.length;i++)h+='<div class="sb-item" onclick="showToast(\'Coming soon!\')"><span>'+items[i].label+'</span><span class="sb-soon">Soon</span></div>';
+  var items=[{label:"Saved Strategies",action:"openStrategies()"},{label:"Behavior Tracker",action:"openTracker()"},{label:"Booking History",action:"openBookingHistory()"},{label:"My Profile",soon:true},{label:"Settings",soon:true}];
+  var h='';for(var i=0;i<items.length;i++){var item=items[i];if(item.soon){h+='<div class="sb-item" onclick="showToast(\'Coming soon!\')"><span>'+item.label+'</span><span class="sb-soon">Soon</span></div>'}else{h+='<div class="sb-item" onclick="closeSb();'+item.action+'"><span>'+item.label+'</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray-light)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>'}}
   if(S.user)h+='<div class="sb-logout" onclick="logout()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out</div>';
   document.getElementById('sbMenu').innerHTML=h;
 }
@@ -468,7 +614,7 @@ function updateSubSt(){
 }
 
 // ═══ TAB SWITCHING ═══
-function switchTab(t){S.tab=t;var tabs=document.querySelectorAll('.tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('on');var m={coach:'tCoach',pros:'tPros',community:'tComm'};document.getElementById(m[t]).classList.add('on');var btns=document.querySelectorAll('.nb');for(var i=0;i<btns.length;i++){var b=btns[i],a=b.getAttribute('data-t')===t;b.classList.toggle('on',a);var s=b.querySelector('svg'),d=b.querySelector('.ndot');if(a){if(!d){d=document.createElement('div');d.className='ndot';b.appendChild(d)}s.setAttribute('stroke',t==='coach'?'none':'#7A9E7E');if(t==='coach')s.setAttribute('fill','#7A9E7E')}else{if(d)d.remove();s.setAttribute('stroke','#9E9790');s.setAttribute('fill','none')}}document.getElementById('chatBar').style.display=t==='coach'?'block':'none';document.getElementById('mainScroll').scrollTop=0}
+function switchTab(t){S.tab=t;var tabs=document.querySelectorAll('.tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('on');var m={coach:'tCoach',pros:'tPros',community:'tComm',track:'tTrack'};document.getElementById(m[t]).classList.add('on');var btns=document.querySelectorAll('.nb');for(var i=0;i<btns.length;i++){var b=btns[i],a=b.getAttribute('data-t')===t;b.classList.toggle('on',a);var s=b.querySelector('svg'),d=b.querySelector('.ndot');if(a){if(!d){d=document.createElement('div');d.className='ndot';b.appendChild(d)}s.setAttribute('stroke',t==='coach'?'none':'#7A9E7E');if(t==='coach')s.setAttribute('fill','#7A9E7E')}else{if(d)d.remove();s.setAttribute('stroke','#9E9790');s.setAttribute('fill','none')}}document.getElementById('chatBar').style.display=t==='coach'?'block':'none';document.getElementById('mainScroll').scrollTop=0;if(t==='track')loadBehaviorLogs()}
 
 // ═══ AI COACH ═══
 function updateFreeCtr(){var el=document.getElementById('freeCtr');if(S.subscribed){el.style.display='none';return}el.style.display='inline-block';var l=S.freeLimit-S.freeUsed;el.innerHTML='<strong>'+l+'</strong> free card'+(l!==1?'s':'')+' left'}
@@ -587,6 +733,160 @@ function renderTopics(){var h='';for(var i=0;i<TOPICS.length;i++){var t=TOPICS[i
 function selectTopic(t){S.topic=t;renderTopics();renderCommunityPosts()}
 function toggleLike(id){S.likes[id]=!S.likes[id];renderCommunityPosts()}
 function renderCommunityPosts(){var filtered=[];for(var i=0;i<POSTS_DATA.length;i++)if(S.topic==='All'||POSTS_DATA[i].topic===S.topic)filtered.push(POSTS_DATA[i]);var h='';for(var i=0;i<filtered.length;i++){var p=filtered[i],bc=BADGE_COLORS[p.badge]||'#C4B8A8',lk=S.likes[p.id],lc=p.likes+(lk?1:0);h+='<div class="postcard" style="animation:slideUp 0.5s '+(i*0.08)+'s both"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><div class="postav" style="background:linear-gradient(135deg,'+bc+'40,'+bc+'80)">'+p.author[0]+'</div><div style="flex:1"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;font-size:14px">'+p.author+'</span><span style="padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;background:'+bc+'20;color:'+bc+'">'+p.badge+'</span></div><div style="display:flex;align-items:center;gap:6px;margin-top:2px"><span style="font-size:12px;color:var(--warm-gray-light)">'+p.time+'</span><span style="width:3px;height:3px;border-radius:50%;background:var(--sand-dark)"></span><span style="font-size:12px;color:var(--warm-gray)">'+p.topic+'</span></div></div></div><p style="font-size:14.5px;line-height:1.6;margin-bottom:14px">'+p.text+'</p><div style="display:flex;gap:20px"><button class="postbtn '+(lk?'liked':'')+'" onclick="toggleLike('+p.id+')"><svg width="18" height="18" viewBox="0 0 24 24" fill="'+(lk?'#C4745A':'none')+'" stroke="'+(lk?'#C4745A':'#9E9790')+'" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'+lc+'</button><button class="postbtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'+p.comments+'</button></div></div>'}document.getElementById('communityPosts').innerHTML=h}
+
+// ═══ OVERLAY PAGES ═══
+function closeOverlay(id){document.getElementById(id).classList.remove('open')}
+
+// ═══ BEHAVIOR TRACKER ═══
+var trackerState = {intensity:null, outcome:null};
+
+function openTracker(){
+  if(!S.user){showAuth(true);return}
+  document.getElementById('trackerPage').classList.add('open');
+  loadLogs();
+}
+
+function pickIntensity(el, val){
+  trackerState.intensity = val;
+  var btns = el.parentElement.querySelectorAll('.tf-int-btn');
+  for(var i=0;i<btns.length;i++) btns[i].className='tf-int-btn';
+  el.classList.add('sel-'+val);
+}
+
+function pickOutcome(el, val){
+  trackerState.outcome = val;
+  var btns = el.parentElement.querySelectorAll('.tf-out-btn');
+  for(var i=0;i<btns.length;i++) btns[i].className='tf-out-btn';
+  el.classList.add('sel');
+}
+
+async function submitLog(){
+  var behavior = document.getElementById('tfBehavior').value.trim();
+  if(!behavior){showToast('Describe what happened');return}
+  var btn = document.getElementById('logBtn');
+  btn.disabled=true; btn.textContent='Saving...';
+
+  var log = {
+    user_id: S.user.id,
+    behavior: behavior,
+    trigger_desc: document.getElementById('tfTrigger').value.trim()||null,
+    duration_minutes: parseInt(document.getElementById('tfDuration').value)||null,
+    intensity: trackerState.intensity,
+    location: document.getElementById('tfLocation').value.trim()||null,
+    strategy_used: document.getElementById('tfStrategy').value.trim()||null,
+    outcome: trackerState.outcome,
+    notes: document.getElementById('tfNotes').value.trim()||null
+  };
+
+  var r = await sb.from('behavior_logs').insert(log);
+  if(!r.error){
+    showToast('Behavior logged!');
+    document.getElementById('tfBehavior').value='';
+    document.getElementById('tfTrigger').value='';
+    document.getElementById('tfDuration').value='';
+    document.getElementById('tfLocation').value='';
+    document.getElementById('tfStrategy').value='';
+    document.getElementById('tfNotes').value='';
+    trackerState = {intensity:null, outcome:null};
+    var intBtns = document.querySelectorAll('.tf-int-btn');
+    for(var i=0;i<intBtns.length;i++) intBtns[i].className='tf-int-btn';
+    var outBtns = document.querySelectorAll('.tf-out-btn');
+    for(var i=0;i<outBtns.length;i++) outBtns[i].className='tf-out-btn';
+    loadLogs();
+  } else { showToast('Error saving log'); }
+  btn.disabled=false; btn.textContent='Log Behavior';
+}
+
+async function loadLogs(){
+  if(!S.user)return;
+  var r = await sb.from('behavior_logs').select('*').eq('user_id',S.user.id).order('logged_at',{ascending:false}).limit(20);
+  var el = document.getElementById('logsList');
+  if(!r.data||r.data.length===0){
+    el.innerHTML='<div class="log-empty"><div class="log-empty-icon">\ud83d\udcdd</div><div style="font-size:15px;font-weight:600;margin-bottom:4px">No logs yet</div><div style="font-size:13px">Start logging behaviors to see patterns over time</div></div>';
+    return;
+  }
+  var h='';
+  for(var i=0;i<r.data.length;i++){
+    var l=r.data[i];
+    var d=new Date(l.logged_at);
+    var timeStr=d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' at '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    h+='<div class="log-card"><div class="log-card-top"><div class="log-card-behavior">'+esc(l.behavior)+'</div><div class="log-card-time">'+timeStr+'</div></div>';
+    if(l.trigger_desc)h+='<div class="log-card-detail"><strong>Trigger:</strong> '+esc(l.trigger_desc)+'</div>';
+    if(l.duration_minutes)h+='<div class="log-card-detail"><strong>Duration:</strong> '+l.duration_minutes+' min</div>';
+    if(l.strategy_used)h+='<div class="log-card-detail"><strong>Strategy:</strong> '+esc(l.strategy_used)+'</div>';
+    if(l.notes)h+='<div class="log-card-detail" style="margin-top:4px;font-style:italic">'+esc(l.notes)+'</div>';
+    h+='<div class="log-card-tags">';
+    if(l.intensity)h+='<span class="log-tag log-tag-'+l.intensity+'">'+l.intensity+'</span>';
+    if(l.outcome)h+='<span class="log-tag log-tag-'+l.outcome+'">'+l.outcome.replace('_',' ')+'</span>';
+    h+='</div></div>';
+  }
+  el.innerHTML=h;
+}
+
+// ═══ SAVED STRATEGIES ═══
+async function openStrategies(){
+  if(!S.user){showAuth(true);return}
+  document.getElementById('strategiesPage').classList.add('open');
+  loadSavedStrategies();
+}
+
+async function loadSavedStrategies(){
+  if(!S.user)return;
+  var r = await sb.from('saved_strategies').select('*').eq('user_id',S.user.id).order('created_at',{ascending:false});
+  var el = document.getElementById('savedStrategiesList');
+  if(!r.data||r.data.length===0){
+    el.innerHTML='<div class="log-empty"><div class="log-empty-icon">\u2b50</div><div style="font-size:15px;font-weight:600;margin-bottom:4px">No saved strategies yet</div><div style="font-size:13px">Tap the \u2605 Save button on any strategy card in the AI Coach</div></div>';
+    return;
+  }
+  var h='';
+  for(var i=0;i<r.data.length;i++){
+    var s=r.data[i];
+    var d=new Date(s.created_at);
+    var dateStr=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    var preview='';
+    if(s.strategy_data&&s.strategy_data.strategy) preview=s.strategy_data.strategy.substring(0,120)+'...';
+    else if(s.strategy_data&&s.strategy_data.empathy) preview=s.strategy_data.empathy.substring(0,120)+'...';
+    h+='<div class="strat-saved-card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="strat-saved-title">'+(s.title?esc(s.title):'Strategy')+'</div><div class="strat-saved-date">Saved '+dateStr+'</div></div></div>';
+    if(preview)h+='<div class="strat-saved-preview">'+esc(preview)+'</div>';
+    h+='<button class="strat-delete" onclick="deleteStrategy(\''+s.id+'\')">Remove</button></div>';
+  }
+  el.innerHTML=h;
+}
+
+async function deleteStrategy(id){
+  await sb.from('saved_strategies').delete().eq('id',id);
+  showToast('Strategy removed');
+  loadSavedStrategies();
+}
+
+// ═══ BOOKING HISTORY ═══
+async function openBookingHistory(){
+  if(!S.user){showAuth(true);return}
+  document.getElementById('bookingHistoryPage').classList.add('open');
+  loadBookingHistory();
+}
+
+async function loadBookingHistory(){
+  if(!S.user)return;
+  var r = await sb.from('bookings').select('*').eq('user_id',S.user.id).order('created_at',{ascending:false});
+  var el = document.getElementById('bookingHistoryList');
+  if(!r.data||r.data.length===0){
+    el.innerHTML='<div class="log-empty"><div class="log-empty-icon">\ud83d\udcc5</div><div style="font-size:15px;font-weight:600;margin-bottom:4px">No bookings yet</div><div style="font-size:13px">Book a session with Ariana from the Ariana tab</div></div>';
+    return;
+  }
+  var h='';
+  for(var i=0;i<r.data.length;i++){
+    var b=r.data[i];
+    var d=new Date(b.session_date);
+    var dateStr=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    var statusColor=b.status==='completed'?'var(--sage)':b.status==='confirmed'?'var(--sunflower)':'var(--warm-gray-light)';
+    h+='<div class="log-card"><div class="log-card-top"><div class="log-card-behavior">'+b.provider_name+'</div><div class="log-card-time">'+dateStr+'</div></div>';
+    h+='<div class="log-card-detail"><strong>Time:</strong> '+b.session_time+' \u2022 '+(b.session_type==='30min'?'30':'60')+' min</div>';
+    h+='<div class="log-card-detail"><strong>Amount:</strong> $'+(b.amount_cents/100).toFixed(2)+'</div>';
+    h+='<div class="log-card-tags"><span class="log-tag" style="background:'+statusColor+'20;color:'+statusColor+'">'+b.status+'</span></div></div>';
+  }
+  el.innerHTML=h;
+}
 </script>
 </body>
 </html>
