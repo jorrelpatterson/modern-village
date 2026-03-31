@@ -8,7 +8,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://jrsiqjfwvunrjiihnsgc.supabase.co https://village-api.jorrelpatterson.workers.dev https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://doxy.me; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:; font-src https://fonts.gstatic.com;">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:title" content="Modern Village — AI Behavior Coach">
-<meta property="og:description" content="Instant ABA strategy cards for parents. 24/7 AI coaching, licensed BCBAs, and a parent community.">
+<meta property="og:description" content="Instant ABA strategy cards for parents. 24/7 AI coaching, certified BCBAs, and a parent community.">
 <meta property="og:image" content="https://modernvillage.app/og-image.png">
 <meta property="og:url" content="https://modernvillage.app/app.html">
 <meta property="og:type" content="website">
@@ -447,10 +447,10 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   <div class="dots" id="dots"><div class="dot on"></div><div class="dot"></div></div>
   <div id="obStep1">
     <h1 class="ob-t">Welcome to Modern Village</h1>
-    <p class="ob-s">AI behavior coaching, licensed professionals, and a parent community.</p>
+    <p class="ob-s">AI behavior coaching, certified professionals, and a parent community.</p>
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:24px">
       <div class="fc" style="animation:slideUp 0.6s 0.2s both"><div style="flex-shrink:0;margin-top:2px"><svg width="20" height="20" viewBox="0 0 24 24" fill="#7A9E7E"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/></svg></div><div><div style="font-weight:600;font-size:15px">AI Coach with ABA Strategy Cards</div><div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Step-by-step behavioral strategies, instantly</div></div></div>
-      <div class="fc" style="animation:slideUp 0.6s 0.35s both"><div style="flex-shrink:0;margin-top:2px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div><div style="font-weight:600;font-size:15px">Book sessions with licensed BCBAs</div><div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Board Certified Behavior Analysts</div></div></div>
+      <div class="fc" style="animation:slideUp 0.6s 0.35s both"><div style="flex-shrink:0;margin-top:2px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div><div style="font-weight:600;font-size:15px">Book sessions with certified BCBAs</div><div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Board Certified Behavior Analysts</div></div></div>
       <div class="fc" style="animation:slideUp 0.6s 0.5s both"><div style="flex-shrink:0;margin-top:2px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div><div style="font-weight:600;font-size:15px">Free parent community</div><div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Connect with parents who understand</div></div></div>
     </div>
     <div style="margin-top:32px"><button class="btn btn-p" style="width:100%" onclick="obNext()">Continue</button></div>
@@ -707,22 +707,13 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
           <div style="margin-bottom:14px"><label class="fl">Relationship to child</label><select id="profRelationship" class="fi"><option value="">Select</option><option>Mother</option><option>Father</option><option>Grandparent</option><option>Guardian</option><option>Foster Parent</option><option>Other</option></select></div>
         </div>
 
-        <!-- Primary Child -->
+        <!-- Children -->
         <div style="background:white;border-radius:20px;padding:24px;border:1px solid var(--sand);margin-bottom:16px">
-          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:16px">Your Child</div>
-          <div style="margin-bottom:14px"><label class="fl">Child's name</label><input id="profChild" class="fi" placeholder="Child's name"></div>
-          <div style="display:flex;gap:12px;margin-bottom:14px">
-            <div style="flex:1"><label class="fl">Birthday</label><input id="profBirthday" class="fi" type="date"></div>
-            <div style="flex:1"><label class="fl">Gender</label><select id="profGender" class="fi"><option value="">Select</option><option>Male</option><option>Female</option><option>Non-binary</option><option>Prefer not to say</option></select></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800">Your Children</div>
+            <button class="btn btn-s" style="padding:8px 16px;font-size:13px" onclick="openAddChild()">+ Add Child</button>
           </div>
-          <div id="profAgeDisplay" style="display:none;padding:10px 14px;background:var(--sage-light);border-radius:10px;font-size:13px;color:var(--sage-dark);font-weight:600;margin-bottom:14px"></div>
-          <div style="display:flex;gap:12px;margin-bottom:14px">
-            <div style="flex:1"><label class="fl">School</label><input id="profSchool" class="fi" placeholder="e.g. Lincoln Elementary"></div>
-            <div style="flex:1"><label class="fl">Grade</label><select id="profGrade" class="fi"><option value="">Select</option><option>Pre-K</option><option>Kindergarten</option><option>1st</option><option>2nd</option><option>3rd</option><option>4th</option><option>5th</option><option>6th</option><option>7th</option><option>8th</option><option>9th</option><option>10th</option><option>11th</option><option>12th</option><option>Not in school</option></select></div>
-          </div>
-          <div style="margin-bottom:14px"><label class="fl">Diagnosis (select all that apply)</label>
-            <div style="display:flex;flex-wrap:wrap;gap:6px" id="profDxChips"></div>
-          </div>
+          <div id="profChildrenList"></div>
         </div>
 
         <!-- Goals -->
@@ -765,7 +756,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   <header class="hdr"><div class="hdr-left"><button class="hdr-menu" onclick="openSb()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div style="display:flex;align-items:center;gap:8px"><div class="hdr-logo"><svg width="18" height="18" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 24C8 32 14 38 22 38C30 38 36 32 36 24C36 14 22 6 22 6Z" fill="white" opacity="0.9"/><circle cx="22" cy="24" r="4" fill="white"/></svg></div><span class="hdr-name">Modern <span>Village</span></span></div></div><div class="hdr-av" id="hdrAv" onclick="openSb()">?</div></header>
 
   <div class="scroll" id="mainScroll"><div class="minner">
-    <div id="tCoach" class="tab on"><div id="coachEmpty" class="ce"><div class="ce-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/><path d="M19 15L19.75 17.25L22 18L19.75 18.75L19 21L18.25 18.75L16 18L18.25 17.25L19 15Z" opacity="0.6"/></svg></div><h2>Modern Village Coach</h2><p>ABA-powered behavior strategies delivered as step-by-step cards.</p><div id="ceProfile" class="ce-profile hidden"></div><div id="freeCtr" class="free-ctr"></div><div id="sugs" style="margin-top:20px;display:flex;flex-direction:column;gap:8px"></div><div class="ariana-banner" onclick="switchTab('pros')"><div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--lavender),rgba(212,200,232,0.6));display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div><div style="flex:1"><div style="font-weight:700;font-size:14px">Need deeper support? Book a Pro session</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Licensed BCBAs — from $55/session</div></div><div style="color:var(--warm-gray-light);font-size:18px">&rarr;</div></div></div><div id="chatMsgs" class="msgs hidden"></div><div id="paywall" class="paywall hidden"><div class="paywall-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/></svg></div><h3>Unlock Unlimited Coaching</h3><p>Upgrade for unlimited ABA strategy cards.</p><div class="pw-price">$19<span style="font-size:18px;font-weight:500">.99</span></div><div class="pw-period">per month &middot; cancel anytime</div><ul class="pw-feats"><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Unlimited strategy cards</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Save &amp; revisit strategies</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Behavior tracking</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Available 24/7</li></ul><button class="pw-btn" onclick="subscribe()">Start Modern Village Coach &mdash; $19.99/mo</button><div style="display:flex;gap:8px;margin-top:12px;align-items:center"><input id="promoInput" class="fi" style="flex:1;padding:10px 14px;font-size:14px;text-align:center;text-transform:uppercase" placeholder="Have a code?" maxlength="20"><button class="btn btn-s" style="padding:10px 16px" onclick="redeemCode()">Redeem</button></div><button class="pw-skip" onclick="dismissPw()">Maybe later</button></div></div>
+    <div id="tCoach" class="tab on"><div id="childSwitcher" style="display:none;gap:8px;padding:0 0 12px;overflow-x:auto;flex-wrap:wrap"></div><div id="coachEmpty" class="ce"><div class="ce-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/><path d="M19 15L19.75 17.25L22 18L19.75 18.75L19 21L18.25 18.75L16 18L18.25 17.25L19 15Z" opacity="0.6"/></svg></div><h2>Modern Village Coach</h2><p>ABA-powered behavior strategies delivered as step-by-step cards.</p><div id="ceProfile" class="ce-profile hidden"></div><div id="freeCtr" class="free-ctr"></div><div id="sugs" style="margin-top:20px;display:flex;flex-direction:column;gap:8px"></div><div class="ariana-banner" onclick="switchTab('pros')"><div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--lavender),rgba(212,200,232,0.6));display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div><div style="flex:1"><div style="font-weight:700;font-size:14px">Need deeper support? Book a Pro session</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Certified BCBAs — from $55/session</div></div><div style="color:var(--warm-gray-light);font-size:18px">&rarr;</div></div></div><div id="chatMsgs" class="msgs hidden"></div><div id="paywall" class="paywall hidden"><div class="paywall-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/></svg></div><h3>Unlock Unlimited Coaching</h3><p>Upgrade for unlimited ABA strategy cards.</p><div class="pw-price">$19<span style="font-size:18px;font-weight:500">.99</span></div><div class="pw-period">per month &middot; cancel anytime</div><ul class="pw-feats"><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Unlimited strategy cards</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Save &amp; revisit strategies</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Behavior tracking</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Available 24/7</li></ul><button class="pw-btn" onclick="subscribe()">Start Modern Village Coach &mdash; $19.99/mo</button><div style="display:flex;gap:8px;margin-top:12px;align-items:center"><input id="promoInput" class="fi" style="flex:1;padding:10px 14px;font-size:14px;text-align:center;text-transform:uppercase" placeholder="Have a code?" maxlength="20"><button class="btn btn-s" style="padding:10px 16px" onclick="redeemCode()">Redeem</button></div><button class="pw-skip" onclick="dismissPw()">Maybe later</button></div></div>
     <div id="tPros" class="tab"><div id="providerView"></div></div>
     <div id="tComm" class="tab"><div style="margin-bottom:16px"><h2 style="font-family:'Fraunces',serif;font-size:24px;font-weight:800">Your Village</h2><p style="color:var(--warm-gray);font-size:14px;margin-top:4px">Real parents. Real stories. Real support.</p></div><div id="topicPills" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin-bottom:8px"></div>
       <!-- Compose -->
@@ -875,6 +866,7 @@ setInterval(function(){
 var S = {
   user: null, profile: null,
   name:'', child:'', age:'', dx:'', focuses:[],
+  children:[], activeChild:null,
   tab:'coach', msgs:[], typing:false, likes:{}, topic:'All',
   subscribed:false, freeUsed:0, freeLimit:3,
   booking:{session:null,date:null,time:null},
@@ -882,7 +874,7 @@ var S = {
 };
 
 var PROVIDERS = [
-  {id:'ariana',name:"Ariana Roberts",initials:"AR",creds:["BCBA"],badge:"Founder & Clinical Director",specialty:["Autism (ASD)","Early Intervention","Social Skills","Parent Coaching"],bio:"Ariana brings deep expertise in behavior analysis to every family she works with. She specializes in helping parents of autistic children build structure, reduce stress, and celebrate progress. Her approach blends ABA strategies with practical warmth \u2014 because parents need both evidence and encouragement.",rating:5.0,reviews:48,price30:55,price60:95,families:200,experience:"8 yrs",color:"var(--lavender)",active:true,videoUrl:"https://doxy.me/v2/check-in/arianaroberts/",email:"ArianaRPatterson@gmail.com"}
+  {id:'ariana',name:"Ariana Roberts",initials:"AR",creds:["BCBA"],badge:"Board Certified Behavior Analyst",specialty:["Autism (ASD)","Early Intervention","Social Skills","Parent Coaching"],bio:"Ariana brings deep expertise in behavior analysis to every family she works with. She specializes in helping parents of autistic children build structure, reduce stress, and celebrate progress. Her approach blends ABA strategies with practical warmth \u2014 because parents need both evidence and encouragement.",rating:5.0,reviews:48,price30:55,price60:95,families:200,experience:"8 yrs",color:"var(--lavender)",active:true,videoUrl:"https://doxy.me/v2/check-in/arianaroberts/",email:"ArianaRPatterson@gmail.com"}
 ];
 var selectedProvider = null;
 var TIMES = ["9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM"];
@@ -973,14 +965,127 @@ async function loadProfile(){
   if(r.data){
     S.profile=r.data;
     S.name=r.data.name||'';
-    S.child=r.data.child_name||'';
-    S.age=r.data.child_age||'';
-    S.dx=r.data.diagnosis||'';
     S.focuses=r.data.focus_areas||[];
     S.subscribed=r.data.subscription_status==='pro';
     S.freeUsed=r.data.free_messages_used||0;
     auditLog('view_profile','profiles',S.user.id);
   }
+  await loadChildren();
+}
+
+async function loadChildren(){
+  if(!S.user)return;
+  var r=await sb.from('children').select('*').eq('user_id',S.user.id).order('created_at',{ascending:true});
+  S.children=r.data||[];
+  // If no children in table but profile has legacy child data, migrate it
+  if(!S.children.length && S.profile && S.profile.child_name){
+    var legacy={user_id:S.user.id,name:S.profile.child_name,age:S.profile.child_age||null,gender:S.profile.child_gender||null,school:S.profile.child_school||null,grade:S.profile.child_grade||null,birthday:S.profile.child_birthday||null};
+    if(S.profile.diagnosis){
+      legacy.diagnosis=Array.isArray(S.profile.diagnosis)?S.profile.diagnosis:[S.profile.diagnosis];
+    }
+    if(S.profile.goals) legacy.goals=S.profile.goals;
+    var ins=await sb.from('children').insert(legacy).select();
+    if(ins.data&&ins.data.length){S.children=ins.data;await sb.from('profiles').update({active_child_id:ins.data[0].id}).eq('id',S.user.id)}
+  }
+  // Set active child
+  var activeId=S.profile&&S.profile.active_child_id;
+  if(activeId){
+    S.activeChild=S.children.find(function(c){return c.id===activeId})||S.children[0]||null;
+  } else {
+    S.activeChild=S.children[0]||null;
+    if(S.activeChild) sb.from('profiles').update({active_child_id:S.activeChild.id}).eq('id',S.user.id);
+  }
+  syncActiveChild();
+  renderChildSwitcher();
+}
+
+function syncActiveChild(){
+  if(S.activeChild){
+    S.child=S.activeChild.name||'';
+    S.age=S.activeChild.age||'';
+    S.dx=S.activeChild.diagnosis?S.activeChild.diagnosis.join(', '):'';
+  } else {
+    S.child='';S.age='';S.dx='';
+  }
+}
+
+async function switchChild(childId){
+  S.activeChild=S.children.find(function(c){return c.id===childId})||null;
+  syncActiveChild();
+  renderChildSwitcher();
+  // Update coach profile display
+  if(S.child){var p=document.getElementById('ceProfile');p.classList.remove('hidden');p.innerHTML='Coaching for <strong>'+esc(S.child)+'</strong>'+(S.age?' \u00b7 '+esc(S.age):'')+(S.dx?' \u00b7 '+esc(S.dx):'')}
+  // Update sidebar
+  var displayName=S.name||S.user.email.split('@')[0];
+  document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Signed in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+esc(displayName)+'</div>'+(S.child?'<div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Parent of '+esc(S.child)+(S.age?', '+esc(S.age):'')+(S.dx?' \u00b7 '+esc(S.dx):'')+'</div>':'');
+  if(S.user) sb.from('profiles').update({active_child_id:childId}).eq('id',S.user.id);
+}
+
+function openAddChild(){
+  document.getElementById('addChildName').value='';
+  document.getElementById('addChildBirthday').value='';
+  document.getElementById('addChildGender').value='';
+  document.getElementById('addChildDx').value='';
+  document.getElementById('addChildModal').style.display='flex';
+  document.getElementById('addChildModalTitle').textContent='Add Child';
+  document.getElementById('addChildId').value='';
+}
+
+function editChild(childId){
+  var c=S.children.find(function(ch){return ch.id===childId});
+  if(!c)return;
+  document.getElementById('addChildName').value=c.name||'';
+  document.getElementById('addChildBirthday').value=c.birthday||'';
+  document.getElementById('addChildGender').value=c.gender||'';
+  document.getElementById('addChildDx').value=c.diagnosis?c.diagnosis.join(', '):'';
+  document.getElementById('addChildModal').style.display='flex';
+  document.getElementById('addChildModalTitle').textContent='Edit Child';
+  document.getElementById('addChildId').value=childId;
+}
+
+async function saveChild(){
+  var name=document.getElementById('addChildName').value.trim();
+  if(!name){showToast('Enter child name');return}
+  var birthday=document.getElementById('addChildBirthday').value;
+  var age='';
+  if(birthday){var diff=Date.now()-new Date(birthday).getTime();age=Math.floor(diff/31557600000)+' yrs'}
+  var dxStr=document.getElementById('addChildDx').value.trim();
+  var dxArr=dxStr?dxStr.split(',').map(function(d){return d.trim()}).filter(function(d){return d}):[];
+  var data={user_id:S.user.id,name:name,birthday:birthday||null,age:age||null,gender:document.getElementById('addChildGender').value||null,diagnosis:dxArr.length?dxArr:null};
+  var editId=document.getElementById('addChildId').value;
+  if(editId){
+    await sb.from('children').update(data).eq('id',editId);
+  } else {
+    var ins=await sb.from('children').insert(data).select();
+    if(ins.data&&ins.data.length) editId=ins.data[0].id;
+  }
+  document.getElementById('addChildModal').style.display='none';
+  await loadChildren();
+  if(editId) switchChild(editId);
+  showToast(document.getElementById('addChildId').value?'Child updated':'Child added!');
+}
+
+async function removeChild(childId){
+  if(S.children.length<=1){showToast('Cannot remove your only child profile');return}
+  if(!confirm('Remove this child profile? This cannot be undone.'))return;
+  await sb.from('children').delete().eq('id',childId);
+  await loadChildren();
+  showToast('Child removed');
+}
+
+function renderChildSwitcher(){
+  var el=document.getElementById('childSwitcher');
+  if(!el)return;
+  if(S.children.length<=1){el.innerHTML='';el.style.display='none';return}
+  el.style.display='flex';
+  var h='';
+  S.children.forEach(function(c){
+    var active=S.activeChild&&S.activeChild.id===c.id;
+    var dx=c.diagnosis&&c.diagnosis.length?c.diagnosis[0]:'';
+    h+='<button onclick="switchChild(\''+c.id+'\')" style="padding:8px 16px;border-radius:12px;border:1.5px solid '+(active?'var(--sage)':'var(--sand)')+';background:'+(active?'var(--sage-light)':'white')+';font-size:13px;font-weight:'+(active?'700':'500')+';color:'+(active?'var(--sage-dark)':'var(--warm-gray)')+';cursor:pointer;transition:all 0.2s;font-family:inherit;white-space:nowrap">'+esc(c.name)+(dx?' <span style="opacity:0.6;font-weight:400">'+esc(dx)+'</span>':'')+'</button>';
+  });
+  h+='<button onclick="openAddChild()" style="padding:8px 12px;border-radius:12px;border:1.5px dashed var(--sand);background:transparent;font-size:16px;color:var(--warm-gray-light);cursor:pointer;line-height:1">+</button>';
+  el.innerHTML=h;
 }
 
 // ═══ SPLASH & INIT ═══
@@ -1019,11 +1124,16 @@ function obBack(){
   document.querySelectorAll('#dots .dot').forEach(function(d,i){d.classList.toggle('on',i===0)});
 }
 async function finishOnboarding(){
-  S.child=document.getElementById('iChild').value.trim();
-  S.age=document.getElementById('iAge').value;
-  S.dx=document.getElementById('iDx').value;
-  if(S.user){
-    await sb.from('profiles').update({child_name:S.child||null,child_age:S.age||null,diagnosis:S.dx||null}).eq('id',S.user.id);
+  var childName=document.getElementById('iChild').value.trim();
+  var childAge=document.getElementById('iAge').value;
+  var childDx=document.getElementById('iDx').value;
+  if(S.user && childName){
+    var dxArr=childDx?[childDx]:null;
+    var ins=await sb.from('children').insert({user_id:S.user.id,name:childName,age:childAge||null,diagnosis:dxArr}).select();
+    if(ins.data&&ins.data.length){
+      await sb.from('profiles').update({active_child_id:ins.data[0].id}).eq('id',S.user.id);
+    }
+    await loadChildren();
   }
   document.getElementById('onboarding').classList.add('hidden');
   enterApp();
@@ -1037,7 +1147,8 @@ function enterApp(){
   var initial=S.name?S.name[0].toUpperCase():(S.user?S.user.email[0].toUpperCase():'?');
   document.getElementById('hdrAv').textContent=initial;
   document.getElementById('commAv').textContent=initial;
-  if(S.child){var p=document.getElementById('ceProfile');p.classList.remove('hidden');p.innerHTML='Coaching for <strong>'+S.child+'</strong>'+(S.age?' \u00b7 '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'')}
+  if(S.child){var p=document.getElementById('ceProfile');p.classList.remove('hidden');p.innerHTML='Coaching for <strong>'+esc(S.child)+'</strong>'+(S.age?' \u00b7 '+esc(S.age):'')+(S.dx?' \u00b7 '+esc(S.dx):'')}
+  renderChildSwitcher();
   renderSb();renderSugs();renderProvider();renderTopics();renderCommunityPosts();updateFreeCtr();
 }
 
@@ -1098,7 +1209,7 @@ async function redeemCode(){
   }
 }
 
-function buildSys(){var p=S.profile||{};var goals=p.goals&&p.goals.length?p.goals.join(', '):'';return 'You are Modern Village Coach, an AI behavior support assistant. A licensed BCBA oversees your clinical accuracy.\nCHILD PROFILE:\n'+(S.name?'- Parent: '+S.name+(p.parent_relationship?' ('+p.parent_relationship+')':'')+'\n':'')+(S.child?'- Child: '+S.child+'\n':'')+(S.age?'- Age: '+S.age+'\n':'')+(p.child_gender?'- Gender: '+p.child_gender+'\n':'')+(p.child_grade?'- Grade: '+p.child_grade+'\n':'')+(S.dx?'- Diagnosis: '+S.dx+'\n':'')+(goals?'- Goals: '+goals+'\n':'')+'\nFORMAT:\n[EMPATHY] 1-2 warm sentences. Use names. [/EMPATHY]\n[ASSESSMENT] Brief ABA assessment. 2-3 sentences. [/ASSESSMENT]\n[STRATEGY] 3 numbered steps. Bold title: explanation with "quoted scripts". [/STRATEGY]\n[REINFORCE] One reinforcement tip with exact words. [/REINFORCE]\n[FOLLOWUP] 2 questions separated by |. Under 10 words each. [/FOLLOWUP]\n\nRULES: Always use markers. Adapt to age/diagnosis/goals. Never diagnose. For crisis: 988/911 + book a Pro session.'}
+function buildSys(){var p=S.profile||{};var goals=p.goals&&p.goals.length?p.goals.join(', '):'';return 'You are Modern Village Coach, an AI behavior support assistant. A board certified behavior analyst oversees your clinical accuracy.\nCHILD PROFILE:\n'+(S.name?'- Parent: '+S.name+(p.parent_relationship?' ('+p.parent_relationship+')':'')+'\n':'')+(S.child?'- Child: '+S.child+'\n':'')+(S.age?'- Age: '+S.age+'\n':'')+(p.child_gender?'- Gender: '+p.child_gender+'\n':'')+(p.child_grade?'- Grade: '+p.child_grade+'\n':'')+(S.dx?'- Diagnosis: '+S.dx+'\n':'')+(goals?'- Goals: '+goals+'\n':'')+'\nFORMAT:\n[EMPATHY] 1-2 warm sentences. Use names. [/EMPATHY]\n[ASSESSMENT] Brief ABA assessment. 2-3 sentences. [/ASSESSMENT]\n[STRATEGY] 3 numbered steps. Bold title: explanation with "quoted scripts". [/STRATEGY]\n[REINFORCE] One reinforcement tip with exact words. [/REINFORCE]\n[FOLLOWUP] 2 questions separated by |. Under 10 words each. [/FOLLOWUP]\n\nRULES: Always use markers. Adapt to age/diagnosis/goals. Never diagnose. For crisis: 988/911 + book a Pro session.'}
 function parseResp(text){var s={},markers=['EMPATHY','ASSESSMENT','STRATEGY','REINFORCE','FOLLOWUP'];for(var i=0;i<markers.length;i++){var m=markers[i],re=new RegExp('\\['+m+'\\]([\\s\\S]*?)\\[\\/'+m+'\\]','i'),x=text.match(re);if(x)s[m.toLowerCase()]=x[1].trim()}if(!s.empathy&&!s.strategy)s.plain=text;return s}
 function parseSteps(text){var lines=text.split('\n').filter(function(l){return l.trim()}),steps=[];for(var i=0;i<lines.length;i++){var l=lines[i],m=l.match(/^\d+[\.\)]\s*\*?\*?(.+?)\*?\*?:\s*(.+)/);if(m)steps.push({t:m[1].replace(/\*/g,'').trim(),b:m[2].trim()});else if(l.match(/^\d+[\.\)]/))steps.push({t:'',b:l.replace(/^\d+[\.\)]\s*/,'').trim()})}return steps.length?steps:[{t:'',b:text}]}
 
@@ -1200,7 +1311,7 @@ function getNextDates(dayMap){
 function renderProvider(){
   selectedProvider=null;
   S.booking={session:null,date:null,time:null,provider:null};
-  var h='<div style="margin-bottom:16px"><h2 style="font-family:\'Fraunces\',serif;font-size:24px;font-weight:800">Our Professionals</h2><p style="color:var(--warm-gray);font-size:14px;margin-top:4px">Licensed providers ready to support your family</p></div>';
+  var h='<div style="margin-bottom:16px"><h2 style="font-family:\'Fraunces\',serif;font-size:24px;font-weight:800">Our Professionals</h2><p style="color:var(--warm-gray);font-size:14px;margin-top:4px">Certified providers ready to support your family</p></div>';
   var active=PROVIDERS.filter(function(p){return p.active});
   if(!active.length){h+='<div style="text-align:center;padding:40px;color:var(--warm-gray-light)">No providers available yet.</div>';document.getElementById('providerView').innerHTML=h;return}
   for(var i=0;i<active.length;i++){
@@ -2685,33 +2796,10 @@ function openProfile(){
   document.getElementById('profPhone').value = S.profile&&S.profile.phone || '';
   document.getElementById('profZip').value = S.profile&&S.profile.zip_code || '';
   document.getElementById('profRelationship').value = S.profile&&S.profile.parent_relationship || '';
-  document.getElementById('profChild').value = S.child || '';
-  document.getElementById('profBirthday').value = S.profile&&S.profile.child_birthday || '';
-  document.getElementById('profGender').value = S.profile&&S.profile.child_gender || '';
-  document.getElementById('profSchool').value = S.profile&&S.profile.child_school || '';
-  document.getElementById('profGrade').value = S.profile&&S.profile.child_grade || '';
   document.getElementById('profInsurance').value = S.profile&&S.profile.insurance_provider || '';
 
-  // Show calculated age if birthday is set
-  var bday = document.getElementById('profBirthday').value;
-  var ageDisplay = document.getElementById('profAgeDisplay');
-  if(bday){var ageStr=calcAge(bday);ageDisplay.textContent='Age: '+ageStr;ageDisplay.style.display='block'}
-  else{ageDisplay.style.display='none'}
-
-  // Birthday change listener
-  document.getElementById('profBirthday').onchange=function(){
-    var v=this.value;
-    if(v){ageDisplay.textContent='Age: '+calcAge(v);ageDisplay.style.display='block'}
-    else{ageDisplay.style.display='none'}
-  };
-
-  // Diagnosis chips
-  profSelectedDx = S.dx ? (Array.isArray(S.dx) ? S.dx.slice() : [S.dx]) : [];
-  if(S.profile&&S.profile.diagnosis){
-    if(typeof S.profile.diagnosis==='string'&&S.profile.diagnosis)profSelectedDx=[S.profile.diagnosis];
-    if(Array.isArray(S.profile.diagnosis))profSelectedDx=S.profile.diagnosis.slice();
-  }
-  renderDxChips();
+  // Render children list
+  renderProfileChildren();
 
   // Goal chips
   profSelectedGoals = S.profile&&S.profile.goals ? S.profile.goals.slice() : [];
@@ -2728,22 +2816,35 @@ function openProfile(){
   document.getElementById('profAccountInfo').textContent = 'Member since ' + joined;
 }
 
+function renderProfileChildren(){
+  var el=document.getElementById('profChildrenList');
+  if(!el)return;
+  if(!S.children.length){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray)"><div style="font-size:24px;margin-bottom:8px">&#128118;</div><div style="font-size:14px">No children added yet</div><button class="btn btn-s" style="margin-top:12px" onclick="openAddChild()">Add Your First Child</button></div>';
+    return;
+  }
+  var h='';
+  S.children.forEach(function(c){
+    var isActive=S.activeChild&&S.activeChild.id===c.id;
+    var dx=c.diagnosis&&c.diagnosis.length?c.diagnosis.join(', '):'';
+    var age=c.age||'';
+    h+='<div style="padding:16px;background:'+(isActive?'var(--sage-light)':'var(--cream)')+';border-radius:14px;border:1.5px solid '+(isActive?'var(--sage)':'var(--sand)')+';margin-bottom:10px">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center">';
+    h+='<div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:10px;background:'+(isActive?'var(--sage)':'var(--sand)')+';color:'+(isActive?'white':'var(--warm-gray)')+';display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px">'+esc(c.name?c.name[0].toUpperCase():'?')+'</div><div><div style="font-weight:700;font-size:15px">'+esc(c.name)+(isActive?' <span style="font-size:11px;color:var(--sage-dark);font-weight:600">ACTIVE</span>':'')+'</div><div style="font-size:12px;color:var(--warm-gray);margin-top:1px">'+(age?age:'')+(dx?(age?' \u00b7 ':'')+dx:'')+(c.gender?(age||dx?' \u00b7 ':'')+c.gender:'')+'</div></div></div>';
+    h+='<div style="display:flex;gap:4px">';
+    if(!isActive) h+='<button class="btn btn-s" style="padding:6px 12px;font-size:11px" onclick="switchChild(\''+c.id+'\')">Set Active</button>';
+    h+='<button style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--warm-gray);font-size:12px" onclick="editChild(\''+c.id+'\')">Edit</button>';
+    if(S.children.length>1) h+='<button style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--terracotta);font-size:12px" onclick="removeChild(\''+c.id+'\')">Remove</button>';
+    h+='</div></div></div>';
+  });
+  el.innerHTML=h;
+}
+
 async function saveProfile(){
   var name = document.getElementById('profName').value.trim();
-  var child = document.getElementById('profChild').value.trim();
-  var birthday = document.getElementById('profBirthday').value || null;
-  var age = birthday ? calcAge(birthday) : '';
-  var dxStr = profSelectedDx.length ? profSelectedDx.join(', ') : null;
 
   var updateData = {
     name: name || null,
-    child_name: child || null,
-    child_birthday: birthday,
-    child_age: age || null,
-    child_gender: document.getElementById('profGender').value || null,
-    child_school: document.getElementById('profSchool').value.trim() || null,
-    child_grade: document.getElementById('profGrade').value || null,
-    diagnosis: dxStr,
     parent_relationship: document.getElementById('profRelationship').value || null,
     phone: document.getElementById('profPhone').value.trim() || null,
     zip_code: document.getElementById('profZip').value.trim() || null,
@@ -2754,8 +2855,7 @@ async function saveProfile(){
 
   var r = await sb.from('profiles').update(updateData).eq('id', S.user.id);
   if(!r.error){
-    S.name=name; S.child=child; S.age=age; S.dx=dxStr;
-    // Reload profile to get updated data
+    S.name=name;
     await loadProfile();
     var initial=S.name?S.name[0].toUpperCase():S.user.email[0].toUpperCase();
     document.getElementById('hdrAv').textContent=initial;
@@ -2764,12 +2864,32 @@ async function saveProfile(){
     if(S.child){
       var p=document.getElementById('ceProfile');
       p.classList.remove('hidden');
-      p.innerHTML='Coaching for <strong>'+S.child+'</strong>'+(S.age?' \u00b7 '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'');
+      p.innerHTML='Coaching for <strong>'+esc(S.child)+'</strong>'+(S.age?' \u00b7 '+esc(S.age):'')+(S.dx?' \u00b7 '+esc(S.dx):'');
     }
     renderSb();
     showToast('Profile saved!');
   } else { showToast('Error saving profile'); }
 }
 </script>
+<!-- ADD/EDIT CHILD MODAL -->
+<div id="addChildModal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:24px;padding:32px;max-width:440px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,0.2)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 id="addChildModalTitle" style="font-family:'Fraunces',serif;font-size:22px;font-weight:800">Add Child</h2>
+      <button style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--warm-gray)" onclick="document.getElementById('addChildModal').style.display='none'">&times;</button>
+    </div>
+    <input type="hidden" id="addChildId" value="">
+    <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:700;color:var(--warm-gray);display:block;margin-bottom:4px">Child's Name *</label><input id="addChildName" class="fi" placeholder="e.g. Emma"></div>
+    <div style="display:flex;gap:12px;margin-bottom:14px">
+      <div style="flex:1"><label style="font-size:12px;font-weight:700;color:var(--warm-gray);display:block;margin-bottom:4px">Birthday</label><input id="addChildBirthday" type="date" class="fi"></div>
+      <div style="flex:1"><label style="font-size:12px;font-weight:700;color:var(--warm-gray);display:block;margin-bottom:4px">Gender</label><select id="addChildGender" class="fi"><option value="">Select</option><option>Male</option><option>Female</option><option>Non-binary</option><option>Prefer not to say</option></select></div>
+    </div>
+    <div style="margin-bottom:20px"><label style="font-size:12px;font-weight:700;color:var(--warm-gray);display:block;margin-bottom:4px">Diagnosis (comma-separated)</label><input id="addChildDx" class="fi" placeholder="e.g. Autism (ASD), ADHD"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-p" style="flex:1" onclick="saveChild()">Save</button>
+      <button class="btn btn-s" onclick="document.getElementById('addChildModal').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

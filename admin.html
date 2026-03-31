@@ -283,7 +283,7 @@
         <div style="margin-bottom:14px"><label class="fl">Slug (URL-friendly)</label><input id="beSlug" class="fi" placeholder="e.g. aba-strategies-at-home"></div>
         <div style="display:flex;gap:12px;margin-bottom:14px">
           <div style="flex:1"><label class="fl">Category</label><select id="beCat" class="fi"><option>Tips</option><option>Strategies</option><option>Guides</option><option>Advocacy</option><option>News</option></select></div>
-          <div style="flex:1"><label class="fl">Author</label><input id="beAuthor" class="fi" value="Ariana Roberts, BCBA"></div>
+          <div style="flex:1"><label class="fl">Author</label><input id="beAuthor" class="fi" value="Modern Village Team"></div>
         </div>
         <div style="margin-bottom:14px"><label class="fl">Excerpt (shown on blog listing)</label><textarea id="beExcerpt" class="fi" rows="2" style="resize:none" placeholder="Brief summary..."></textarea></div>
         <div style="margin-bottom:14px"><label class="fl">Content (Markdown supported)</label><textarea id="beContent" class="fi" rows="14" style="resize:vertical;font-family:monospace;font-size:13px" placeholder="## Your heading&#10;&#10;Write your post content here...&#10;&#10;### Subheading&#10;&#10;- Bullet point&#10;- Another point&#10;&#10;**Bold text** and *italic text*&#10;&#10;[Link text](https://url.com)"></textarea></div>
@@ -523,7 +523,7 @@ async function loadReviews(){
 }
 
 async function submitReview(convId, accuracy, safety, aba){
-  await sb.from('admin_reviews').insert({conversation_id:convId,reviewer:'Ariana Roberts',accuracy:accuracy,safety:safety,aba_aligned:aba});
+  await sb.from('admin_reviews').insert({conversation_id:convId,reviewer:adminUser?adminUser.email:'Admin',accuracy:accuracy,safety:safety,aba_aligned:aba});
   loadReviews();
 }
 
@@ -788,7 +788,7 @@ function openBlogEditor(){
   document.getElementById('beTitle').value='';
   document.getElementById('beSlug').value='';
   document.getElementById('beCat').value='Tips';
-  document.getElementById('beAuthor').value='Ariana Roberts, BCBA';
+  document.getElementById('beAuthor').value='Modern Village Team';
   document.getElementById('beExcerpt').value='';
   document.getElementById('beContent').value='';
   document.getElementById('beMetaTitle').value='';
