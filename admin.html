@@ -71,6 +71,7 @@
 .tag{padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;display:inline-block}
 .tag-sage{background:var(--sage-light);color:var(--sage-dark)}
 .tag-yellow{background:rgba(232,200,74,0.2);color:#7A6A10}
+.tag-terra{background:var(--terracotta-light);color:var(--terracotta)}
 .tag-red{background:var(--terracotta-light);color:var(--terracotta)}
 .tag-blue{background:var(--sky);color:var(--sky-dark)}
 .tag-free{background:var(--cream);color:var(--warm-gray)}
@@ -175,6 +176,7 @@
     <div class="sb-item" data-page="behavior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>Behavior Data</div>
     <div class="sb-item" data-page="blog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Blog</div>
     <div class="sb-item" data-page="districts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>District Leads</div>
+    <div class="sb-item" data-page="screener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Screener Leads</div>
   </aside>
 
   <main class="main">
@@ -264,6 +266,13 @@
       <div class="page-hdr"><div><h1>District Pilot Requests</h1><p>Leads from the landing page</p></div></div>
       <div class="stats" id="districtStats"></div>
       <div class="panel"><div class="panel-hdr"><div class="panel-title">All Requests</div></div><div class="panel-body" id="districtList"></div></div>
+    </div>
+
+    <!-- SCREENER LEADS -->
+    <div id="pgScreener" class="page">
+      <div class="page-hdr"><div><h1>Screener Leads</h1><p>Parents who took the M-CHAT-R screening tool</p></div></div>
+      <div class="stats" id="screenerStats"></div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">All Leads</div></div><div class="panel-body" id="screenerList"></div></div>
     </div>
 
     <!-- BLOG -->
@@ -411,6 +420,7 @@ async function loadPage(pg){
   else if(pg==='behavior') await loadBehavior();
   else if(pg==='blog') await loadBlog();
   else if(pg==='districts') await loadDistricts();
+  else if(pg==='screener') await loadScreenerLeads();
 }
 
 // ═══ DASHBOARD ═══
@@ -717,6 +727,33 @@ function grantRow(label, actual, target){
   var pct = target && !isNaN(parseInt(target)) ? Math.min(100, Math.round(actual/parseInt(target)*100)) : null;
   var color = pct !== null ? (pct >= 100 ? 'var(--sage)' : pct >= 60 ? 'var(--sunflower)' : 'var(--terracotta)') : 'var(--sage)';
   return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand)"><span style="font-size:13px;color:var(--warm-gray)">'+label+'</span><div style="display:flex;align-items:center;gap:12px"><span style="font-weight:700;font-size:13px">'+actual+(target!=='—'?' / '+target:'')+'</span>'+(pct!==null?'<div style="width:80px;height:6px;background:var(--cream);border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:3px"></div></div>':'')+'</div></div>';
+}
+
+// ═══ SCREENER LEADS ═══
+async function loadScreenerLeads(){
+  var r=await sb.from('screener_leads').select('*').order('created_at',{ascending:false});
+  var leads=r.data||[];
+  var high=leads.filter(function(l){return l.risk_level==='high'}).length;
+  var med=leads.filter(function(l){return l.risk_level==='medium'}).length;
+  var low=leads.filter(function(l){return l.risk_level==='low'}).length;
+  var withEmail=leads.filter(function(l){return l.email}).length;
+  document.getElementById('screenerStats').innerHTML=statCard('Total Screens',leads.length,'')+statCard('High Risk',high,'')+statCard('Medium Risk',med,'')+statCard('With Email',withEmail,'');
+
+  if(!leads.length){document.getElementById('screenerList').innerHTML='<div class="empty"><div class="empty-icon">&#9745;</div>No screener leads yet. They\'ll appear when parents take the M-CHAT-R at modernvillage.app/screener.html</div>';return}
+
+  var h='';
+  leads.forEach(function(l){
+    var d=new Date(l.created_at);
+    var ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    var rc=l.risk_level==='high'?'tag-terra':l.risk_level==='medium'?'tag-yellow':'tag-sage';
+    h+='<div style="padding:14px;background:'+(l.risk_level==='high'?'var(--terracotta-light)':l.risk_level==='medium'?'rgba(232,200,74,0.08)':'var(--cream)')+';border-radius:12px;margin-bottom:8px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">';
+    h+='<div style="flex:1;min-width:200px"><div style="font-weight:700;font-size:14px">'+(l.email?esc(l.email):'<span style="color:var(--warm-gray-light)">No email</span>')+'</div>';
+    h+='<div style="font-size:12px;color:var(--warm-gray);margin-top:2px">'+(l.parent_name?esc(l.parent_name)+' &middot; ':'')+'Child: '+esc(l.child_age_months||'?')+' months &middot; '+ds+'</div></div>';
+    h+='<div style="font-family:Fraunces,serif;font-size:22px;font-weight:800;color:'+(l.risk_level==='high'?'var(--terracotta)':l.risk_level==='medium'?'#7A6A10':'var(--sage)')+'">'+l.score+'/20</div>';
+    h+='<span class="tag '+rc+'" style="text-transform:capitalize">'+esc(l.risk_level)+' risk</span>';
+    h+='</div>';
+  });
+  document.getElementById('screenerList').innerHTML=h;
 }
 
 // ═══ DISTRICT LEADS ═══
