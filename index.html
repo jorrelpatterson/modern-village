@@ -475,7 +475,7 @@ function toggleAuthMode(){
   document.getElementById('authError').style.display='none';
 }
 
-function closeAuth(){document.getElementById('authModal').classList.add('hidden')}
+function closeAuth(){document.getElementById('authModal').classList.add('hidden');enterApp()}
 
 async function handleAuth(){
   var email=document.getElementById('authEmail').value.trim();
