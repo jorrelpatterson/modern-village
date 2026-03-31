@@ -845,7 +845,7 @@ var S = {
 };
 
 var PROVIDERS = [
-  {id:'ariana',name:"Ariana Roberts",initials:"AR",creds:["BCBA"],badge:"Founder & Clinical Director",specialty:["Autism (ASD)","Early Intervention","Social Skills","Parent Coaching"],bio:"Ariana brings deep expertise in behavior analysis to every family she works with. She specializes in helping parents of autistic children build structure, reduce stress, and celebrate progress. Her approach blends ABA strategies with practical warmth \u2014 because parents need both evidence and encouragement.",rating:5.0,reviews:48,price30:55,price60:95,families:200,experience:"8 yrs",color:"var(--lavender)",active:true,videoUrl:"https://doxy.me/v2/check-in/arianaroberts/"}
+  {id:'ariana',name:"Ariana Roberts",initials:"AR",creds:["BCBA"],badge:"Founder & Clinical Director",specialty:["Autism (ASD)","Early Intervention","Social Skills","Parent Coaching"],bio:"Ariana brings deep expertise in behavior analysis to every family she works with. She specializes in helping parents of autistic children build structure, reduce stress, and celebrate progress. Her approach blends ABA strategies with practical warmth \u2014 because parents need both evidence and encouragement.",rating:5.0,reviews:48,price30:55,price60:95,families:200,experience:"8 yrs",color:"var(--lavender)",active:true,videoUrl:"https://doxy.me/v2/check-in/arianaroberts/",email:"ArianaRPatterson@gmail.com"}
 ];
 var selectedProvider = null;
 var TIMES = ["9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM"];
@@ -1287,6 +1287,12 @@ async function sendBookingEmail(bookingId, email, name, provider, duration, date
 
     await fetch(API_URL+'email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:email,subject:'Session Confirmed \u2014 '+provider+' on '+ds,html:html})}).catch(function(){});
 
+    // Send provider notification
+    if(p&&p.email){
+      var provHtml='<div style="max-width:500px;margin:0 auto;font-family:-apple-system,sans-serif;background:#FDF8F0;padding:40px 32px;border-radius:16px"><div style="text-align:center;margin-bottom:24px"><div style="display:inline-block;width:48px;height:48px;border-radius:12px;background:#D4C8E8;line-height:48px;text-align:center"><span style="color:white;font-size:20px">\uD83D\uDCC5</span></div><h1 style="font-size:24px;font-weight:800;margin:12px 0 0;color:#2D2D2D">New Session Booked!</h1></div><p style="font-size:15px;color:#4A4540;line-height:1.6;text-align:center">A parent just booked a video session with you.</p><div style="background:white;border-radius:14px;padding:20px;margin:20px 0;border:1px solid #E8DDD0"><table style="width:100%;font-size:14px;border-collapse:collapse"><tr><td style="padding:8px 0;color:#706B65">Parent</td><td style="padding:8px 0;text-align:right;font-weight:700">'+esc(name||'Not provided')+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Email</td><td style="padding:8px 0;text-align:right;font-weight:700">'+esc(email)+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Date</td><td style="padding:8px 0;text-align:right;font-weight:700">'+ds+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Time</td><td style="padding:8px 0;text-align:right;font-weight:700">'+time+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Duration</td><td style="padding:8px 0;text-align:right;font-weight:700">'+duration+' min</td></tr><tr style="border-top:1px solid #E8DDD0"><td style="padding:12px 0 0;color:#706B65;font-weight:700">Session Fee</td><td style="padding:12px 0 0;text-align:right;font-weight:800;color:#5C7F60;font-size:18px">$'+price+'</td></tr></table></div><div style="text-align:center;margin:20px 0"><a href="'+videoUrl+'" style="display:inline-block;padding:14px 28px;background:#D4C8E8;color:#4A3670;text-decoration:none;border-radius:12px;font-size:15px;font-weight:700">Open Doxy.me Waiting Room</a></div><p style="font-size:12px;color:#706B65;text-align:center;margin-top:24px">Log in to the admin portal at modernvillage.app/admin.html to manage bookings.</p><p style="font-size:11px;color:#706B65;text-align:center;margin-top:16px">Modern Village LLC</p></div>';
+      await fetch(API_URL+'email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:p.email,subject:'New Booking \u2014 '+esc(name||'A parent')+' on '+ds+' at '+time,html:provHtml})}).catch(function(){});
+    }
+
     await sb.from('bookings').update({confirmation_sent:true}).eq('id',bookingId);
   }catch(e){console.log('Email send failed',e)}
 }
@@ -1331,9 +1337,21 @@ function cancelBookingPrompt(bookingId){
 
 async function doCancelBooking(bookingId){
   var reason=document.getElementById('cancelReason')?document.getElementById('cancelReason').value:'';
+  // Get booking details before cancelling
+  var booking=await sb.from('bookings').select('*').eq('id',bookingId).single();
   await sb.from('bookings').update({status:'cancelled',cancelled_at:new Date().toISOString(),cancel_reason:reason||null}).eq('id',bookingId);
   document.getElementById('cancelModal').remove();
   showToast('Session cancelled');
+  // Notify provider
+  if(booking.data){
+    var b=booking.data;
+    var p=PROVIDERS.find(function(pv){return pv.name===b.provider_name});
+    if(p&&p.email){
+      var ds=new Date(b.session_date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+      var cancelHtml='<div style="max-width:500px;margin:0 auto;font-family:-apple-system,sans-serif;background:#FDF8F0;padding:40px 32px;border-radius:16px"><div style="text-align:center;margin-bottom:24px"><div style="display:inline-block;width:48px;height:48px;border-radius:12px;background:#C4745A;line-height:48px;text-align:center"><span style="color:white;font-size:20px">\u2717</span></div><h1 style="font-size:24px;font-weight:800;margin:12px 0 0;color:#2D2D2D">Session Cancelled</h1></div><p style="font-size:15px;color:#4A4540;line-height:1.6;text-align:center">A parent has cancelled their session.</p><div style="background:white;border-radius:14px;padding:20px;margin:20px 0;border:1px solid #E8DDD0"><table style="width:100%;font-size:14px;border-collapse:collapse"><tr><td style="padding:8px 0;color:#706B65">Date</td><td style="padding:8px 0;text-align:right;font-weight:700">'+ds+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Time</td><td style="padding:8px 0;text-align:right;font-weight:700">'+b.session_time+'</td></tr><tr><td style="padding:8px 0;color:#706B65">Duration</td><td style="padding:8px 0;text-align:right;font-weight:700">'+b.session_type+'</td></tr>'+(reason?'<tr><td style="padding:8px 0;color:#706B65">Reason</td><td style="padding:8px 0;text-align:right;font-weight:700">'+esc(reason)+'</td></tr>':'')+'</table></div><p style="font-size:12px;color:#706B65;text-align:center">This time slot is now available for other bookings.</p><p style="font-size:11px;color:#706B65;text-align:center;margin-top:16px">Modern Village LLC</p></div>';
+      fetch(API_URL+'email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:p.email,subject:'Session Cancelled \u2014 '+ds+' at '+b.session_time,html:cancelHtml})}).catch(function(){});
+    }
+  }
   renderProvider();
 }
 
