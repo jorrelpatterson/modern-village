@@ -177,6 +177,7 @@
     <div class="sb-item" data-page="blog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Blog</div>
     <div class="sb-item" data-page="districts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>District Leads</div>
     <div class="sb-item" data-page="screener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Screener Leads</div>
+    <div class="sb-item" data-page="analytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>District Analytics</div>
   </aside>
 
   <main class="main">
@@ -273,6 +274,17 @@
       <div class="page-hdr"><div><h1>Screener Leads</h1><p>Parents who took the M-CHAT-R screening tool</p></div></div>
       <div class="stats" id="screenerStats"></div>
       <div class="panel"><div class="panel-hdr"><div class="panel-title">All Leads</div></div><div class="panel-body" id="screenerList"></div></div>
+    </div>
+
+    <!-- DISTRICT ANALYTICS -->
+    <div id="pgAnalytics" class="page">
+      <div class="page-hdr"><div><h1>District Analytics</h1><p>Aggregate engagement data for pilot districts (demo view)</p></div></div>
+      <div class="stats" id="analyticsStats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="panel"><div class="panel-hdr"><div class="panel-title">Family Engagement (Last 30 Days)</div></div><div class="panel-body" id="analyticsEngagement"></div></div>
+        <div class="panel"><div class="panel-hdr"><div class="panel-title">Top Behavioral Concerns</div></div><div class="panel-body" id="analyticsTopics"></div></div>
+      </div>
+      <div class="panel" style="margin-top:16px"><div class="panel-hdr"><div class="panel-title">Pillar Usage</div></div><div class="panel-body" id="analyticsPillars"></div></div>
     </div>
 
     <!-- BLOG -->
@@ -421,6 +433,7 @@ async function loadPage(pg){
   else if(pg==='blog') await loadBlog();
   else if(pg==='districts') await loadDistricts();
   else if(pg==='screener') await loadScreenerLeads();
+  else if(pg==='analytics') await loadAnalytics();
 }
 
 // ═══ DASHBOARD ═══
@@ -727,6 +740,81 @@ function grantRow(label, actual, target){
   var pct = target && !isNaN(parseInt(target)) ? Math.min(100, Math.round(actual/parseInt(target)*100)) : null;
   var color = pct !== null ? (pct >= 100 ? 'var(--sage)' : pct >= 60 ? 'var(--sunflower)' : 'var(--terracotta)') : 'var(--sage)';
   return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand)"><span style="font-size:13px;color:var(--warm-gray)">'+label+'</span><div style="display:flex;align-items:center;gap:12px"><span style="font-weight:700;font-size:13px">'+actual+(target!=='—'?' / '+target:'')+'</span>'+(pct!==null?'<div style="width:80px;height:6px;background:var(--cream);border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:3px"></div></div>':'')+'</div></div>';
+}
+
+// ═══ DISTRICT ANALYTICS ═══
+async function loadAnalytics(){
+  // Pull real aggregate data
+  var profiles=await sb.from('profiles').select('id,created_at,subscription_status,child_age,diagnosis,free_messages_used');
+  var convos=await sb.from('conversations').select('id,created_at');
+  var bookings=await sb.from('bookings').select('id,created_at,status');
+  var logs=await sb.from('behavior_logs').select('id,created_at,behavior');
+  var posts=await sb.from('community_posts').select('id,created_at');
+
+  var users=profiles.data||[];
+  var totalFamilies=users.length;
+  var proUsers=users.filter(function(u){return u.subscription_status==='pro'}).length;
+  var totalConvos=(convos.data||[]).length;
+  var totalSessions=(bookings.data||[]).filter(function(b){return b.status==='confirmed'}).length;
+
+  document.getElementById('analyticsStats').innerHTML=
+    statCard('Families Enrolled',totalFamilies,'')+
+    statCard('Pro Subscribers',proUsers,'')+
+    statCard('AI Sessions',totalConvos,'')+
+    statCard('BCBA Sessions',totalSessions,'');
+
+  // Engagement metrics
+  var thirtyDaysAgo=new Date(Date.now()-30*24*60*60*1000).toISOString();
+  var recentConvos=(convos.data||[]).filter(function(c){return c.created_at>thirtyDaysAgo}).length;
+  var recentLogs=(logs.data||[]).filter(function(l){return l.created_at>thirtyDaysAgo}).length;
+  var recentPosts=(posts.data||[]).filter(function(p){return p.created_at>thirtyDaysAgo}).length;
+  var recentBookings=(bookings.data||[]).filter(function(b){return b.created_at>thirtyDaysAgo&&b.status==='confirmed'}).length;
+
+  var engH='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+  engH+='<div style="padding:16px;background:var(--sage-light);border-radius:12px;text-align:center"><div style="font-family:Fraunces,serif;font-size:28px;font-weight:800;color:var(--sage-dark)">'+recentConvos+'</div><div style="font-size:11px;color:var(--warm-gray);margin-top:2px">AI Coach conversations</div></div>';
+  engH+='<div style="padding:16px;background:var(--terracotta-light);border-radius:12px;text-align:center"><div style="font-family:Fraunces,serif;font-size:28px;font-weight:800;color:var(--terracotta)">'+recentLogs+'</div><div style="font-size:11px;color:var(--warm-gray);margin-top:2px">Behaviors logged</div></div>';
+  engH+='<div style="padding:16px;background:var(--cream);border-radius:12px;text-align:center"><div style="font-family:Fraunces,serif;font-size:28px;font-weight:800;color:var(--charcoal)">'+recentPosts+'</div><div style="font-size:11px;color:var(--warm-gray);margin-top:2px">Community posts</div></div>';
+  engH+='<div style="padding:16px;background:rgba(212,200,232,0.2);border-radius:12px;text-align:center"><div style="font-family:Fraunces,serif;font-size:28px;font-weight:800;color:#7B6FA0">'+recentBookings+'</div><div style="font-size:11px;color:var(--warm-gray);margin-top:2px">BCBA sessions booked</div></div>';
+  engH+='</div>';
+  engH+='<div style="margin-top:12px;padding:12px;background:var(--cream);border-radius:10px;font-size:12px;color:var(--warm-gray);text-align:center">Data represents aggregate engagement across all enrolled families. No individual student data is shared.</div>';
+  document.getElementById('analyticsEngagement').innerHTML=engH;
+
+  // Top behavioral concerns (from behavior logs)
+  var behaviorCounts={};
+  (logs.data||[]).forEach(function(l){
+    var b=l.behavior||'Other';
+    behaviorCounts[b]=(behaviorCounts[b]||0)+1;
+  });
+  var sorted=Object.keys(behaviorCounts).sort(function(a,b){return behaviorCounts[b]-behaviorCounts[a]}).slice(0,8);
+  var topMax=sorted.length?behaviorCounts[sorted[0]]:1;
+  var topH='';
+  if(!sorted.length){
+    topH='<div style="text-align:center;padding:20px;color:var(--warm-gray-light);font-size:13px">No behavior data yet. As families log behaviors, the most common concerns will appear here.</div>';
+  } else {
+    sorted.forEach(function(b){
+      var pct=Math.round((behaviorCounts[b]/topMax)*100);
+      topH+='<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:600">'+esc(b)+'</span><span style="color:var(--warm-gray-light)">'+behaviorCounts[b]+'</span></div><div style="height:8px;background:var(--sand);border-radius:4px"><div style="height:100%;width:'+pct+'%;background:var(--sage);border-radius:4px"></div></div></div>';
+    });
+  }
+  document.getElementById('analyticsTopics').innerHTML=topH;
+
+  // Pillar usage
+  var totalMsgs=0;users.forEach(function(u){totalMsgs+=(u.free_messages_used||0)});
+  var pillars=[
+    {name:'AI Coach',count:totalConvos,color:'var(--sage)'},
+    {name:'Behavior Tracker',count:(logs.data||[]).length,color:'var(--terracotta)'},
+    {name:'Community',count:(posts.data||[]).length,color:'var(--charcoal)'},
+    {name:'BCBA Sessions',count:totalSessions,color:'#7B6FA0'},
+  ];
+  var pillarMax=Math.max.apply(null,pillars.map(function(p){return p.count}))||1;
+  var pH='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">';
+  pillars.forEach(function(p){
+    var pct=Math.round((p.count/pillarMax)*100);
+    pH+='<div style="text-align:center"><div style="font-family:Fraunces,serif;font-size:24px;font-weight:800;color:'+p.color+'">'+p.count+'</div><div style="font-size:11px;color:var(--warm-gray);margin:4px 0 6px">'+p.name+'</div><div style="height:6px;background:var(--sand);border-radius:3px"><div style="height:100%;width:'+pct+'%;background:'+p.color+';border-radius:3px"></div></div></div>';
+  });
+  pH+='</div>';
+  pH+='<div style="margin-top:14px;padding:12px;background:var(--sage-light);border-radius:10px;font-size:12px;color:var(--sage-dark);text-align:center"><strong>Note:</strong> This dashboard shows aggregate data for all families. When district-specific accounts are enabled, data will be filtered per district. No individually identifiable student data is ever shared.</div>';
+  document.getElementById('analyticsPillars').innerHTML=pH;
 }
 
 // ═══ SCREENER LEADS ═══
