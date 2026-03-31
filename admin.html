@@ -107,23 +107,24 @@
 
 /* Responsive */
 /* Mobile nav */
-.mobile-hdr{display:none;position:sticky;top:0;z-index:50;padding:12px 16px;background:white;border-bottom:1px solid var(--sand);align-items:center;justify-content:space-between}
+.mobile-hdr{display:none;position:sticky;top:0;z-index:50;padding:12px 16px;background:white;border-bottom:1px solid var(--sand);align-items:center;justify-content:space-between;order:-1}
 .mobile-hdr-logo{display:flex;align-items:center;gap:8px}
 .mobile-hdr-btn{background:none;border:none;cursor:pointer;padding:4px}
 .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:90}
 
 @media(max-width:800px){
+  .layout{flex-direction:column}
   .sidebar{display:none;position:fixed;left:0;top:0;bottom:0;width:280px;z-index:100;box-shadow:4px 0 20px rgba(0,0,0,0.1)}
   .sidebar.mobile-open{display:block}
   .sb-overlay.mobile-open{display:block}
   .main{margin-left:0;padding:16px}
   .stats{grid-template-columns:repeat(2,1fr)}
   .mobile-hdr{display:flex}
+  .two-col{grid-template-columns:1fr!important}
   .page-hdr{flex-direction:column;align-items:flex-start;gap:12px}
   .page-hdr h1{font-size:20px}
   .tbl{font-size:12px;display:block;overflow-x:auto}
   .panel-body{padding:14px;overflow-x:auto}
-  div[style*="grid-template-columns: 1fr 1fr"]{grid-template-columns:1fr!important}
 }
 .hidden{display:none}
 </style>
@@ -176,7 +177,7 @@
     <div id="pgDashboard" class="page active">
       <div class="page-hdr"><div><h1>Dashboard</h1><p>Real-time platform analytics</p></div><button class="btn btn-outline" onclick="refreshAll()">&#8635; Refresh</button></div>
       <div class="stats" id="dashStats"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
         <div class="panel"><div class="panel-hdr"><div class="panel-title">Top AI Topics</div></div><div class="panel-body" id="dashTopics"></div></div>
         <div class="panel"><div class="panel-hdr"><div class="panel-title">Recent Signups</div></div><div class="panel-body" id="dashRecent"></div></div>
       </div>
@@ -241,7 +242,7 @@
     <div id="pgBehavior" class="page">
       <div class="page-hdr"><div><h1>Behavior Data</h1><p>Aggregate behavioral logging data across all users</p></div></div>
       <div class="stats" id="behaviorStats"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
         <div class="panel"><div class="panel-hdr"><div class="panel-title">Top Behaviors Reported</div></div><div class="panel-body" id="behaviorTopics"></div></div>
         <div class="panel"><div class="panel-hdr"><div class="panel-title">Outcome Distribution</div></div><div class="panel-body" id="behaviorOutcomes"></div></div>
       </div>
