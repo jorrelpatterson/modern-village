@@ -523,79 +523,28 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   <!-- IEP & ADVOCACY TOOLKIT -->
   <div id="iepPage" class="overlay-page">
     <div class="overlay-hdr">
-      <button class="overlay-back" onclick="closeOverlay('iepPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <button class="overlay-back" onclick="iepBack()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
       <div class="overlay-title">IEP Toolkit</div>
     </div>
     <div class="overlay-body">
-      <div class="overlay-inner">
-        <!-- Tabs -->
-        <div class="iep-tab-row">
-          <button class="iep-tab active" onclick="showIepTab('prep',this)">Meeting Prep</button>
-          <button class="iep-tab" onclick="showIepTab('rights',this)">Your Rights</button>
-          <button class="iep-tab" onclick="showIepTab('letters',this)">Letters</button>
-          <button class="iep-tab" onclick="showIepTab('explainer',this)">IEP Explainer</button>
-          <button class="iep-tab" onclick="showIepTab('goals',this)">Goal Bank</button>
+      <div class="overlay-inner" id="iepContent">
+        <!-- Hub - shown by default -->
+        <div id="iepHub">
+          <div style="margin-bottom:20px"><div style="font-family:'Fraunces',serif;font-size:22px;font-weight:800">What do you need?</div><div style="font-size:13px;color:var(--warm-gray);margin-top:4px">We'll walk you through it step by step</div></div>
+
+          <div onclick="startWizard('letter')" style="background:white;border-radius:16px;padding:20px;border:1px solid var(--sand);margin-bottom:12px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:14px"><div style="width:48px;height:48px;border-radius:14px;background:var(--sage-light);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">✉️</div><div style="flex:1"><div style="font-weight:700;font-size:15px">Write a Letter</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Request evaluation, IEP meeting, disagree with a decision, or request records</div></div><div style="color:var(--warm-gray-light)">&rarr;</div></div>
+
+          <div onclick="startWizard('prep')" style="background:white;border-radius:16px;padding:20px;border:1px solid var(--sand);margin-bottom:12px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:14px"><div style="width:48px;height:48px;border-radius:14px;background:var(--sky);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📋</div><div style="flex:1"><div style="font-weight:700;font-size:15px">Prep for a Meeting</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Get a personalized checklist, talking points, and questions to ask</div></div><div style="color:var(--warm-gray-light)">&rarr;</div></div>
+
+          <div onclick="startWizard('explain')" style="background:white;border-radius:16px;padding:20px;border:1px solid var(--sand);margin-bottom:12px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:14px"><div style="width:48px;height:48px;border-radius:14px;background:var(--lavender);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🔍</div><div style="flex:1"><div style="font-weight:700;font-size:15px">Explain IEP Text</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Paste confusing IEP language and get a plain-English translation</div></div><div style="color:var(--warm-gray-light)">&rarr;</div></div>
+
+          <div onclick="startWizard('rights')" style="background:white;border-radius:16px;padding:20px;border:1px solid var(--sand);margin-bottom:12px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:14px"><div style="width:48px;height:48px;border-radius:14px;background:var(--terracotta-light);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">⚖️</div><div style="flex:1"><div style="font-weight:700;font-size:15px">Know Your Rights</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Learn what IDEA protects and how to advocate for your child</div></div><div style="color:var(--warm-gray-light)">&rarr;</div></div>
+
+          <div onclick="startWizard('goals')" style="background:white;border-radius:16px;padding:20px;border:1px solid var(--sand);margin-bottom:12px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:14px"><div style="width:48px;height:48px;border-radius:14px;background:rgba(232,200,74,0.15);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🎯</div><div style="flex:1"><div style="font-weight:700;font-size:15px">Suggest IEP Goals</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Get goal suggestions based on your child's needs and diagnosis</div></div><div style="color:var(--warm-gray-light)">&rarr;</div></div>
         </div>
 
-        <!-- MEETING PREP -->
-        <div id="iepPrep" class="iep-panel">
-          <div class="iep-section">
-            <div class="iep-section-title">Before the Meeting</div>
-            <div class="iep-section-sub">Check off each item as you prepare</div>
-            <div class="iep-checklist" id="iepPrepList"></div>
-          </div>
-          <div class="iep-section">
-            <div class="iep-section-title">Bring to the Meeting</div>
-            <div class="iep-section-sub">Documents and materials to have ready</div>
-            <div class="iep-checklist" id="iepBringList"></div>
-          </div>
-          <div class="iep-section">
-            <div class="iep-section-title">Questions to Ask</div>
-            <div class="iep-section-sub">Copy these or adapt to your situation</div>
-            <div id="iepQuestions"></div>
-          </div>
-        </div>
-
-        <!-- YOUR RIGHTS -->
-        <div id="iepRights" class="iep-panel hidden">
-          <div class="iep-section">
-            <div class="iep-section-title">Your Rights Under IDEA</div>
-            <div class="iep-section-sub">Federal law protects your child's right to a Free Appropriate Public Education (FAPE)</div>
-            <div id="iepRightsList"></div>
-          </div>
-        </div>
-
-        <!-- LETTERS -->
-        <div id="iepLetters" class="iep-panel hidden">
-          <div class="iep-section">
-            <div class="iep-section-title">Sample Letters</div>
-            <div class="iep-section-sub">Tap to view. Copy and customize with your child's information.</div>
-            <div id="iepLettersList"></div>
-          </div>
-        </div>
-
-        <!-- IEP EXPLAINER -->
-        <div id="iepExplainer" class="iep-panel hidden">
-          <div class="iep-section">
-            <div class="iep-section-title">IEP Document Explainer</div>
-            <div class="iep-section-sub">Paste any IEP language and get a plain-English explanation</div>
-            <div class="iep-explainer">
-              <textarea id="iepExplainerInput" class="iep-explainer-input" placeholder="Paste IEP text here... e.g. 'Student will demonstrate pragmatic language skills by initiating and maintaining a conversational exchange for 3-4 turns with 80% accuracy across 3 consecutive sessions.'"></textarea>
-              <button class="btn btn-p" style="width:100%;margin-top:10px" id="iepExplainBtn" onclick="explainIep()">Explain in Plain English</button>
-              <div id="iepExplainerResult" class="iep-explainer-result hidden"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- GOAL BANK -->
-        <div id="iepGoals" class="iep-panel hidden">
-          <div class="iep-section">
-            <div class="iep-section-title">Common IEP Goals</div>
-            <div class="iep-section-sub">Reference goals by area. Discuss with your IEP team.</div>
-            <div id="iepGoalsList"></div>
-          </div>
-        </div>
-
+        <!-- Wizard panels (hidden by default) -->
+        <div id="iepWizard" class="hidden"></div>
       </div>
     </div>
   </div>
@@ -1554,193 +1503,234 @@ function renderResources(){
 }
 
 // ═══ IEP TOOLKIT ═══
+var iepWizardMode = null;
+var iepStep = 0;
+var iepData = {};
+
 function openIep(){
   closeSb();
+  iepWizardMode = null;
+  document.getElementById('iepHub').classList.remove('hidden');
+  document.getElementById('iepWizard').classList.add('hidden');
   document.getElementById('iepPage').classList.add('open');
-  renderIepPrep();
-  renderIepRights();
-  renderIepLetters();
-  renderIepGoals();
 }
 
-function showIepTab(tab, el){
-  document.querySelectorAll('.iep-panel').forEach(function(p){p.classList.add('hidden')});
-  document.querySelectorAll('.iep-tab').forEach(function(t){t.classList.remove('active')});
-  el.classList.add('active');
-  var map={prep:'iepPrep',rights:'iepRights',letters:'iepLetters',explainer:'iepExplainer',goals:'iepGoals'};
-  document.getElementById(map[tab]).classList.remove('hidden');
+function iepBack(){
+  if(iepWizardMode){
+    iepWizardMode=null;
+    document.getElementById('iepHub').classList.remove('hidden');
+    document.getElementById('iepWizard').classList.add('hidden');
+    document.querySelector('#iepPage .overlay-body').scrollTop=0;
+  } else {
+    closeOverlay('iepPage');
+  }
 }
 
-var iepChecked = {};
-function toggleIepCheck(id, el){
-  iepChecked[id]=!iepChecked[id];
-  el.classList.toggle('checked', iepChecked[id]);
+function startWizard(mode){
+  iepWizardMode=mode;
+  iepStep=0;
+  iepData={childName:S.child||'',school:S.profile&&S.profile.child_school||'',grade:S.profile&&S.profile.child_grade||'',dx:S.dx||''};
+  document.getElementById('iepHub').classList.add('hidden');
+  document.getElementById('iepWizard').classList.remove('hidden');
+  document.querySelector('#iepPage .overlay-body').scrollTop=0;
+
+  if(mode==='letter') renderLetterWizard();
+  else if(mode==='prep') renderPrepWizard();
+  else if(mode==='explain') renderExplainWizard();
+  else if(mode==='rights') renderRightsWizard();
+  else if(mode==='goals') renderGoalsWizard();
 }
 
-function renderIepPrep(){
-  var prep=[
-    'Review your child\'s current IEP document',
-    'Write down your top 3 concerns',
-    'Note what\'s working well (bring positives too)',
-    'Review recent report cards and teacher notes',
-    'Check progress on current IEP goals',
-    'List any new behaviors or challenges since last IEP',
-    'Research specific services you want to request',
-    'Prepare a parent statement (1 paragraph about your child)'
-  ];
-  var bring=[
-    'Copy of current IEP',
-    'Your written concerns and priorities',
-    'Recent evaluations or outside reports',
-    'Work samples showing progress or struggles',
-    'Notebook and pen for taking notes',
-    'A trusted person for support (you can bring anyone)'
-  ];
-  var questions=[
-    'What data are you using to measure progress on Goal #___?',
-    'Is my child on track to meet their annual goals?',
-    'What accommodations are working? Which aren\'t?',
-    'How does my child interact with peers during unstructured time?',
-    'What does my child do when they\'re struggling and need help?',
-    'Can we add a behavior intervention plan (BIP)?',
-    'What happens after this meeting? What are the next steps?',
-    'Can I get a copy of everything discussed today in writing?'
-  ];
-
-  var h='';
-  prep.forEach(function(item,i){
-    var id='prep_'+i;
-    h+='<div class="iep-check-item'+(iepChecked[id]?' checked':'')+'" onclick="toggleIepCheck(\''+id+'\',this)"><div class="iep-checkbox">'+(iepChecked[id]?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':'')+'</div><div class="iep-check-text">'+item+'</div></div>';
-  });
-  document.getElementById('iepPrepList').innerHTML=h;
-
-  h='';
-  bring.forEach(function(item,i){
-    var id='bring_'+i;
-    h+='<div class="iep-check-item'+(iepChecked[id]?' checked':'')+'" onclick="toggleIepCheck(\''+id+'\',this)"><div class="iep-checkbox">'+(iepChecked[id]?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':'')+'</div><div class="iep-check-text">'+item+'</div></div>';
-  });
-  document.getElementById('iepBringList').innerHTML=h;
-
-  h='';
-  questions.forEach(function(q){
-    h+='<div class="iep-right-card" style="border-left-color:var(--sky-dark)"><div style="font-size:14px;line-height:1.5">"'+q+'"</div></div>';
-  });
-  document.getElementById('iepQuestions').innerHTML=h;
+// ── LETTER WIZARD ──
+function renderLetterWizard(){
+  var h='<div style="margin-bottom:20px"><div style="font-family:Fraunces,serif;font-size:22px;font-weight:800">Write a Letter</div><div style="font-size:13px;color:var(--warm-gray);margin-top:4px">Answer a few questions and we\'ll generate a personalized letter</div></div>';
+  h+='<div class="iep-section"><div style="margin-bottom:14px"><label class="fl">What type of letter?</label><select id="iepLetterType" class="fi" onchange="iepLetterTypeChanged()"><option value="">Select...</option><option value="eval">Request initial evaluation</option><option value="meeting">Request IEP meeting</option><option value="disagree">Disagree with a decision</option><option value="iee">Request independent evaluation (IEE)</option><option value="progress">Request progress reports</option></select></div>';
+  h+='<div style="margin-bottom:14px"><label class="fl">Child\'s full name</label><input id="iepChildName" class="fi" value="'+esc(iepData.childName)+'" placeholder="e.g. Liam Johnson"></div>';
+  h+='<div style="display:flex;gap:12px;margin-bottom:14px"><div style="flex:1"><label class="fl">School name</label><input id="iepSchool" class="fi" value="'+esc(iepData.school)+'" placeholder="e.g. Lincoln Elementary"></div><div style="flex:1"><label class="fl">Grade</label><input id="iepGrade" class="fi" value="'+esc(iepData.grade)+'" placeholder="e.g. 3rd"></div></div>';
+  h+='<div style="margin-bottom:14px"><label class="fl">Send to (name/title)</label><input id="iepRecipient" class="fi" placeholder="e.g. Dr. Smith, Special Education Director"></div>';
+  h+='<div id="iepLetterExtra"></div>';
+  h+='<div style="margin-bottom:14px"><label class="fl">Your name</label><input id="iepParentName" class="fi" value="'+esc(S.name||'')+'" placeholder="Your full name"></div>';
+  h+='<button class="btn btn-p" style="width:100%;padding:16px;font-size:16px" onclick="generateLetter()">Generate My Letter</button></div>';
+  h+='<div id="iepLetterResult"></div>';
+  document.getElementById('iepWizard').innerHTML=h;
 }
 
-function renderIepRights(){
-  var rights=[
-    {title:'Free Appropriate Public Education (FAPE)',desc:'Your child has the right to a free education designed to meet their unique needs, including specialized instruction and related services, at no cost to you.'},
-    {title:'Right to Evaluation',desc:'You can request a full evaluation at any time. The school must respond within a reasonable timeframe. You do not need to pay for school evaluations.'},
-    {title:'Right to Participate',desc:'You are an equal member of the IEP team. The school cannot make decisions about your child\'s education without you. Meetings must be scheduled at a mutually convenient time.'},
-    {title:'Prior Written Notice',desc:'The school must notify you in writing before making any changes to your child\'s identification, evaluation, placement, or services.'},
-    {title:'Informed Consent',desc:'The school must get your written consent before conducting evaluations or beginning special education services. You can revoke consent at any time.'},
-    {title:'Access to Records',desc:'You have the right to review all educational records related to your child. The school must provide copies within a reasonable time.'},
-    {title:'Independent Educational Evaluation (IEE)',desc:'If you disagree with the school\'s evaluation, you can request an Independent Educational Evaluation at the school district\'s expense.'},
-    {title:'Dispute Resolution',desc:'If you disagree with the IEP team\'s decisions, you have the right to mediation, a due process hearing, or file a state complaint. These are free.'},
-    {title:'Stay Put (Pendency)',desc:'During any dispute, your child has the right to remain in their current placement and continue receiving current services until the dispute is resolved.'},
-    {title:'Least Restrictive Environment (LRE)',desc:'Your child should be educated with non-disabled peers to the maximum extent appropriate. Removal from general education requires justification.'}
-  ];
-
-  var h='';
-  rights.forEach(function(r){
-    h+='<div class="iep-right-card"><div class="iep-right-title">'+r.title+'</div><div class="iep-right-desc">'+r.desc+'</div></div>';
-  });
-  document.getElementById('iepRightsList').innerHTML=h;
+function iepLetterTypeChanged(){
+  var type=document.getElementById('iepLetterType').value;
+  var el=document.getElementById('iepLetterExtra');
+  if(type==='eval'){
+    el.innerHTML='<div style="margin-bottom:14px"><label class="fl">What concerns do you have?</label><textarea class="fi" id="iepConcerns" rows="3" style="resize:none" placeholder="e.g. He struggles with reading, gets overwhelmed in loud environments, has difficulty with social interactions..."></textarea></div><div style="margin-bottom:14px"><label class="fl">What evaluations are you requesting?</label><div style="display:flex;flex-wrap:wrap;gap:6px" id="iepEvalTypes"></div></div>';
+    var evals=['Academic','Cognitive','Speech/Language','Occupational Therapy','Behavioral/Emotional','Adaptive Behavior'];
+    var eh='';evals.forEach(function(e){eh+='<button class="chip" onclick="this.classList.toggle(\'on\')">'+e+'</button>'});
+    document.getElementById('iepEvalTypes').innerHTML=eh;
+  } else if(type==='meeting'){
+    el.innerHTML='<div style="margin-bottom:14px"><label class="fl">What do you want to discuss? (list your concerns)</label><textarea class="fi" id="iepConcerns" rows="3" style="resize:none" placeholder="e.g. 1. Behavior plan isn\'t working\n2. Need more speech therapy\n3. Transition plan for middle school"></textarea></div>';
+  } else if(type==='disagree'){
+    el.innerHTML='<div style="margin-bottom:14px"><label class="fl">What decision do you disagree with?</label><textarea class="fi" id="iepConcerns" rows="3" style="resize:none" placeholder="e.g. The team decided to reduce OT from 2x/week to 1x/week. I believe my child still needs the additional support."></textarea></div>';
+  } else if(type==='iee'){
+    el.innerHTML='<div style="margin-bottom:14px"><label class="fl">Which evaluation area do you disagree with?</label><input class="fi" id="iepConcerns" placeholder="e.g. cognitive, speech/language, behavioral"></div>';
+  } else if(type==='progress'){
+    el.innerHTML='';
+  } else {
+    el.innerHTML='';
+  }
 }
 
-function renderIepLetters(){
-  var letters=[
-    {title:'📋 Request Initial Evaluation',desc:'Ask the school to evaluate your child for special education services',
-     body:'Dear [Principal/Special Education Director],\n\nI am writing to formally request that [Child\'s Name], a [grade] student at [School Name], be evaluated for special education services under the Individuals with Disabilities Education Act (IDEA).\n\nI am concerned about [his/her] [describe concerns: academic progress, behavior, social skills, communication, etc.]. Specifically, I have observed [provide 2-3 specific examples].\n\nI understand that under IDEA, the school district has 60 days from the date of my written consent to complete the evaluation. I am requesting evaluations in the following areas: [academic achievement, cognitive ability, speech and language, occupational therapy, behavioral/emotional, adaptive behavior — list relevant ones].\n\nPlease send me the consent forms and a copy of my parental rights (procedural safeguards) at your earliest convenience.\n\nThank you for your attention to this matter.\n\nSincerely,\n[Your Name]\n[Date]\n[Phone/Email]'},
-    {title:'📝 Request IEP Meeting',desc:'Ask to schedule an IEP meeting to discuss concerns',
-     body:'Dear [Special Education Coordinator],\n\nI am writing to formally request an IEP meeting for my child, [Child\'s Name], [DOB], currently in [grade] at [School Name].\n\nI would like to discuss the following concerns:\n\n1. [First concern]\n2. [Second concern]\n3. [Third concern]\n\nUnder IDEA, I understand that I am an equal member of the IEP team and that the meeting must be scheduled at a mutually convenient time. Please contact me to arrange a date and time.\n\nI look forward to working together to support [Child\'s Name]\'s educational progress.\n\nSincerely,\n[Your Name]\n[Date]'},
-    {title:'⚠️ Disagree with IEP Decision',desc:'Formally document disagreement with an IEP team decision',
-     body:'Dear [Special Education Director],\n\nI am writing to formally express my disagreement with the IEP team\'s decision regarding [Child\'s Name] made at the meeting on [date].\n\nSpecifically, I disagree with [describe the decision: removal of services, change in placement, denial of evaluation, goal changes, etc.].\n\nMy concerns are:\n\n1. [Explain why you disagree]\n2. [Provide supporting evidence or observations]\n\nI am requesting [what you want: continued services, additional evaluation, reconvened IEP meeting, mediation, etc.].\n\nPlease note that under IDEA\'s "stay put" provision, my child is entitled to remain in [his/her] current placement while this disagreement is being resolved.\n\nPlease provide me with information about my options for dispute resolution, including mediation and due process.\n\nSincerely,\n[Your Name]\n[Date]'},
-    {title:'🔍 Request Independent Evaluation (IEE)',desc:'Request an outside evaluation at school district expense',
-     body:'Dear [Special Education Director],\n\nI am writing to formally request an Independent Educational Evaluation (IEE) for my child, [Child\'s Name], at public expense.\n\nI disagree with the school district\'s evaluation completed on [date] in the area(s) of [specify: cognitive, academic, speech/language, occupational therapy, behavioral, etc.].\n\nUnder 34 CFR §300.502, I have the right to request an IEE at public expense when I disagree with the school\'s evaluation. The district must either fund the IEE or file for a due process hearing to defend its evaluation.\n\nPlease provide me with the district\'s criteria for IEEs, including the location and qualifications of examiners, within a reasonable timeframe.\n\nSincerely,\n[Your Name]\n[Date]'},
-    {title:'📊 Request Progress Reports',desc:'Ask for detailed data on IEP goal progress',
-     body:'Dear [Special Education Teacher/Case Manager],\n\nI am writing to request detailed progress reports on [Child\'s Name]\'s IEP goals.\n\nSpecifically, I would like:\n\n1. Current data and progress toward each annual goal\n2. The methods and frequency of data collection\n3. Any benchmark data or work samples supporting the progress reports\n4. Information about which goals are on track and which are not\n\nUnder IDEA, I am entitled to regular progress reports on my child\'s IEP goals, at least as frequently as progress is reported for general education students.\n\nThank you for your support.\n\nSincerely,\n[Your Name]\n[Date]'}
-  ];
+async function generateLetter(){
+  var type=document.getElementById('iepLetterType').value;
+  if(!type){showToast('Select a letter type');return}
+  var child=document.getElementById('iepChildName').value.trim();
+  var school=document.getElementById('iepSchool').value.trim();
+  var grade=document.getElementById('iepGrade').value.trim();
+  var recipient=document.getElementById('iepRecipient').value.trim();
+  var parent=document.getElementById('iepParentName').value.trim();
+  var concerns=document.getElementById('iepConcerns')?document.getElementById('iepConcerns').value.trim():'';
+  var evalTypes=[];
+  document.querySelectorAll('#iepEvalTypes .chip.on').forEach(function(c){evalTypes.push(c.textContent)});
 
-  var h='';
-  letters.forEach(function(l,i){
-    h+='<div class="iep-letter" id="letter_'+i+'" onclick="toggleLetter('+i+')"><div class="iep-letter-title">'+l.title+'</div><div class="iep-letter-desc">'+l.desc+'</div><div class="iep-letter-content">'+esc(l.body)+'<button class="iep-copy-btn" onclick="event.stopPropagation();copyLetter('+i+')">📋 Copy Letter</button></div></div>';
-  });
-  document.getElementById('iepLettersList').innerHTML=h;
+  var resultEl=document.getElementById('iepLetterResult');
+  resultEl.innerHTML='<div style="text-align:center;padding:24px;color:var(--warm-gray)"><div style="margin-bottom:8px">Generating your letter...</div></div>';
+
+  var typeNames={eval:'request an initial special education evaluation',meeting:'request an IEP meeting',disagree:'formally disagree with an IEP team decision',iee:'request an Independent Educational Evaluation at public expense',progress:'request detailed progress reports on IEP goals'};
+
+  var prompt='Write a formal parent letter to '+typeNames[type]+' under IDEA.\n\nDetails:\n- Child: '+(child||'[Child Name]')+', '+(grade||'[Grade]')+' at '+(school||'[School Name]')+'\n- Recipient: '+(recipient||'Special Education Director')+'\n- Parent: '+(parent||'[Parent Name]');
+  if(concerns)prompt+='\n- Specific concerns: '+concerns;
+  if(evalTypes.length)prompt+='\n- Evaluation areas requested: '+evalTypes.join(', ');
+  prompt+='\n\nWrite the complete letter ready to print. Include the date. Be professional but firm. Reference IDEA rights where appropriate. Keep it concise (under 300 words).';
+
+  try{
+    var r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'You are a parent advocacy assistant. Write formal letters for parents navigating the special education system. Always reference IDEA (Individuals with Disabilities Education Act) rights. Be professional, clear, and firm. Output only the letter text, no commentary.',messages:[{role:'user',content:prompt}]})});
+    var d=await r.json();var text='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)text+=d.content[i].text;
+    resultEl.innerHTML='<div class="iep-section" style="margin-top:16px"><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:12px">Your Letter</div><div style="background:var(--cream);border-radius:14px;padding:20px;font-size:14px;line-height:1.7;white-space:pre-wrap" id="iepGenLetter">'+esc(text)+'</div><div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-p" style="flex:1" onclick="copyIepLetter()">📋 Copy Letter</button><button class="btn btn-outline" style="flex:1" onclick="renderLetterWizard()">✏️ Edit & Regenerate</button></div></div>';
+  }catch(e){
+    resultEl.innerHTML='<div class="iep-section" style="margin-top:16px;text-align:center;color:var(--terracotta)">Connection error. Try again.</div>';
+  }
 }
 
-function toggleLetter(i){document.getElementById('letter_'+i).classList.toggle('open')}
-function copyLetter(i){
-  var el=document.getElementById('letter_'+i).querySelector('.iep-letter-content');
-  var text=el.textContent.replace('📋 Copy Letter','').trim();
+function copyIepLetter(){
+  var text=document.getElementById('iepGenLetter').textContent;
   navigator.clipboard.writeText(text).then(function(){showToast('Letter copied!')}).catch(function(){showToast('Tap and hold to copy')});
 }
 
-async function explainIep(){
-  var text=document.getElementById('iepExplainerInput').value.trim();
-  if(!text){showToast('Paste IEP text first');return}
-  var btn=document.getElementById('iepExplainBtn');
-  var result=document.getElementById('iepExplainerResult');
-  btn.disabled=true;btn.textContent='Explaining...';
-  result.classList.add('hidden');
+// ── PREP WIZARD ──
+function renderPrepWizard(){
+  var h='<div style="margin-bottom:20px"><div style="font-family:Fraunces,serif;font-size:22px;font-weight:800">Meeting Prep</div><div style="font-size:13px;color:var(--warm-gray);margin-top:4px">Tell us about the meeting and we\'ll build your prep kit</div></div>';
+  h+='<div class="iep-section">';
+  h+='<div style="margin-bottom:14px"><label class="fl">What type of meeting?</label><select id="iepMeetType" class="fi"><option value="">Select...</option><option>Annual IEP review</option><option>Initial IEP (first time)</option><option>Re-evaluation</option><option>Behavior plan review</option><option>Transition planning</option><option>Parent-requested meeting</option></select></div>';
+  h+='<div style="margin-bottom:14px"><label class="fl">Child\'s name</label><input id="iepPrepChild" class="fi" value="'+esc(iepData.childName)+'" placeholder="Child\'s name"></div>';
+  h+='<div style="margin-bottom:14px"><label class="fl">What are your top 3 concerns?</label><textarea class="fi" id="iepPrepConcerns" rows="3" style="resize:none" placeholder="e.g. Not making progress on reading goals\nBehavior at recess is getting worse\nNeed more speech therapy"></textarea></div>';
+  h+='<div style="margin-bottom:14px"><label class="fl">What\'s going well? (bring positives too)</label><textarea class="fi" id="iepPrepWins" rows="2" style="resize:none" placeholder="e.g. Loves math, gets along with his aide, uses his visual schedule"></textarea></div>';
+  h+='<button class="btn btn-p" style="width:100%;padding:16px;font-size:16px" onclick="generatePrep()">Build My Prep Kit</button></div>';
+  h+='<div id="iepPrepResult"></div>';
+  document.getElementById('iepWizard').innerHTML=h;
+}
+
+async function generatePrep(){
+  var type=document.getElementById('iepMeetType').value;
+  var child=document.getElementById('iepPrepChild').value.trim();
+  var concerns=document.getElementById('iepPrepConcerns').value.trim();
+  var wins=document.getElementById('iepPrepWins').value.trim();
+  if(!concerns){showToast('Enter your concerns');return}
+
+  var resultEl=document.getElementById('iepPrepResult');
+  resultEl.innerHTML='<div style="text-align:center;padding:24px;color:var(--warm-gray)">Building your prep kit...</div>';
+
+  var prompt='Create an IEP meeting prep kit for a parent.\n\nMeeting type: '+(type||'IEP meeting')+'\nChild: '+(child||'my child')+'\nDiagnosis: '+(iepData.dx||'not specified')+'\nConcerns: '+concerns+(wins?'\nPositives: '+wins:'')+'\n\nProvide:\n1. TALKING POINTS: 3-4 bullet points the parent should bring up, written as first-person statements\n2. QUESTIONS TO ASK: 5 specific questions tailored to their concerns\n3. WHAT TO BRING: Checklist of documents relevant to this specific meeting\n4. WATCH OUT FOR: 2-3 things the school might say and how to respond\n\nKeep each section concise. Use plain language.';
 
   try{
-    var r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      model:'claude-sonnet-4-20250514',max_tokens:600,
-      system:'You are a parent advocate helping explain IEP documents in plain English. The parent has no special education background. Explain what the text means in simple, clear language. If it contains a goal, explain: what skill is being worked on, how it will be measured, and what success looks like. Keep it warm and supportive. 3-5 sentences max.',
-      messages:[{role:'user',content:'Please explain this IEP text in plain English:\n\n'+text}]
-    })});
-    var d=await r.json();
-    var explanation='';
-    if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)explanation+=d.content[i].text;
-    result.innerHTML=explanation?esc(explanation):'Could not generate explanation. Try again.';
-    result.classList.remove('hidden');
+    var r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:'You are a parent advocacy assistant helping parents prepare for IEP meetings. Be practical, warm, and empowering. Format with clear section headers.',messages:[{role:'user',content:prompt}]})});
+    var d=await r.json();var text='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)text+=d.content[i].text;
+    resultEl.innerHTML='<div class="iep-section" style="margin-top:16px"><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:12px">Your Prep Kit</div><div style="background:var(--cream);border-radius:14px;padding:20px;font-size:14px;line-height:1.7;white-space:pre-wrap" id="iepGenPrep">'+esc(text)+'</div><button class="btn btn-p" style="width:100%;margin-top:12px" onclick="navigator.clipboard.writeText(document.getElementById(\'iepGenPrep\').textContent).then(function(){showToast(\'Copied!\')})">📋 Copy Prep Kit</button></div>';
   }catch(e){
-    result.innerHTML='Having trouble connecting. Try again in a moment.';
-    result.classList.remove('hidden');
+    resultEl.innerHTML='<div class="iep-section" style="margin-top:16px;text-align:center;color:var(--terracotta)">Connection error. Try again.</div>';
+  }
+}
+
+// ── EXPLAIN WIZARD ──
+function renderExplainWizard(){
+  var h='<div style="margin-bottom:20px"><div style="font-family:Fraunces,serif;font-size:22px;font-weight:800">IEP Explainer</div><div style="font-size:13px;color:var(--warm-gray);margin-top:4px">Paste any confusing IEP text and get a plain-English translation</div></div>';
+  h+='<div class="iep-section"><textarea id="iepExplainText" class="fi" rows="5" style="resize:none;min-height:120px" placeholder="Paste IEP text here...\n\ne.g. \'Student will demonstrate pragmatic language skills by initiating and maintaining a conversational exchange for 3-4 turns with 80% accuracy across 3 consecutive sessions.\'"></textarea>';
+  h+='<button class="btn btn-p" style="width:100%;padding:16px;font-size:16px;margin-top:12px" id="iepExplainBtn2" onclick="generateExplain()">Explain in Plain English</button></div>';
+  h+='<div id="iepExplainResult"></div>';
+  document.getElementById('iepWizard').innerHTML=h;
+}
+
+async function generateExplain(){
+  var text=document.getElementById('iepExplainText').value.trim();
+  if(!text){showToast('Paste IEP text first');return}
+  var btn=document.getElementById('iepExplainBtn2');
+  btn.disabled=true;btn.textContent='Translating...';
+  var resultEl=document.getElementById('iepExplainResult');
+
+  try{
+    var r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:'You are a parent advocate helping explain IEP documents in plain English. The parent has no special education background. Explain what the text means simply. If it contains a goal, explain: what skill is being worked on, how it will be measured, and what success looks like. If it contains legal language, explain what it means for their child. Be warm and supportive. Use bullet points for clarity.',messages:[{role:'user',content:'Please explain this IEP text in plain English:\n\n'+text}]})});
+    var d=await r.json();var explanation='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)explanation+=d.content[i].text;
+    resultEl.innerHTML='<div class="iep-section" style="margin-top:16px"><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:12px">Here\'s What It Means</div><div style="background:var(--sage-light);border-radius:14px;padding:20px;font-size:14px;line-height:1.7;white-space:pre-wrap">'+esc(explanation)+'</div></div>';
+  }catch(e){
+    resultEl.innerHTML='<div class="iep-section" style="margin-top:16px;text-align:center;color:var(--terracotta)">Connection error. Try again.</div>';
   }
   btn.disabled=false;btn.textContent='Explain in Plain English';
 }
 
-function renderIepGoals(){
-  var goals=[
-    {area:'Behavior',color:'var(--terracotta)',goals:[
-      'Student will use a self-regulation strategy (deep breathing, counting, requesting a break) when frustrated, reducing disruptive behaviors from [X] to [Y] incidents per week.',
-      'Student will follow classroom rules and expectations with no more than 2 verbal prompts in 4 out of 5 observed sessions.',
-      'Student will transition between activities within 2 minutes with no more than 1 prompt in 80% of opportunities.'
-    ]},
-    {area:'Social Skills',color:'var(--sage)',goals:[
-      'Student will initiate a social interaction with a peer (greeting, asking to play, making a comment) at least 3 times per day across settings.',
-      'Student will take turns during a structured activity with peers for at least 5 exchanges in 4 out of 5 trials.',
-      'Student will identify emotions in self and others using visual supports with 80% accuracy.'
-    ]},
-    {area:'Communication',color:'var(--sky-dark)',goals:[
-      'Student will use a functional communication system (verbal, AAC, PECS) to request desired items/activities in 80% of opportunities.',
-      'Student will respond to "wh" questions (who, what, where) about a familiar story with 75% accuracy.',
-      'Student will engage in a 3-turn conversational exchange on a preferred topic with a peer or adult.'
-    ]},
-    {area:'Daily Living / Adaptive',color:'var(--lavender)',goals:[
-      'Student will independently complete a 3-step morning routine (put away belongings, sit at desk, begin warm-up) with visual schedule support in 4 out of 5 days.',
-      'Student will independently manage personal hygiene tasks (handwashing, toileting) with no more than 1 verbal prompt.',
-      'Student will follow a visual schedule to complete homework assignments with 80% independence.'
-    ]},
-    {area:'Academic Support',color:'var(--sunflower)',goals:[
-      'Student will attend to a teacher-directed activity for 10 consecutive minutes with no more than 1 redirection in 4 out of 5 opportunities.',
-      'Student will independently request help using an appropriate strategy (raising hand, using help card) instead of shutting down, in 80% of observed opportunities.',
-      'Student will organize materials for class using a checklist with 80% independence.'
-    ]}
+// ── RIGHTS WIZARD ──
+function renderRightsWizard(){
+  var rights=[
+    {title:'Free Appropriate Public Education (FAPE)',icon:'🎓',desc:'Your child has the right to a free education designed to meet their unique needs, including specialized instruction and related services, at no cost to you.'},
+    {title:'Right to Evaluation',icon:'📋',desc:'You can request a full evaluation at any time. The school must respond within a reasonable timeframe. You do not need to pay for school evaluations.'},
+    {title:'Right to Participate',icon:'🤝',desc:'You are an equal member of the IEP team. The school cannot make decisions without you. Meetings must be at a mutually convenient time.'},
+    {title:'Prior Written Notice',icon:'📬',desc:'The school must notify you in writing before making any changes to your child\'s identification, evaluation, placement, or services.'},
+    {title:'Informed Consent',icon:'✅',desc:'The school must get your written consent before evaluations or starting services. You can revoke consent at any time.'},
+    {title:'Access to Records',icon:'📂',desc:'You have the right to review all educational records related to your child. The school must provide copies within a reasonable time.'},
+    {title:'Independent Evaluation (IEE)',icon:'🔬',desc:'If you disagree with the school\'s evaluation, you can request an Independent Educational Evaluation at the school district\'s expense.'},
+    {title:'Dispute Resolution',icon:'⚖️',desc:'If you disagree with IEP decisions, you can use mediation, a due process hearing, or file a state complaint. These are free.'},
+    {title:'Stay Put (Pendency)',icon:'🛡️',desc:'During any dispute, your child stays in their current placement and continues receiving current services until it\'s resolved.'},
+    {title:'Least Restrictive Environment',icon:'🏫',desc:'Your child should be educated with non-disabled peers to the maximum extent appropriate. Removal from general education requires justification.'}
   ];
-
-  var h='';
-  goals.forEach(function(g){
-    h+='<div style="margin-bottom:16px"><div class="iep-goal-area" style="color:'+g.color+'">'+g.area+'</div>';
-    g.goals.forEach(function(goal){
-      h+='<div class="iep-goal-card"><div class="iep-goal-text">'+goal+'</div></div>';
-    });
-    h+='</div>';
+  var h='<div style="margin-bottom:20px"><div style="font-family:Fraunces,serif;font-size:22px;font-weight:800">Your Rights Under IDEA</div><div style="font-size:13px;color:var(--warm-gray);margin-top:4px">Federal law protects your child\'s right to a Free Appropriate Public Education</div></div>';
+  rights.forEach(function(r){
+    h+='<div style="background:white;border-radius:16px;padding:18px;border:1px solid var(--sand);margin-bottom:10px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:20px">'+r.icon+'</span><div style="font-weight:700;font-size:15px">'+r.title+'</div></div><div style="font-size:14px;color:var(--warm-gray);line-height:1.6">'+r.desc+'</div></div>';
   });
-  document.getElementById('iepGoalsList').innerHTML=h;
+  document.getElementById('iepWizard').innerHTML=h;
+}
+
+// ── GOALS WIZARD ──
+function renderGoalsWizard(){
+  var h='<div style="margin-bottom:20px"><div style="font-family:Fraunces,serif;font-size:22px;font-weight:800">Goal Suggestions</div><div style="font-size:13px;color:var(--warm-gray);margin-top:4px">Tell us about your child and we\'ll suggest IEP goals to discuss with the team</div></div>';
+  h+='<div class="iep-section">';
+  h+='<div style="margin-bottom:14px"><label class="fl">Child\'s name</label><input id="iepGoalChild" class="fi" value="'+esc(iepData.childName)+'" placeholder="Child\'s name"></div>';
+  h+='<div style="margin-bottom:14px"><label class="fl">Age / Grade</label><input id="iepGoalAge" class="fi" value="'+esc(iepData.grade)+'" placeholder="e.g. 7 years old, 2nd grade"></div>';
+  h+='<div style="margin-bottom:14px"><label class="fl">Diagnosis</label><input id="iepGoalDx" class="fi" value="'+esc(iepData.dx)+'" placeholder="e.g. Autism, ADHD"></div>';
+  h+='<div style="margin-bottom:14px"><label class="fl">What areas need the most help?</label><div style="display:flex;flex-wrap:wrap;gap:6px" id="iepGoalAreas"></div></div>';
+  h+='<div style="margin-bottom:14px"><label class="fl">Any specific challenges?</label><textarea class="fi" id="iepGoalChallenges" rows="2" style="resize:none" placeholder="e.g. Can\'t sit still for more than 5 minutes, hits when frustrated, won\'t initiate conversations"></textarea></div>';
+  h+='<button class="btn btn-p" style="width:100%;padding:16px;font-size:16px" onclick="generateGoals()">Suggest Goals</button></div>';
+  h+='<div id="iepGoalResult"></div>';
+  document.getElementById('iepWizard').innerHTML=h;
+  var areas=['Behavior','Social Skills','Communication','Daily Living','Academic','Self-Regulation','Motor Skills','Sensory'];
+  var ah='';areas.forEach(function(a){ah+='<button class="chip" onclick="this.classList.toggle(\'on\')">'+a+'</button>'});
+  document.getElementById('iepGoalAreas').innerHTML=ah;
+}
+
+async function generateGoals(){
+  var child=document.getElementById('iepGoalChild').value.trim();
+  var age=document.getElementById('iepGoalAge').value.trim();
+  var dx=document.getElementById('iepGoalDx').value.trim();
+  var challenges=document.getElementById('iepGoalChallenges').value.trim();
+  var areas=[];
+  document.querySelectorAll('#iepGoalAreas .chip.on').forEach(function(c){areas.push(c.textContent)});
+  if(!areas.length&&!challenges){showToast('Select areas or describe challenges');return}
+
+  var resultEl=document.getElementById('iepGoalResult');
+  resultEl.innerHTML='<div style="text-align:center;padding:24px;color:var(--warm-gray)">Generating goal suggestions...</div>';
+
+  var prompt='Suggest 5-6 specific, measurable IEP goals for this child:\n\nChild: '+(child||'the child')+'\nAge/Grade: '+(age||'not specified')+'\nDiagnosis: '+(dx||'not specified')+'\nAreas of need: '+(areas.length?areas.join(', '):'general')+(challenges?'\nSpecific challenges: '+challenges:'')+'\n\nEach goal should:\n- Be measurable with a clear target (percentages, frequencies)\n- Include the condition and criteria\n- Be realistic for school implementation\n- Include the area label (Behavior, Social, Communication, etc.)\n\nFormat each goal as:\nAREA: [goal text]\n\nKeep goals practical and parent-friendly.';
+
+  try{
+    var r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'You are an IEP goal specialist. Write specific, measurable, achievable IEP goals. Use standard IEP goal format with conditions, behaviors, and criteria. Make them parent-friendly.',messages:[{role:'user',content:prompt}]})});
+    var d=await r.json();var text='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)text+=d.content[i].text;
+    resultEl.innerHTML='<div class="iep-section" style="margin-top:16px"><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:12px">Suggested Goals</div><div style="font-size:13px;color:var(--warm-gray);margin-bottom:14px">Discuss these with your IEP team — they can adapt them to your child\'s specific needs</div><div style="background:var(--cream);border-radius:14px;padding:20px;font-size:14px;line-height:1.7;white-space:pre-wrap" id="iepGenGoals">'+esc(text)+'</div><button class="btn btn-p" style="width:100%;margin-top:12px" onclick="navigator.clipboard.writeText(document.getElementById(\'iepGenGoals\').textContent).then(function(){showToast(\'Copied!\')})">📋 Copy Goals</button></div>';
+  }catch(e){
+    resultEl.innerHTML='<div class="iep-section" style="margin-top:16px;text-align:center;color:var(--terracotta)">Connection error. Try again.</div>';
+  }
 }
 
 // ═══ SATISFACTION SURVEY ═══
