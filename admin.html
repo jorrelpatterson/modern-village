@@ -174,6 +174,7 @@
     <div class="sb-item" data-page="grants"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Grant Reporting</div>
     <div class="sb-item" data-page="behavior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>Behavior Data</div>
     <div class="sb-item" data-page="blog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Blog</div>
+    <div class="sb-item" data-page="districts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>District Leads</div>
   </aside>
 
   <main class="main">
@@ -258,6 +259,13 @@
       </div>
       <div class="panel"><div class="panel-hdr"><div class="panel-title">Recent Logs (All Users)</div></div><div class="panel-body"><table class="tbl"><thead><tr><th>User</th><th>Behavior</th><th>Trigger</th><th>Duration</th><th>Intensity</th><th>Outcome</th><th>Date</th></tr></thead><tbody id="behaviorBody"></tbody></table></div></div>
     </div>
+    <!-- DISTRICTS -->
+    <div id="pgDistricts" class="page">
+      <div class="page-hdr"><div><h1>District Pilot Requests</h1><p>Leads from the landing page</p></div></div>
+      <div class="stats" id="districtStats"></div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">All Requests</div></div><div class="panel-body" id="districtList"></div></div>
+    </div>
+
     <!-- BLOG -->
     <div id="pgBlog" class="page">
       <div class="page-hdr"><div><h1>Blog Management</h1><p>Create and manage blog posts</p></div><button class="btn btn-sage" onclick="openBlogEditor()">+ New Post</button></div>
@@ -402,6 +410,7 @@ async function loadPage(pg){
   else if(pg==='grants') await loadGrants();
   else if(pg==='behavior') await loadBehavior();
   else if(pg==='blog') await loadBlog();
+  else if(pg==='districts') await loadDistricts();
 }
 
 // ═══ DASHBOARD ═══
@@ -708,6 +717,45 @@ function grantRow(label, actual, target){
   var pct = target && !isNaN(parseInt(target)) ? Math.min(100, Math.round(actual/parseInt(target)*100)) : null;
   var color = pct !== null ? (pct >= 100 ? 'var(--sage)' : pct >= 60 ? 'var(--sunflower)' : 'var(--terracotta)') : 'var(--sage)';
   return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand)"><span style="font-size:13px;color:var(--warm-gray)">'+label+'</span><div style="display:flex;align-items:center;gap:12px"><span style="font-weight:700;font-size:13px">'+actual+(target!=='—'?' / '+target:'')+'</span>'+(pct!==null?'<div style="width:80px;height:6px;background:var(--cream);border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:3px"></div></div>':'')+'</div></div>';
+}
+
+// ═══ DISTRICT LEADS ═══
+async function loadDistricts(){
+  var r=await sb.from('district_requests').select('*').order('created_at',{ascending:false});
+  var leads=r.data||[];
+  var newCount=leads.filter(function(l){return l.status==='new'}).length;
+  document.getElementById('districtStats').innerHTML=statCard('Total Requests',leads.length,'')+statCard('New',newCount,'')+statCard('Contacted',leads.filter(function(l){return l.status==='contacted'}).length,'')+statCard('Converted',leads.filter(function(l){return l.status==='converted'}).length,'');
+
+  if(!leads.length){document.getElementById('districtList').innerHTML='<div class="empty"><div class="empty-icon">🏫</div>No district requests yet. They\'ll appear here when districts submit the form on the landing page.</div>';return}
+
+  var h='';
+  leads.forEach(function(l){
+    var d=new Date(l.created_at);
+    var ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    var sc=l.status==='new'?'tag-yellow':l.status==='contacted'?'tag-sage':'tag-sage';
+    h+='<div style="padding:18px;background:'+(l.status==='new'?'var(--sage-light)':'var(--cream)')+';border-radius:14px;margin-bottom:12px;border:1px solid var(--sand)">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:800;font-size:15px">'+esc(l.district_name)+'</span><span class="tag '+sc+'">'+l.status+'</span></div><span style="font-size:11px;color:var(--warm-gray-light)">'+ds+'</span></div>';
+    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;margin-bottom:10px">';
+    h+='<div><span style="color:var(--warm-gray)">Contact:</span> <strong>'+esc(l.contact_name)+'</strong></div>';
+    h+='<div><span style="color:var(--warm-gray)">Title:</span> '+esc(l.title||'N/A')+'</div>';
+    h+='<div><span style="color:var(--warm-gray)">Email:</span> <a href="mailto:'+esc(l.email)+'" style="color:var(--sage-dark)">'+esc(l.email)+'</a></div>';
+    h+='<div><span style="color:var(--warm-gray)">Phone:</span> '+esc(l.phone||'N/A')+'</div>';
+    h+='<div><span style="color:var(--warm-gray)">State:</span> '+esc(l.state||'N/A')+'</div>';
+    h+='<div><span style="color:var(--warm-gray)">Students:</span> '+esc(l.student_count||'N/A')+'</div>';
+    h+='</div>';
+    if(l.message) h+='<div style="font-size:13px;color:var(--warm-gray);padding:10px;background:white;border-radius:8px;margin-bottom:10px">'+esc(l.message)+'</div>';
+    h+='<div style="display:flex;gap:6px">';
+    if(l.status==='new') h+='<button class="btn btn-sm btn-sage" onclick="updateDistrictStatus(\''+l.id+'\',\'contacted\')">Mark Contacted</button>';
+    if(l.status!=='converted') h+='<button class="btn btn-sm btn-outline" onclick="updateDistrictStatus(\''+l.id+'\',\'converted\')">Mark Converted</button>';
+    h+='</div></div>';
+  });
+  document.getElementById('districtList').innerHTML=h;
+}
+
+async function updateDistrictStatus(id,status){
+  await sb.from('district_requests').update({status:status}).eq('id',id);
+  showToast('Updated to '+status);
+  loadDistricts();
 }
 
 // ═══ BLOG MANAGEMENT ═══

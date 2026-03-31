@@ -451,9 +451,81 @@ a{text-decoration:none;color:inherit}
         <div class="district-desc">No cost, no obligation. We onboard families and let results speak for themselves.</div>
       </div>
     </div>
-    <button class="district-cta" onclick="window.location.href='mailto:hello@modernvillage.com?subject=District%20Pilot%20Interest'">Request a District Pilot <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+    <button class="district-cta" onclick="document.getElementById('districtModal').style.display='flex'">Request a District Pilot <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
   </div>
 </section>
+
+<!-- DISTRICT PILOT MODAL -->
+<div id="districtModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:24px;padding:36px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,0.2)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:900;color:var(--charcoal)">Request a Pilot</div>
+      <button style="background:none;border:none;font-size:28px;cursor:pointer;color:var(--warm-gray-light);line-height:1" onclick="document.getElementById('districtModal').style.display='none'">&times;</button>
+    </div>
+    <p style="font-size:14px;color:var(--warm-gray);margin-bottom:24px;line-height:1.5">Free 60-day pilot. No cost, no obligation. We onboard families and let results speak for themselves.</p>
+    <div id="districtForm">
+      <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:700;color:var(--warm-gray);display:block;margin-bottom:4px">Your Name *</label><input id="dName" style="width:100%;padding:12px 14px;border:1.5px solid var(--sand);border-radius:12px;font-size:15px;font-family:'DM Sans',sans-serif;background:var(--cream)" placeholder="Dr. Sarah Johnson"></div>
+      <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:700;color:var(--warm-gray);display:block;margin-bottom:4px">Title / Role</label><input id="dTitle" style="width:100%;padding:12px 14px;border:1.5px solid var(--sand);border-radius:12px;font-size:15px;font-family:'DM Sans',sans-serif;background:var(--cream)" placeholder="Special Education Director"></div>
+      <div style="display:flex;gap:12px;margin-bottom:14px">
+        <div style="flex:1"><label style="font-size:12px;font-weight:700;color:var(--warm-gray);display:block;margin-bottom:4px">Email *</label><input id="dEmail" type="email" style="width:100%;padding:12px 14px;border:1.5px solid var(--sand);border-radius:12px;font-size:15px;font-family:'DM Sans',sans-serif;background:var(--cream)" placeholder="sjohnson@district.edu"></div>
+        <div style="flex:1"><label style="font-size:12px;font-weight:700;color:var(--warm-gray);display:block;margin-bottom:4px">Phone</label><input id="dPhone" type="tel" style="width:100%;padding:12px 14px;border:1.5px solid var(--sand);border-radius:12px;font-size:15px;font-family:'DM Sans',sans-serif;background:var(--cream)" placeholder="(555) 123-4567"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:14px">
+        <div style="flex:1"><label style="font-size:12px;font-weight:700;color:var(--warm-gray);display:block;margin-bottom:4px">District Name *</label><input id="dDistrict" style="width:100%;padding:12px 14px;border:1.5px solid var(--sand);border-radius:12px;font-size:15px;font-family:'DM Sans',sans-serif;background:var(--cream)" placeholder="Lincoln Unified School District"></div>
+        <div style="flex:1"><label style="font-size:12px;font-weight:700;color:var(--warm-gray);display:block;margin-bottom:4px">State</label><select id="dState" style="width:100%;padding:12px 14px;border:1.5px solid var(--sand);border-radius:12px;font-size:15px;font-family:'DM Sans',sans-serif;background:var(--cream)"><option value="">Select</option><option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option><option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option><option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option><option>KS</option><option>KY</option><option>LA</option><option>ME</option><option>MD</option><option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option><option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option><option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option><option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option><option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option><option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option><option>DC</option></select></div>
+      </div>
+      <div style="margin-bottom:14px"><label style="font-size:12px;font-weight:700;color:var(--warm-gray);display:block;margin-bottom:4px">Approximate Student Count</label><select id="dStudents" style="width:100%;padding:12px 14px;border:1.5px solid var(--sand);border-radius:12px;font-size:15px;font-family:'DM Sans',sans-serif;background:var(--cream)"><option value="">Select</option><option>Under 1,000</option><option>1,000 - 5,000</option><option>5,000 - 15,000</option><option>15,000 - 30,000</option><option>30,000+</option></select></div>
+      <div style="margin-bottom:20px"><label style="font-size:12px;font-weight:700;color:var(--warm-gray);display:block;margin-bottom:4px">Anything else we should know?</label><textarea id="dMessage" rows="3" style="width:100%;padding:12px 14px;border:1.5px solid var(--sand);border-radius:12px;font-size:15px;font-family:'DM Sans',sans-serif;background:var(--cream);resize:none" placeholder="Current PBIS programs, specific challenges, timeline..."></textarea></div>
+      <button id="dSubmit" onclick="submitDistrictRequest()" style="width:100%;padding:16px;background:var(--sage);color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s">Submit Pilot Request</button>
+      <p style="font-size:11px;color:var(--warm-gray-light);text-align:center;margin-top:12px">We'll reach out within 2 business days to schedule an intro call.</p>
+    </div>
+    <div id="districtSuccess" style="display:none;text-align:center;padding:20px 0">
+      <div style="font-size:48px;margin-bottom:16px">&#10003;</div>
+      <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:800;margin-bottom:8px">Request Received!</div>
+      <p style="font-size:14px;color:var(--warm-gray);line-height:1.6">Thank you for your interest. We'll reach out within 2 business days to schedule an intro call and discuss how Modern Village can support your families.</p>
+      <button onclick="document.getElementById('districtModal').style.display='none'" style="margin-top:20px;padding:12px 28px;background:var(--sage);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var SUPA_URL_D="https://jrsiqjfwvunrjiihnsgc.supabase.co";
+var SUPA_KEY_D="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyc2lxamZ3dnVucmppaWhuc2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MTUyMDksImV4cCI6MjA5MDQ5MTIwOX0.KLkbX6wjMpIty_gwV3HuE5bs-Wlut-VlRhBGP4VnrO4";
+async function submitDistrictRequest(){
+  var name=document.getElementById('dName').value.trim();
+  var email=document.getElementById('dEmail').value.trim();
+  var district=document.getElementById('dDistrict').value.trim();
+  if(!name||!email||!district){alert('Please fill in required fields (name, email, district).');return}
+  var btn=document.getElementById('dSubmit');
+  btn.disabled=true;btn.textContent='Submitting...';
+  try{
+    var r=await fetch(SUPA_URL_D+'/rest/v1/district_requests',{
+      method:'POST',headers:{'apikey':SUPA_KEY_D,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({
+        contact_name:name,
+        title:document.getElementById('dTitle').value.trim()||null,
+        email:email,
+        phone:document.getElementById('dPhone').value.trim()||null,
+        district_name:district,
+        state:document.getElementById('dState').value||null,
+        student_count:document.getElementById('dStudents').value||null,
+        message:document.getElementById('dMessage').value.trim()||null
+      })
+    });
+    if(r.ok){
+      document.getElementById('districtForm').style.display='none';
+      document.getElementById('districtSuccess').style.display='block';
+      // Notify you via email
+      fetch('https://village-api.jorrelpatterson.workers.dev/email',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({to:'jorrelpatterson@gmail.com',subject:'New District Pilot Request — '+district,
+          html:'<h2>New District Pilot Request</h2><p><strong>Name:</strong> '+name+'</p><p><strong>Title:</strong> '+(document.getElementById('dTitle').value||'N/A')+'</p><p><strong>Email:</strong> '+email+'</p><p><strong>Phone:</strong> '+(document.getElementById('dPhone').value||'N/A')+'</p><p><strong>District:</strong> '+district+'</p><p><strong>State:</strong> '+(document.getElementById('dState').value||'N/A')+'</p><p><strong>Students:</strong> '+(document.getElementById('dStudents').value||'N/A')+'</p><p><strong>Message:</strong> '+(document.getElementById('dMessage').value||'N/A')+'</p>'
+        })
+      }).catch(function(){});
+    } else {btn.disabled=false;btn.textContent='Submit Pilot Request';alert('Error submitting. Please try again.')}
+  }catch(e){btn.disabled=false;btn.textContent='Submit Pilot Request';alert('Error submitting. Please try again.')}
+}
+</script>
 
 <!-- FOOTER -->
 <footer class="footer">
