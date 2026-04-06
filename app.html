@@ -173,6 +173,22 @@
 .note-comment-author{display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .note-comment-avatar{width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
 .note-input{width:100%;padding:14px 18px;border:2px solid var(--sand);border-radius:14px;font-size:14px;font-family:DM Sans,sans-serif;resize:none;min-height:60px}.note-input:focus{border-color:var(--sage);outline:none}
+/* Provider Dashboard */
+.client-card{background:white;border-radius:16px;padding:16px 20px;border:1px solid var(--sand);margin-bottom:12px;cursor:pointer;transition:all 0.15s}.client-card:hover{border-color:var(--sage);box-shadow:0 4px 16px rgba(0,0,0,0.05)}
+.client-avatar{width:40px;height:40px;border-radius:12px;background:var(--sage-light);color:var(--sage-dark);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0}
+.client-stat{font-size:11px;color:var(--warm-gray-light);display:flex;align-items:center;gap:4px}
+.client-trend{font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px}
+.client-trend.improving{background:#E8F0E8;color:var(--sage-dark)}
+.client-trend.increasing{background:var(--terracotta-light);color:var(--terracotta)}
+.client-trend.stable{background:var(--cream);color:var(--warm-gray)}
+.session-card{background:white;border-radius:14px;padding:14px 16px;border:1px solid var(--sand);margin-bottom:10px}
+.session-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;text-transform:uppercase}
+.billing-draft{background:var(--cream);color:var(--warm-gray)}
+.billing-submitted{background:var(--sky);color:#2a6496}
+.billing-paid{background:#E8F0E8;color:var(--sage-dark)}
+.billing-denied{background:var(--terracotta-light);color:var(--terracotta)}
+.cdtab{padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.15s;border:none;background:none;color:var(--warm-gray)}.cdtab.active{background:var(--sage);color:white}
+@media print{.no-print,.overlay-hdr.no-print,.bnav,#chatBar{display:none !important}.overlay-page{position:static !important;display:block !important}.overlay-body{overflow:visible !important}}
 
 /* Routine Builder */
 .routine-card{background:white;border-radius:16px;padding:20px;border:1px solid var(--sand);margin-bottom:12px}
@@ -206,7 +222,6 @@
 .routine-preview-step:last-child{border-bottom:none}
 .routine-preview-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
 .routine-preview-arrow{color:var(--sand-dark);font-size:20px;text-align:center;padding:4px 0}
-.routine-readonly .routine-templates,.routine-readonly #routineEditor,.routine-readonly #stepForm,.routine-readonly #aiRoutineForm,.routine-readonly #routineChildSelector,.routine-readonly [onclick*="saveRoutine"],.routine-readonly [onclick*="showPreview"]{display:none !important}
 .routine-print-btn{margin-top:20px;padding:14px 28px;border-radius:14px;border:none;background:var(--sage);color:white;font-size:15px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
 
 @media print{
@@ -593,6 +608,54 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     </div>
   </div>
 
+  <!-- CLIENT DETAIL (providers) -->
+  <div id="clientDetailPage" class="overlay-page">
+    <div class="overlay-hdr">
+      <button class="overlay-back" onclick="closeOverlay('clientDetailPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="overlay-title" id="clientDetailTitle">Client</div>
+    </div>
+    <div class="overlay-body">
+      <div class="overlay-inner">
+        <div id="clientDetailProfile" style="margin-bottom:16px"></div>
+        <div id="clientDetailTabs" style="display:flex;gap:4px;background:var(--cream);padding:4px;border-radius:12px;margin-bottom:16px;overflow-x:auto"></div>
+        <div id="clientDetailContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SESSION NOTE FORM (providers) -->
+  <div id="sessionNoteFormPage" class="overlay-page">
+    <div class="overlay-hdr">
+      <button class="overlay-back" onclick="closeOverlay('sessionNoteFormPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="overlay-title">New Session Note</div>
+    </div>
+    <div class="overlay-body">
+      <div class="overlay-inner" id="sessionNoteFormContent"></div>
+    </div>
+  </div>
+
+  <!-- SUPERBILL PRINT VIEW -->
+  <div id="superbillPage" class="overlay-page">
+    <div class="overlay-hdr no-print">
+      <button class="overlay-back" onclick="closeOverlay('superbillPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="overlay-title">Superbill</div>
+    </div>
+    <div class="overlay-body">
+      <div class="overlay-inner" id="superbillContent"></div>
+    </div>
+  </div>
+
+  <!-- PARENT SESSION NOTES VIEW -->
+  <div id="parentSessionNotesPage" class="overlay-page">
+    <div class="overlay-hdr">
+      <button class="overlay-back" onclick="closeOverlay('parentSessionNotesPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="overlay-title">Session Notes</div>
+    </div>
+    <div class="overlay-body">
+      <div class="overlay-inner" id="parentSessionNotesList"></div>
+    </div>
+  </div>
+
   <!-- SAVED STRATEGIES PAGE -->
   <div id="strategiesPage" class="overlay-page">
     <div class="overlay-hdr">
@@ -898,6 +961,14 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
       </div>
       <div id="communityPosts" style="display:flex;flex-direction:column;gap:12px"></div></div>
 
+    <!-- CLIENTS TAB (providers) -->
+    <div id="tClients" class="tab">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div><h2 style="font-family:'Fraunces',serif;font-size:24px;font-weight:800">My Clients</h2><p style="color:var(--warm-gray);font-size:14px;margin-top:4px" id="clientCount"></p></div>
+      </div>
+      <div id="clientList"></div>
+    </div>
+
     <!-- BEHAVIOR TRACKER -->
     <div id="tTrack" class="tab">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -943,6 +1014,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     <button class="nb" data-t="pros" onclick="switchTab('pros')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg><span class="nl">Pros</span></button>
     <button class="nb" data-t="community" onclick="switchTab('community')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="nl">Community</span></button>
     <button class="nb" data-t="track" onclick="switchTab('track')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2" stroke-linecap="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><span class="nl">Track</span></button>
+    <button class="nb" data-t="clients" onclick="switchTab('clients')" style="display:none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="nl">Clients</span></button>
   </div></nav>
   <!-- INVITE MODAL -->
   <div id="inviteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px">
@@ -1390,7 +1462,7 @@ function applyRole(){
   // Tab visibility per role
   var tabMap={
     parent:['coach','pros','community','track'],
-    provider:['track'],
+    provider:['clients','track'],
     caregiver:['track'],
     teacher:[]
   };
@@ -1550,7 +1622,7 @@ function renderSb(){
   var displayName=S.name||( S.user?S.user.email:'Guest');
   document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Signed in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+displayName+'</div>'+(S.child?'<div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Parent of '+S.child+(S.age?', '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'')+'</div>':'');
   updateSubSt();
-  var allItems=[{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver']},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
+  var allItems=[{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent']},{label:"🧠 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver']},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"🎁 Invite Friends — Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Care Team",action:"openCareTeam()",roles:['parent']}];
   var items=allItems.filter(function(item){return !item.roles||item.roles.indexOf(S.role)>=0});
   var h='';for(var i=0;i<items.length;i++){var item=items[i];if(item.soon){h+='<div class="sb-item" onclick="showToast(\'Coming soon!\')"><span>'+item.label+'</span><span class="sb-soon">Soon</span></div>'}else{h+='<div class="sb-item'+(item.highlight?' sb-highlight':'')+'" onclick="closeSb();'+item.action+'"><span>'+item.label+'</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray-light)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>'}}
   if(S.user)h+='<div class="sb-logout" onclick="logout()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out</div>';
@@ -1563,7 +1635,7 @@ function updateSubSt(){
 }
 
 // ═══ TAB SWITCHING ═══
-function switchTab(t){S.tab=t;var tabs=document.querySelectorAll('.tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('on');var m={coach:'tCoach',pros:'tPros',community:'tComm',track:'tTrack'};document.getElementById(m[t]).classList.add('on');var btns=document.querySelectorAll('.nb');for(var i=0;i<btns.length;i++){var b=btns[i],a=b.getAttribute('data-t')===t;b.classList.toggle('on',a);var s=b.querySelector('svg'),d=b.querySelector('.ndot');if(a){if(!d){d=document.createElement('div');d.className='ndot';b.appendChild(d)}s.setAttribute('stroke',t==='coach'?'none':'#7A9E7E');if(t==='coach')s.setAttribute('fill','#7A9E7E')}else{if(d)d.remove();s.setAttribute('stroke','#9E9790');s.setAttribute('fill','none')}}document.getElementById('chatBar').style.display=t==='coach'?'block':'none';document.getElementById('mainScroll').scrollTop=0;if(t==='track')loadLogs();if(t==='community')renderCommunityPosts()}
+function switchTab(t){S.tab=t;var tabs=document.querySelectorAll('.tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('on');var m={coach:'tCoach',pros:'tPros',community:'tComm',track:'tTrack',clients:'tClients'};document.getElementById(m[t]).classList.add('on');var btns=document.querySelectorAll('.nb');for(var i=0;i<btns.length;i++){var b=btns[i],a=b.getAttribute('data-t')===t;b.classList.toggle('on',a);var s=b.querySelector('svg'),d=b.querySelector('.ndot');if(a){if(!d){d=document.createElement('div');d.className='ndot';b.appendChild(d)}s.setAttribute('stroke',t==='coach'?'none':'#7A9E7E');if(t==='coach')s.setAttribute('fill','#7A9E7E')}else{if(d)d.remove();s.setAttribute('stroke','#9E9790');s.setAttribute('fill','none')}}document.getElementById('chatBar').style.display=t==='coach'?'block':'none';document.getElementById('mainScroll').scrollTop=0;if(t==='track')loadLogs();if(t==='community')renderCommunityPosts()}
 
 // ═══ AI COACH ═══
 function updateFreeCtr(){
@@ -2347,8 +2419,6 @@ async function logBehavior(){
     strategy_used: document.getElementById('trStrategy').value.trim()||null,
     outcome: trackerState.outcome,
     notes: document.getElementById('trNotes').value.trim()||null
-    ,logged_by: S.role!=='parent' ? S.user.id : null
-    ,logged_by_name: S.role!=='parent' ? (S.name||S.user.email.split('@')[0]) : null
   };
 
   var r = await sb.from('behavior_logs').insert(log);
@@ -2372,16 +2442,7 @@ async function logBehavior(){
 
 async function loadLogs(){
   if(!S.user)return;
-  var q;
-  if(S.role==='parent'){
-    q=sb.from('behavior_logs').select('*').eq('user_id',S.user.id);
-  } else if(S.activeChild){
-    q=sb.from('behavior_logs').select('*').eq('user_id',S.activeChild.user_id);
-  } else {
-    document.getElementById('trackLogs').innerHTML='<div class="log-empty"><div class="log-empty-icon">\ud83d\udcdd</div><div style="font-size:15px;font-weight:600;margin-bottom:4px">No child connected</div></div>';
-    return;
-  }
-  var r=await q.order('logged_at',{ascending:false}).limit(20);
+  var r = await sb.from('behavior_logs').select('*').eq('user_id',S.user.id).order('logged_at',{ascending:false}).limit(20);
   var el = document.getElementById('trackLogs');
   if(!r.data||r.data.length===0){
     el.innerHTML='<div class="log-empty"><div class="log-empty-icon">\ud83d\udcdd</div><div style="font-size:15px;font-weight:600;margin-bottom:4px">No logs yet</div><div style="font-size:13px">Start logging behaviors to see patterns over time</div></div>';
@@ -2400,9 +2461,7 @@ async function loadLogs(){
     h+='<div class="log-card-tags">';
     if(l.intensity)h+='<span class="log-tag log-tag-'+l.intensity+'">'+l.intensity+'</span>';
     if(l.outcome)h+='<span class="log-tag log-tag-'+l.outcome+'">'+l.outcome.replace('_',' ')+'</span>';
-    h+='</div>';
-    if(l.logged_by_name)h+='<div style="font-size:11px;color:var(--warm-gray-light);margin-top:6px;display:flex;align-items:center;gap:4px"><span style="width:16px;height:16px;border-radius:5px;background:var(--lavender);display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#6B5B8D">'+esc(l.logged_by_name[0].toUpperCase())+'</span>Logged by '+esc(l.logged_by_name)+'</div>';
-    h+='</div>';
+    h+='</div></div>';
   }
   el.innerHTML=h;
 }
@@ -2416,9 +2475,7 @@ async function openStrategies(){
 
 async function loadSavedStrategies(){
   if(!S.user)return;
-  var stratUserId=S.user.id;
-  if(S.role!=='parent'&&S.activeChild){stratUserId=S.activeChild.user_id}
-  var r = await sb.from('saved_strategies').select('*').eq('user_id',stratUserId).order('created_at',{ascending:false});
+  var r = await sb.from('saved_strategies').select('*').eq('user_id',S.user.id).order('created_at',{ascending:false});
   var el = document.getElementById('savedStrategiesList');
   if(!r.data||r.data.length===0){
     el.innerHTML='<div class="log-empty"><div class="log-empty-icon">\u2b50</div><div style="font-size:15px;font-weight:600;margin-bottom:4px">No saved strategies yet</div><div style="font-size:13px">Tap the \u2605 Save button on any strategy card in the AI Coach</div></div>';
@@ -2434,8 +2491,7 @@ async function loadSavedStrategies(){
     else if(s.strategy_data&&s.strategy_data.empathy) preview=s.strategy_data.empathy.substring(0,120)+'...';
     h+='<div class="strat-saved-card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="strat-saved-title">'+(s.title?esc(s.title):'Strategy')+'</div><div class="strat-saved-date">Saved '+dateStr+'</div></div></div>';
     if(preview)h+='<div class="strat-saved-preview">'+esc(preview)+'</div>';
-    if(S.role==='parent')h+='<button class="strat-delete" onclick="deleteStrategy(\x27'+s.id+'\x27)">Remove</button>';
-    h+='</div>';
+    h+='<button class="strat-delete" onclick="deleteStrategy(\''+s.id+'\')">Remove</button></div>';
   }
   el.innerHTML=h;
 }
@@ -3233,13 +3289,6 @@ var TEMPLATES = {
 
 async function openRoutines(){
   closeSb();
-  var isReadonly=S.role==='caregiver'||S.role==='teacher';
-  document.getElementById('routinePage').classList.toggle('routine-readonly',isReadonly);
-  if(isReadonly){
-    document.getElementById('routinePage').classList.add('open');
-    loadSavedRoutines2();
-    return;
-  }
   document.getElementById('routinePage').classList.add('open');
   renderStepIcons();
   loadTemplate('morning');
