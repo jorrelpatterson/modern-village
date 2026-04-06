@@ -162,6 +162,8 @@
 .routine-step-del{background:none;border:none;cursor:pointer;padding:4px;color:var(--warm-gray-light);font-size:18px;transition:color 0.15s}.routine-step-del:hover{color:var(--terracotta)}
 .routine-add{display:flex;align-items:center;gap:10px;padding:14px;border:2px dashed var(--sand);border-radius:12px;cursor:pointer;transition:all 0.15s;color:var(--warm-gray-light);font-weight:600;font-size:14px}
 .routine-add:hover{border-color:var(--sage);color:var(--sage-dark);background:var(--sage-light)}
+.routine-step.dragging{opacity:0.5;transform:scale(1.02);z-index:10;position:relative}
+.routine-step.drag-over{border-color:var(--sage);background:var(--sage-light)}
 .routine-empty{text-align:center;padding:32px;color:var(--warm-gray-light)}
 .routine-empty-icon{font-size:40px;margin-bottom:8px}
 .routine-form{background:white;border-radius:16px;padding:20px;border:1px solid var(--sage);margin-bottom:16px}
@@ -2888,9 +2890,9 @@ function renderRoutineSteps(){
     var s=routineSteps[i];
     var bgColors=['var(--sage-light)','var(--sky)','var(--blush)','var(--lavender)','rgba(232,200,74,0.15)','var(--terracotta-light)'];
     var bg=bgColors[i%bgColors.length];
-    h+='<div class="routine-step" draggable="true" data-idx="'+i+'" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropStep(event)">';
+    h+='<div class="routine-step" draggable="true" data-idx="'+i+'" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropStep(event)" ontouchstart="touchDragStart(event)" ontouchmove="touchDragMove(event)" ontouchend="touchDragEnd(event)">';
     h+='<div class="routine-step-icon" style="background:'+bg+'">'+s.icon+'</div>';
-    h+='<div class="routine-step-text"><div class="routine-step-name">'+esc(s.name)+'</div>'+(s.dur?'<div class="routine-step-dur">'+s.dur+' min</div>':'')+'</div>';
+    h+='<div class="routine-step-text"><div class="routine-step-name">'+esc(s.name)+'</div>'+(s.dur?'<div class="routine-step-dur">'+s.dur+' min</div>':'')+(s.tip?'<div style="font-size:11px;color:var(--sage-dark);background:var(--sage-light);padding:4px 8px;border-radius:6px;margin-top:4px">'+esc(s.tip)+'</div>':'')+'</div>';
     h+='<button class="routine-step-del" onclick="removeStep('+i+')">&times;</button>';
     h+='</div>';
   }
@@ -2928,6 +2930,43 @@ function dropStep(e){
   routineSteps.splice(targetIdx,0,item);
   renderRoutineSteps();
   dragIdx=null;
+}
+// Touch drag-and-drop for mobile
+var touchDragIdx=null,touchClone=null,touchStartY=0;
+function touchDragStart(e){
+  var step=e.target.closest('.routine-step');
+  if(!step)return;
+  touchDragIdx=parseInt(step.dataset.idx);
+  touchStartY=e.touches[0].clientY;
+  step.classList.add('dragging');
+}
+function touchDragMove(e){
+  if(touchDragIdx===null)return;
+  e.preventDefault();
+  var touch=e.touches[0];
+  var el=document.elementFromPoint(touch.clientX,touch.clientY);
+  var steps=document.querySelectorAll('.routine-step');
+  steps.forEach(function(s){s.classList.remove('drag-over')});
+  if(el){var target=el.closest('.routine-step');if(target&&parseInt(target.dataset.idx)!==touchDragIdx)target.classList.add('drag-over')}
+}
+function touchDragEnd(e){
+  if(touchDragIdx===null)return;
+  var steps=document.querySelectorAll('.routine-step');
+  steps.forEach(function(s){s.classList.remove('dragging','drag-over')});
+  var touch=e.changedTouches[0];
+  var el=document.elementFromPoint(touch.clientX,touch.clientY);
+  if(el){
+    var target=el.closest('.routine-step');
+    if(target){
+      var targetIdx=parseInt(target.dataset.idx);
+      if(targetIdx!==touchDragIdx){
+        var item=routineSteps.splice(touchDragIdx,1)[0];
+        routineSteps.splice(targetIdx,0,item);
+        renderRoutineSteps();
+      }
+    }
+  }
+  touchDragIdx=null;
 }
 
 function showPreview(){
