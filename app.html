@@ -3861,7 +3861,103 @@ async function revokeAccess(accessId,childId){
   loadCareTeam(childId);
 }
 
-function openCareTeam(){openProfile()}
+function openCareNotes(){
+  if(!S.user){showAuth(true);return}
+  closeSb();
+  document.getElementById('careNotesPage').classList.add('open');
+  var childName=S.activeChild?S.activeChild.name:'';
+  document.getElementById('careNotesChildName').textContent=childName?'Notes for '+childName:'Care Team Notes';
+  loadCareNotes();
+}
+
+async function loadCareNotes(){
+  if(!S.user||!S.activeChild)return;
+  var el=document.getElementById('careNotesList');
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div>';
+  var r=await sb.from('care_notes').select('*').eq('child_id',S.activeChild.id).order('created_at',{ascending:false}).limit(50);
+  var notes=r.data||[];
+  if(!notes.length){
+    el.innerHTML='<div style="text-align:center;padding:32px;color:var(--warm-gray-light)"><div style="font-size:32px;margin-bottom:8px">📝</div><div style="font-size:14px;font-weight:600">No notes yet</div><div style="font-size:13px;margin-top:4px">Write the first note for the care team</div></div>';
+    return;
+  }
+  var h='';
+  for(var i=0;i<notes.length;i++){
+    var n=notes[i];
+    var roleColor=n.author_role==='caregiver'?'var(--lavender)':n.author_role==='teacher'?'var(--sky)':n.author_role==='provider'?'var(--sage-light)':'var(--sand)';
+    var badgeColor=n.author_role==='caregiver'?'#6B5B8D':n.author_role==='teacher'?'#2a6496':n.author_role==='provider'?'var(--sage-dark)':'var(--warm-gray)';
+    var timeStr=renderNoteTime(new Date(n.created_at));
+    h+='<div class="note-card">';
+    h+='<div class="note-author"><div class="note-avatar" style="background:'+roleColor+';color:'+badgeColor+'">'+esc((n.author_name||'?')[0].toUpperCase())+'</div><div><div class="note-name">'+esc(n.author_name)+'</div><div style="display:flex;gap:6px;align-items:center;margin-top:2px"><span class="note-role-badge" style="background:'+roleColor+';color:'+badgeColor+'">'+esc(n.author_role)+'</span><span class="note-time">'+timeStr+'</span></div></div></div>';
+    h+='<div class="note-content">'+esc(n.content)+'</div>';
+    h+='<div class="note-actions"><button class="note-action" onclick="toggleNoteComments(\x27'+n.id+'\x27)">Reply</button></div>';
+    h+='<div id="noteComments_'+n.id+'" class="note-comments hidden"></div>';
+    h+='</div>';
+  }
+  el.innerHTML=h;
+}
+
+function renderNoteTime(date){
+  var now=new Date(),diff=now-date,mins=Math.floor(diff/60000),hrs=Math.floor(diff/3600000),days=Math.floor(diff/86400000);
+  if(mins<1)return 'Just now';
+  if(mins<60)return mins+'m ago';
+  if(hrs<24)return hrs+'h ago';
+  if(days<7)return days+'d ago';
+  return date.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+async function postCareNote(){
+  if(!S.user||!S.activeChild)return;
+  var input=document.getElementById('careNoteInput');
+  var text=input.value.trim();
+  if(!text){showToast('Write something');return}
+  var btn=document.getElementById('careNoteSubmitBtn');
+  btn.disabled=true;btn.textContent='Posting...';
+  var r=await sb.from('care_notes').insert({
+    child_id:S.activeChild.id,
+    author_id:S.user.id,
+    author_name:S.name||S.user.email.split('@')[0]||'Anonymous',
+    author_role:S.role||'parent',
+    content:text
+  });
+  if(r.error){showToast('Error posting note');console.error(r.error)}
+  else{input.value='';showToast('Note posted!');loadCareNotes()}
+  btn.disabled=false;btn.textContent='Post Note';
+}
+
+async function toggleNoteComments(noteId){
+  var el=document.getElementById('noteComments_'+noteId);
+  if(!el)return;
+  if(!el.classList.contains('hidden')){el.classList.add('hidden');return}
+  el.classList.remove('hidden');
+  el.innerHTML='<div style="font-size:12px;color:var(--warm-gray-light);padding:4px 0">Loading...</div>';
+  var r=await sb.from('care_note_comments').select('*').eq('note_id',noteId).order('created_at',{ascending:true});
+  var comments=r.data||[];
+  var h='';
+  for(var i=0;i<comments.length;i++){
+    var c=comments[i];
+    var roleColor=c.author_role==='caregiver'?'var(--lavender)':c.author_role==='teacher'?'var(--sky)':c.author_role==='provider'?'var(--sage-light)':'var(--sand)';
+    var badgeColor=c.author_role==='caregiver'?'#6B5B8D':c.author_role==='teacher'?'#2a6496':c.author_role==='provider'?'var(--sage-dark)':'var(--warm-gray)';
+    h+='<div class="note-comment"><div class="note-comment-author"><div class="note-comment-avatar" style="background:'+roleColor+';color:'+badgeColor+'">'+esc((c.author_name||'?')[0].toUpperCase())+'</div><div><span style="font-weight:600;font-size:13px">'+esc(c.author_name)+'</span> <span class="note-role-badge" style="background:'+roleColor+';color:'+badgeColor+';font-size:9px">'+esc(c.author_role)+'</span> <span class="note-time">'+renderNoteTime(new Date(c.created_at))+'</span></div></div><div style="font-size:13px;line-height:1.5;margin-left:32px">'+esc(c.content)+'</div></div>';
+  }
+  h+='<div style="margin-top:8px;display:flex;gap:8px"><input class="fi" id="noteReply_'+noteId+'" placeholder="Write a reply..." style="flex:1;padding:8px 12px;font-size:13px"><button class="btn btn-s" style="padding:6px 14px;font-size:12px" onclick="postNoteComment(\x27'+noteId+'\x27)">Reply</button></div>';
+  el.innerHTML=h;
+}
+
+async function postNoteComment(noteId){
+  var input=document.getElementById('noteReply_'+noteId);
+  if(!input)return;
+  var text=input.value.trim();
+  if(!text){showToast('Write something');return}
+  var r=await sb.from('care_note_comments').insert({
+    note_id:noteId,
+    author_id:S.user.id,
+    author_name:S.name||S.user.email.split('@')[0]||'Anonymous',
+    author_role:S.role||'parent',
+    content:text
+  });
+  if(r.error){showToast('Error posting reply');console.error(r.error)}
+  else{showToast('Reply posted!');toggleNoteComments(noteId);toggleNoteComments(noteId)}
+}
 async function saveProfile(){
   var name = document.getElementById('profName').value.trim();
 
