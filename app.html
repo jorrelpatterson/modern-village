@@ -478,6 +478,14 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     <div id="authNameField" class="auth-field"><label>Your name</label><input id="authName" type="text" placeholder="e.g. Sarah"></div>
     <div class="auth-field"><label>Email</label><input id="authEmail" type="email" placeholder="you@email.com"></div>
     <div class="auth-field"><label>Password</label><input id="authPass" type="password" placeholder="6+ characters"></div>
+    <div id="authProviderToggle" class="hidden" style="margin:-4px 0 8px"><a style="font-size:13px;color:var(--sage-dark);cursor:pointer;font-weight:600" onclick="toggleProviderMode()">I'm a Provider / BCBA</a></div>
+    <div id="authProviderFields" class="hidden">
+      <div style="background:var(--sage-light);border-radius:12px;padding:14px;margin-bottom:12px;font-size:13px;color:var(--sage-dark);font-weight:600">Provider Registration</div>
+      <div class="auth-field"><label>NPI Number</label><input id="authNpi" type="text" placeholder="10-digit NPI" maxlength="10"></div>
+      <div class="auth-field"><label>License Type</label><select id="authLicType" class="fi" style="padding:10px 12px"><option value="">Select...</option><option>BCBA</option><option>BCaBA</option><option>LPC</option><option>LMFT</option><option>Psychologist</option><option>Other</option></select></div>
+      <div style="display:flex;gap:8px" class="auth-field"><div style="flex:1"><label>License State</label><select id="authLicState" class="fi" style="padding:10px 12px"><option value="">State</option><option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option><option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option><option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option><option>KS</option><option>KY</option><option>LA</option><option>ME</option><option>MD</option><option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option><option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option><option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option><option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option><option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option><option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option><option>DC</option></select></div><div style="flex:1"><label>License #</label><input id="authLicNum" type="text" placeholder="License number"></div></div>
+      <div class="auth-field"><label>CPT Codes (select all that apply)</label><div id="authCptCodes" style="display:flex;flex-wrap:wrap;gap:6px"></div></div>
+    </div>
     <button id="authSubmit" class="auth-btn auth-btn-primary" onclick="handleAuth()">Create Account</button>
     <div class="auth-toggle" id="authToggle">Already have an account? <a onclick="toggleAuthMode()">Log in</a></div>
     <button class="auth-skip" id="authSkipBtn" onclick="closeAuth()">Continue without account</button>
@@ -983,6 +991,9 @@ function showAuth(force){
   document.getElementById('authNameField').classList.remove('hidden');
   document.getElementById('authError').style.display='none';
   document.getElementById('authSkipBtn').style.display=force?'none':'block';
+  isProviderSignup=false;
+  document.getElementById('authProviderFields').classList.add('hidden');
+  document.getElementById('authProviderToggle').classList.remove('hidden');
 }
 
 function toggleAuthMode(){
@@ -994,6 +1005,21 @@ function toggleAuthMode(){
   document.getElementById('authToggle').innerHTML=isSignup?'Already have an account? <a onclick="toggleAuthMode()">Log in</a>':'Don\'t have an account? <a onclick="toggleAuthMode()">Sign up</a>';
   document.getElementById('authNameField').classList.toggle('hidden',!isSignup);
   document.getElementById('authError').style.display='none';
+  isProviderSignup=false;
+  document.getElementById('authProviderFields').classList.add('hidden');
+  document.getElementById('authProviderToggle').classList.toggle('hidden',!isSignup);
+}
+
+var isProviderSignup=false;
+function toggleProviderMode(){
+  isProviderSignup=!isProviderSignup;
+  document.getElementById('authProviderFields').classList.toggle('hidden',!isProviderSignup);
+  document.getElementById('authProviderToggle').querySelector('a').textContent=isProviderSignup?'← Back to Parent signup':'I'm a Provider / BCBA';
+  if(isProviderSignup&&!document.getElementById('authCptCodes').innerHTML){
+    var codes=['97151','97152','97153','97154','97155','97156','97157','97158'];
+    var h='';codes.forEach(function(c){h+='<button type="button" class="chip" onclick="this.classList.toggle('on')" style="font-size:12px;padding:6px 10px">'+c+'</button>'});
+    document.getElementById('authCptCodes').innerHTML=h;
+  }
 }
 
 function closeAuth(){document.getElementById('authModal').classList.add('hidden');enterApp()}
@@ -1016,11 +1042,31 @@ async function handleAuth(){
       // Update profile with name and email
       var name=document.getElementById('authName').value.trim();
       if(S.user){
-        await sb.from('profiles').update({name:name||null,email:email}).eq('id',S.user.id);
+        // Save role and provider fields
+        var role='parent';
+        var updateData={name:name||null,email:email,role:'parent'};
+        if(isProviderSignup){
+          role='provider';
+          var npi=document.getElementById('authNpi').value.trim();
+          var licType=document.getElementById('authLicType').value;
+          var licState=document.getElementById('authLicState').value;
+          var licNum=document.getElementById('authLicNum').value.trim();
+          var cptArr=[];
+          document.querySelectorAll('#authCptCodes .chip.on').forEach(function(c){cptArr.push(c.textContent)});
+          if(!npi||npi.length!==10){errEl.textContent='NPI must be 10 digits';errEl.style.display='block';btn.disabled=false;btn.textContent='Create Account';return}
+          if(!licType){errEl.textContent='Select license type';errEl.style.display='block';btn.disabled=false;btn.textContent='Create Account';return}
+          updateData={name:name||null,email:email,role:'provider',npi_number:npi,license_type:licType,license_state:licState||null,license_number:licNum||null,cpt_codes:cptArr.length?cptArr:null};
+        }
+        await sb.from('profiles').update(updateData).eq('id',S.user.id);
         S.name=name;
-      }
-      closeAuth();
-      showOnboarding();
+        if(role==='provider'){
+          await loadProfile();
+          closeAuth();
+          enterApp();
+        } else {
+          closeAuth();
+          showOnboarding();
+        }
     } else {
       result=await sb.auth.signInWithPassword({email:email,password:pass});
       if(result.error)throw result.error;
