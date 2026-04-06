@@ -1,0 +1,33 @@
+# Known Bugs & Issues
+
+Track bugs found during testing. Fix priority: Critical > High > Medium > Low.
+
+---
+
+## Critical
+
+_(none currently)_
+
+## High
+
+1. **Forgot password email flow incomplete** — Supabase sends the reset email, but when user clicks the link, app.html doesn't detect the reset token or show a "set new password" form. User just lands back in the app with no way to set a new password. Workaround: admin can reset via admin portal "Reset PW" button.
+
+2. **Profile email not synced from auth** — New Supabase auth users get a profile row with `email = null`. The `handleAuth` signup flow sets it, but direct Supabase dashboard user creation does not. Need a trigger or periodic sync.
+
+## Medium
+
+3. **Invite role validation too strict** — Worker `/invite` endpoint only accepts `caregiver` and `teacher` but not `provider`. Updated in latest code but needs worker redeploy to take effect.
+
+4. **Admin portal child data shows legacy fields** — The Users table shows `child_name`/`child_age` from the old `profiles` columns, not from the `children` table. Multi-child parents only show their first/legacy child.
+
+## Low
+
+5. **macOS resource fork files (._*) in git** — External volume creates AppleDouble metadata files that cause `non-monotonic index` warnings on every git operation. Cosmetic but noisy. Fix: add `._*` to `.gitignore` and run `git gc`.
+
+---
+
+_Add new bugs below with the next number. Move to "Fixed" section when resolved._
+
+## Fixed
+
+_(move resolved bugs here with date)_
