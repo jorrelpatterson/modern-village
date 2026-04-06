@@ -14,15 +14,17 @@ _(none currently)_
 
 2. **Profile email not synced from auth** — New Supabase auth users get a profile row with `email = null`. The `handleAuth` signup flow sets it, but direct Supabase dashboard user creation does not. Need a trigger or periodic sync.
 
+3. **Admin portal shows only 1 child per user** — The Users table reads legacy `child_name`/`child_age`/`diagnosis` from `profiles` table instead of querying the `children` table. Multi-child parents only show their first/legacy child. **Impact:** Also affects grant reporting metrics (`loadGrantData`) and behavior data stats (`loadBehavior`) which may use the same legacy profile fields. Fix: update admin `loadUsers()` to join on `children` table and show all children, or at least the active child. Also audit grant and behavior admin functions for the same issue.
+
 ## Medium
 
-3. **Invite role validation too strict** — Worker `/invite` endpoint only accepts `caregiver` and `teacher` but not `provider`. Updated in latest code but needs worker redeploy to take effect.
+4. **Invite role validation too strict** — Worker `/invite` endpoint only accepts `caregiver` and `teacher` but not `provider`. Updated in latest code but needs worker redeploy to take effect.
 
-4. **Admin portal child data shows legacy fields** — The Users table shows `child_name`/`child_age` from the old `profiles` columns, not from the `children` table. Multi-child parents only show their first/legacy child.
+5. **Admin portal child data shows legacy fields** — Related to #3. The entire admin dashboard uses `profiles.child_name` etc. instead of the `children` table. Needs a systematic update across all admin functions.
 
 ## Low
 
-5. **macOS resource fork files (._*) in git** — External volume creates AppleDouble metadata files that cause `non-monotonic index` warnings on every git operation. Cosmetic but noisy. Fix: add `._*` to `.gitignore` and run `git gc`.
+6. **macOS resource fork files (._*) in git** — External volume creates AppleDouble metadata files that cause `non-monotonic index` warnings on every git operation. Cosmetic but noisy. Fix: add `._*` to `.gitignore` and run `git gc`.
 
 ---
 
