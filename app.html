@@ -2788,6 +2788,7 @@ var ROUTINE_ICONS = ['🪥','👕','🥣','🎒','📚','🚗','🛁','😴','�
 var routineSteps = [];
 var savedRoutines = [];
 var selectedIcon = '⏰';
+var routineSource = 'manual';
 
 var TEMPLATES = {
   morning: {title:'Morning Routine', steps:[
@@ -2805,11 +2806,32 @@ var TEMPLATES = {
   blank: {title:'My Routine', steps:[]}
 };
 
-function openRoutines(){
+async function openRoutines(){
   closeSb();
   document.getElementById('routinePage').classList.add('open');
   renderStepIcons();
   loadTemplate('morning');
+
+  // Migrate localStorage routines to Supabase (one-time)
+  if(S.user){
+    try{
+      var old=JSON.parse(localStorage.getItem('mv_routines')||'[]');
+      if(old.length){
+        for(var i=0;i<old.length;i++){
+          await sb.from('routines').insert({
+            user_id:S.user.id,
+            child_id:(S.activeChild&&S.activeChild.id)||null,
+            title:old[i].title||'My Routine',
+            steps:old[i].steps||[],
+            source:'manual'
+          });
+        }
+        localStorage.removeItem('mv_routines');
+        showToast('Routines synced to your account!');
+      }
+    }catch(e){console.error('Routine migration:',e)}
+  }
+
   loadSavedRoutines2();
 }
 
@@ -2906,23 +2928,37 @@ function showPreview(){
   prevEl.scrollIntoView({behavior:'smooth'});
 }
 
-function saveRoutine(){
+async function saveRoutine(){
   if(!routineSteps.length){showToast('Add steps first');return}
+  if(!S.user){showToast('Sign in to save routines');return}
   var title=document.getElementById('routineTitle').value.trim()||'My Routine';
-  var routine={title:title,steps:routineSteps.map(function(s){return{icon:s.icon,name:s.name,dur:s.dur}}),created:new Date().toISOString()};
+  var childId=(S.activeChild&&S.activeChild.id)||null;
+  var steps=routineSteps.map(function(s){return{icon:s.icon,name:s.name,dur:s.dur,tip:s.tip||null}});
 
-  // Save to localStorage for now (will move to Supabase when table is ready)
-  var saved=[];
-  try{saved=JSON.parse(localStorage.getItem('mv_routines')||'[]')}catch(e){}
-  saved.unshift(routine);
-  localStorage.setItem('mv_routines',JSON.stringify(saved));
+  var r=await sb.from('routines').insert({
+    user_id:S.user.id,
+    child_id:childId,
+    title:title,
+    steps:steps,
+    source:routineSource||'manual'
+  }).select();
+
+  if(r.error){showToast('Error saving routine');console.error(r.error);return}
   showToast('Routine saved!');
+  routineSource='manual';
   loadSavedRoutines2();
 }
 
-function loadSavedRoutines2(){
-  var saved=[];
-  try{saved=JSON.parse(localStorage.getItem('mv_routines')||'[]')}catch(e){}
+async function loadSavedRoutines2(){
+  if(!S.user){
+    document.getElementById('savedRoutines').innerHTML='<div class="routine-empty"><div class="routine-empty-icon">📋</div><div style="font-size:14px;font-weight:600">Sign in to save routines</div></div>';
+    return;
+  }
+  var q=sb.from('routines').select('*').eq('user_id',S.user.id).order('created_at',{ascending:false});
+  var childId=document.getElementById('routineChildFilter');
+  if(childId&&childId.value)q=q.eq('child_id',childId.value);
+  var r=await q;
+  var saved=r.data||[];
   var el=document.getElementById('savedRoutines');
   if(!saved.length){
     el.innerHTML='<div class="routine-empty"><div class="routine-empty-icon">📋</div><div style="font-size:14px;font-weight:600">No saved routines yet</div><div style="font-size:13px;margin-top:4px">Build your first routine above!</div></div>';
@@ -2930,36 +2966,38 @@ function loadSavedRoutines2(){
   }
   var h='';
   for(var i=0;i<saved.length;i++){
-    var r=saved[i];
-    var d=new Date(r.created);
+    var rt=saved[i];
+    var d=new Date(rt.created_at);
     var ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-    var icons=r.steps.map(function(s){return s.icon}).join(' ');
-    h+='<div class="routine-card" style="cursor:pointer" onclick="loadSavedRoutine('+i+')">';
-    h+='<div class="routine-card-hdr"><div class="routine-card-title">'+esc(r.title)+'</div><div style="display:flex;gap:6px;align-items:center"><span class="routine-card-time">'+ds+'</span><button class="routine-step-del" onclick="event.stopPropagation();deleteSavedRoutine('+i+')">&times;</button></div></div>';
+    var icons=(rt.steps||[]).map(function(s){return s.icon}).join(' ');
+    var childName='';
+    if(rt.child_id){var ch=S.children.find(function(c){return c.id===rt.child_id});if(ch)childName=ch.name}
+    h+='<div class="routine-card" style="cursor:pointer" data-id="'+rt.id+'" onclick="loadSavedRoutine(''+rt.id+'')">';
+    h+='<div class="routine-card-hdr"><div class="routine-card-title">'+esc(rt.title)+'</div><div style="display:flex;gap:6px;align-items:center">';
+    if(rt.source==='ai')h+='<span style="font-size:11px;background:var(--lavender);color:#6B5B8D;padding:2px 8px;border-radius:6px;font-weight:700">AI</span>';
+    h+='<span class="routine-card-time">'+ds+'</span><button class="routine-step-del" onclick="event.stopPropagation();deleteSavedRoutine(''+rt.id+'')">&times;</button></div></div>';
     h+='<div style="font-size:14px;margin-bottom:4px">'+icons+'</div>';
-    h+='<div style="font-size:12px;color:var(--warm-gray-light)">'+r.steps.length+' steps</div>';
+    h+='<div style="font-size:12px;color:var(--warm-gray-light)">'+rt.steps.length+' steps'+(childName?' · '+esc(childName):'')+'</div>';
     h+='</div>';
   }
   el.innerHTML=h;
 }
 
-function loadSavedRoutine(idx){
-  var saved=[];
-  try{saved=JSON.parse(localStorage.getItem('mv_routines')||'[]')}catch(e){}
-  if(!saved[idx])return;
-  document.getElementById('routineTitle').value=saved[idx].title;
-  routineSteps=saved[idx].steps.map(function(s){return{icon:s.icon,name:s.name,dur:s.dur}});
+async function loadSavedRoutine(id){
+  var r=await sb.from('routines').select('*').eq('id',id).single();
+  if(!r.data)return;
+  document.getElementById('routineTitle').value=r.data.title;
+  routineSteps=(r.data.steps||[]).map(function(s){return{icon:s.icon,name:s.name,dur:s.dur,tip:s.tip||null}});
+  routineSource=r.data.source||'manual';
   renderRoutineSteps();
   document.getElementById('routinePreview').classList.add('hidden');
-  document.querySelector('.overlay-body').scrollTop=0;
+  document.querySelector('#routinePage .overlay-body').scrollTop=0;
   showToast('Routine loaded');
 }
 
-function deleteSavedRoutine(idx){
-  var saved=[];
-  try{saved=JSON.parse(localStorage.getItem('mv_routines')||'[]')}catch(e){}
-  saved.splice(idx,1);
-  localStorage.setItem('mv_routines',JSON.stringify(saved));
+async function deleteSavedRoutine(id){
+  var r=await sb.from('routines').delete().eq('id',id).eq('user_id',S.user.id);
+  if(r.error){showToast('Error deleting');return}
   loadSavedRoutines2();
   showToast('Routine deleted');
 }
