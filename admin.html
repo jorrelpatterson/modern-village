@@ -1111,7 +1111,7 @@ async function loadVerification(){
   unverified.forEach(function(p){
     var d=new Date(p.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     h+='<div style="padding:16px;background:#FFFDF5;border-radius:12px;margin-bottom:10px;border-left:4px solid #E8C84A">';
-    h+='<div style="display:flex;justify-content:space-between;align-items:start"><div><strong>'+esc(p.name||p.email)+'</strong><div style="font-size:12px;color:#999;margin-top:2px">'+esc(p.email)+' · Applied '+d+'</div></div><div style="display:flex;gap:6px"><button class="btn btn-sm btn-sage" onclick="verifyProvider(''+p.id+'')">Approve</button><button class="btn btn-sm btn-outline" style="color:var(--terracotta);border-color:var(--terracotta)" onclick="rejectProvider(''+p.id+'')">Reject</button></div></div>';
+    h+='<div style="display:flex;justify-content:space-between;align-items:start"><div><strong>'+esc(p.name||p.email)+'</strong><div style="font-size:12px;color:#999;margin-top:2px">'+esc(p.email)+' · Applied '+d+'</div></div><div style="display:flex;gap:6px"><button class="btn btn-sm btn-sage" onclick="verifyProvider(\''+p.id+'\')">Approve</button><button class="btn btn-sm btn-outline" style="color:var(--terracotta);border-color:var(--terracotta)" onclick="rejectProvider(\''+p.id+'\')">Reject</button></div></div>';
     h+='<div style="margin-top:8px;font-size:13px"><strong>NPI:</strong> '+(p.npi_number||'—')+' · <strong>License:</strong> '+(p.license_type||'—')+' ('+(p.license_state||'—')+') #'+(p.license_number||'—')+'</div>';
     if(p.cpt_codes&&p.cpt_codes.length)h+='<div style="margin-top:4px;font-size:12px"><strong>CPT:</strong> '+p.cpt_codes.join(', ')+'</div>';
     h+='</div>';
