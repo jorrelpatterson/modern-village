@@ -173,6 +173,15 @@
 .note-comment-author{display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .note-comment-avatar{width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
 .note-input{width:100%;padding:14px 18px;border:2px solid var(--sand);border-radius:14px;font-size:14px;font-family:DM Sans,sans-serif;resize:none;min-height:60px}.note-input:focus{border-color:var(--sage);outline:none}
+.bsum-card{background:white;border-radius:16px;padding:16px 20px;border:1px solid var(--sand);margin-bottom:12px}
+.bsum-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--warm-gray);margin-bottom:8px}
+.bsum-value{font-family:Fraunces,serif;font-size:28px;font-weight:800}
+.bsum-sub{font-size:13px;color:var(--warm-gray);margin-top:4px}
+.bsum-row{display:flex;gap:6px;margin-bottom:4px}
+.bsum-label{font-size:13px;color:var(--warm-gray);flex:1}
+.bsum-count{font-size:13px;font-weight:700}
+.bsum-bar{height:6px;border-radius:3px;background:var(--sand);flex:2;position:relative;overflow:hidden}
+.bsum-fill{height:100%;border-radius:3px;background:var(--sage)}
 /* Provider Dashboard */
 .client-card{background:white;border-radius:16px;padding:16px 20px;border:1px solid var(--sand);margin-bottom:12px;cursor:pointer;transition:all 0.15s}.client-card:hover{border-color:var(--sage);box-shadow:0 4px 16px rgba(0,0,0,0.05)}
 .client-avatar{width:40px;height:40px;border-radius:12px;background:var(--sage-light);color:var(--sage-dark);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0}
@@ -653,6 +662,17 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     </div>
     <div class="overlay-body">
       <div class="overlay-inner" id="parentSessionNotesList"></div>
+    </div>
+  </div>
+
+  <!-- BEHAVIOR SUMMARY (teachers) -->
+  <div id="behaviorSummaryPage" class="overlay-page">
+    <div class="overlay-hdr">
+      <button class="overlay-back" onclick="closeOverlay('behaviorSummaryPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="overlay-title">Behavior Summary</div>
+    </div>
+    <div class="overlay-body">
+      <div class="overlay-inner" id="behaviorSummaryContent"></div>
     </div>
   </div>
 
@@ -1464,7 +1484,7 @@ function applyRole(){
     parent:['coach','pros','community','track'],
     provider:['clients','track'],
     caregiver:['track'],
-    teacher:[]
+    teacher:['track']
   };
   var visibleTabs=tabMap[S.role]||tabMap.parent;
   document.querySelectorAll('.nb').forEach(function(b){
@@ -1622,7 +1642,7 @@ function renderSb(){
   var displayName=S.name||( S.user?S.user.email:'Guest');
   document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Signed in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+displayName+'</div>'+(S.child?'<div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Parent of '+S.child+(S.age?', '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'')+'</div>':'');
   updateSubSt();
-  var allItems=[{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver']},{label:"Session Notes",action:"openParentSessionNotes()",roles:['parent']},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
+  var allItems=[{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"Behavior Summary",action:"openBehaviorSummary()",roles:['teacher']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver','teacher']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver','teacher']},{label:"Session Notes",action:"openParentSessionNotes()",roles:['parent']},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
   var items=allItems.filter(function(item){return !item.roles||item.roles.indexOf(S.role)>=0});
   var h='';for(var i=0;i<items.length;i++){var item=items[i];if(item.soon){h+='<div class="sb-item" onclick="showToast(\'Coming soon!\')"><span>'+item.label+'</span><span class="sb-soon">Soon</span></div>'}else{h+='<div class="sb-item'+(item.highlight?' sb-highlight':'')+'" onclick="closeSb();'+item.action+'"><span>'+item.label+'</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray-light)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>'}}
   if(S.user)h+='<div class="sb-logout" onclick="logout()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out</div>';
@@ -4096,6 +4116,129 @@ async function loadSessionNotes(){
     h+='</div></div>';
   }
   el.innerHTML=h;
+}
+
+// ═══ BEHAVIOR SUMMARY (teachers) ═══
+async function openBehaviorSummary(){
+  if(!S.user){showAuth(true);return}
+  closeSb();
+  document.getElementById('behaviorSummaryPage').classList.add('open');
+  var el=document.getElementById('behaviorSummaryContent');
+  el.innerHTML='<div style="text-align:center;padding:20px"><div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div><div style="margin-top:12px;font-size:14px;color:var(--warm-gray)">Analyzing patterns...</div></div>';
+
+  if(!S.activeChild){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--warm-gray-light)">No child connected</div>';return}
+
+  var logsR=await sb.from('behavior_logs').select('*').eq('user_id',S.activeChild.user_id).order('logged_at',{ascending:false}).limit(100);
+  var logs=logsR.data||[];
+  var pat=detectPatterns(logs);
+
+  var h='<div style="font-size:13px;color:var(--warm-gray);margin-bottom:16px">Summary for '+esc(S.activeChild.name)+'</div>';
+
+  if(!pat.hasData){
+    h+='<div style="text-align:center;padding:32px;color:var(--warm-gray-light)"><div style="font-size:40px;margin-bottom:8px">📊</div><div style="font-size:15px;font-weight:600">Not enough data yet</div><div style="font-size:13px;margin-top:4px">At least 3 behavior logs are needed to see patterns</div></div>';
+    el.innerHTML=h;return;
+  }
+
+  // This week vs last week
+  var now=new Date(),weekAgo=new Date(now);weekAgo.setDate(weekAgo.getDate()-7);
+  var twoWeeksAgo=new Date(now);twoWeeksAgo.setDate(twoWeeksAgo.getDate()-14);
+  var thisWeek=logs.filter(function(l){return new Date(l.logged_at)>=weekAgo}).length;
+  var lastWeek=logs.filter(function(l){var d=new Date(l.logged_at);return d>=twoWeeksAgo&&d<weekAgo}).length;
+  var weekChange=lastWeek>0?Math.round((thisWeek-lastWeek)/lastWeek*100):0;
+  var weekLabel=weekChange<0?weekChange+'% fewer':'+'+(weekChange||0)+'%';
+  var weekColor=weekChange<=0?'var(--sage-dark)':'var(--terracotta)';
+
+  h+='<div class="bsum-card"><div class="bsum-title">This Week</div><div style="display:flex;align-items:baseline;gap:8px"><div class="bsum-value">'+thisWeek+'</div><div style="font-size:14px;font-weight:700;color:'+weekColor+'">'+weekLabel+' vs last week ('+lastWeek+')</div></div></div>';
+
+  // 30-day trend
+  if(pat.trend&&pat.trend!=='new_user'){
+    var trendColor=pat.trend==='improving'?'var(--sage-dark)':pat.trend==='increasing'?'var(--terracotta)':'var(--warm-gray)';
+    var trendLabel=pat.trend==='improving'?'Improving':pat.trend==='increasing'?'Increasing':'Stable';
+    h+='<div class="bsum-card"><div class="bsum-title">30-Day Trend</div><div style="display:flex;align-items:baseline;gap:8px"><div class="bsum-value" style="color:'+trendColor+'">'+trendLabel+'</div>';
+    if(pat.trendPct)h+='<div class="bsum-sub">'+pat.trendPct+'% vs previous month</div>';
+    h+='</div></div>';
+  }
+
+  // Peak times
+  var now2=new Date(),d30=new Date(now2);d30.setDate(d30.getDate()-30);
+  var recent=logs.filter(function(l){return new Date(l.logged_at)>=d30});
+  var times={Morning:0,Afternoon:0,Evening:0,Night:0};
+  recent.forEach(function(l){var hr=new Date(l.logged_at).getHours();if(hr>=5&&hr<12)times.Morning++;else if(hr>=12&&hr<17)times.Afternoon++;else if(hr>=17&&hr<21)times.Evening++;else times.Night++});
+  var maxTime=Math.max.apply(null,Object.values(times))||1;
+  h+='<div class="bsum-card"><div class="bsum-title">Peak Times (last 30 days)</div>';
+  Object.keys(times).forEach(function(t){
+    var pct=Math.round(times[t]/maxTime*100);
+    h+='<div class="bsum-row"><div class="bsum-label">'+t+'</div><div class="bsum-bar"><div class="bsum-fill" style="width:'+pct+'%"></div></div><div class="bsum-count">'+times[t]+'</div></div>';
+  });
+  h+='</div>';
+
+  // Top behaviors
+  if(pat.topBehaviors&&pat.topBehaviors.length){
+    var maxB=pat.topBehaviors[0].count||1;
+    h+='<div class="bsum-card"><div class="bsum-title">Top Behaviors</div>';
+    pat.topBehaviors.forEach(function(b){
+      var pct=Math.round(b.count/maxB*100);
+      h+='<div class="bsum-row"><div class="bsum-label" style="text-transform:capitalize">'+esc(b.behavior)+'</div><div class="bsum-bar"><div class="bsum-fill" style="width:'+pct+'%;background:var(--terracotta)"></div></div><div class="bsum-count">'+b.count+'x</div></div>';
+    });
+    h+='</div>';
+  }
+
+  // Top triggers
+  if(pat.topTriggers&&pat.topTriggers.length){
+    var maxT=pat.topTriggers[0].count||1;
+    h+='<div class="bsum-card"><div class="bsum-title">Common Triggers</div>';
+    pat.topTriggers.forEach(function(t){
+      var pct=Math.round(t.count/maxT*100);
+      h+='<div class="bsum-row"><div class="bsum-label" style="text-transform:capitalize">'+esc(t.trigger)+'</div><div class="bsum-bar"><div class="bsum-fill" style="width:'+pct+'%;background:var(--sky-dark)"></div></div><div class="bsum-count">'+t.count+'x</div></div>';
+    });
+    h+='</div>';
+  }
+
+  // Strategy effectiveness
+  if(pat.strategyEffectiveness&&pat.strategyEffectiveness.length){
+    h+='<div class="bsum-card"><div class="bsum-title">Strategy Effectiveness</div>';
+    pat.strategyEffectiveness.forEach(function(s){
+      var color=s.successRate>=60?'var(--sage)':s.successRate>=30?'var(--sunflower)':'var(--terracotta)';
+      h+='<div class="bsum-row"><div class="bsum-label" style="text-transform:capitalize">'+esc(s.strategy)+'</div><div class="bsum-bar"><div class="bsum-fill" style="width:'+s.successRate+'%;background:'+color+'"></div></div><div class="bsum-count">'+s.successRate+'%</div></div>';
+    });
+    h+='</div>';
+  }
+
+  // Expandable recent logs
+  h+='<div style="margin-top:8px"><button class="btn btn-outline" style="width:100%" onclick="toggleRecentLogs()">View Recent Logs</button></div>';
+  h+='<div id="bsumRecentLogs" class="hidden" style="margin-top:12px"></div>';
+
+  el.innerHTML=h;
+
+  // Pre-render recent logs (hidden)
+  var lh='';
+  var recentLogs=logs.slice(0,20);
+  for(var i=0;i<recentLogs.length;i++){
+    var l=recentLogs[i];
+    var d=new Date(l.logged_at);
+    var timeStr=d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' at '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    lh+='<div class="session-card"><div style="display:flex;justify-content:space-between"><div style="font-weight:700;font-size:14px">'+esc(l.behavior)+'</div><div style="font-size:11px;color:var(--warm-gray-light)">'+timeStr+'</div></div>';
+    if(l.trigger_desc)lh+='<div style="font-size:13px;color:var(--warm-gray);margin-top:4px"><strong>Trigger:</strong> '+esc(l.trigger_desc)+'</div>';
+    if(l.strategy_used)lh+='<div style="font-size:13px;color:var(--warm-gray);margin-top:2px"><strong>Strategy:</strong> '+esc(l.strategy_used)+'</div>';
+    if(l.duration_minutes)lh+='<div style="font-size:13px;color:var(--warm-gray);margin-top:2px"><strong>Duration:</strong> '+l.duration_minutes+' min</div>';
+    lh+='<div style="display:flex;gap:6px;margin-top:6px">';
+    if(l.intensity)lh+='<span class="session-badge billing-'+(l.intensity==='severe'?'denied':l.intensity==='moderate'?'submitted':'draft')+'">'+l.intensity+'</span>';
+    if(l.outcome)lh+='<span class="session-badge billing-'+(l.outcome==='improved'?'paid':l.outcome==='escalated'?'denied':'draft')+'">'+l.outcome.replace('_',' ')+'</span>';
+    lh+='</div>';
+    if(l.logged_by_name)lh+='<div style="font-size:11px;color:var(--warm-gray-light);margin-top:4px">Logged by '+esc(l.logged_by_name)+'</div>';
+    lh+='</div>';
+  }
+  document.getElementById('bsumRecentLogs').innerHTML=lh||'<div style="text-align:center;padding:16px;color:var(--warm-gray-light)">No logs yet</div>';
+}
+
+function toggleRecentLogs(){
+  var el=document.getElementById('bsumRecentLogs');
+  if(el)el.classList.toggle('hidden');
+}
+
+function openParentSessionNotes(){
+  document.getElementById('parentSessionNotesPage').classList.add('open');
+  loadParentSessionNotes&&loadParentSessionNotes();
 }
 
 function openSessionNoteForm(){
