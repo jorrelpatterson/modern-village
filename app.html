@@ -2757,6 +2757,202 @@ async function generateGoals(){
   }
 }
 
+// ── ANALYZE WIZARD ──
+async function extractPdfText(file){
+  var arrayBuffer=await file.arrayBuffer();
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  var pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+  var text='';
+  for(var i=1;i<=pdf.numPages;i++){
+    var page=await pdf.getPage(i);
+    var content=await page.getTextContent();
+    text+=content.items.map(function(item){return item.str}).join(' ')+'\n';
+  }
+  return{text:text,pages:pdf.numPages};
+}
+
+var iepExtractedText='';
+
+function renderAnalyzeWizard(){
+  var h='<div style="margin-bottom:20px"><div style="font-family:Fraunces,serif;font-size:22px;font-weight:800">Upload & Analyze Your IEP</div><div style="font-size:13px;color:var(--warm-gray);margin-top:4px">Upload a PDF — we\'ll extract goals, services, and accommodations in plain English</div></div>';
+  h+='<div class="iep-upload-zone" id="iepDropZone" onclick="document.getElementById(\'iepFileInput\').click()" ondragover="event.preventDefault();this.classList.add(\'dragover\')" ondragleave="this.classList.remove(\'dragover\')" ondrop="event.preventDefault();this.classList.remove(\'dragover\');handleIepFile(event.dataTransfer.files[0])">';
+  h+='<div style="font-size:40px;margin-bottom:12px">📄</div>';
+  h+='<div style="font-weight:700;font-size:16px;margin-bottom:4px">Tap to choose a PDF</div>';
+  h+='<div style="font-size:13px;color:var(--warm-gray)">or drag and drop your IEP document here</div>';
+  h+='<div style="font-size:11px;color:var(--warm-gray-light);margin-top:8px">Your file stays on your device — nothing is uploaded</div>';
+  h+='<input type="file" id="iepFileInput" accept=".pdf" style="display:none" onchange="handleIepFile(this.files[0])">';
+  h+='</div>';
+  h+='<div id="iepFileInfo" style="display:none;margin-top:12px;padding:12px 16px;background:var(--sage-light);border-radius:12px;font-size:13px"></div>';
+  h+='<div id="iepAnalyzeActions" style="display:none;margin-top:12px"><button class="btn btn-p" style="width:100%;padding:16px;font-size:16px" id="iepAnalyzeBtn" onclick="analyzeIep()">Analyze My IEP</button></div>';
+  h+='<div id="iepAnalyzeResult"></div>';
+  document.getElementById('iepWizard').innerHTML=h;
+}
+
+async function handleIepFile(file){
+  if(!file)return;
+  if(file.type!=='application/pdf'){showToast('Please upload a PDF file');return}
+  if(file.size>10*1024*1024){showToast('File too large (max 10MB)');return}
+
+  var info=document.getElementById('iepFileInfo');
+  info.style.display='block';
+  info.innerHTML='<div style="display:flex;align-items:center;gap:8px"><span>Extracting text from '+esc(file.name)+'...</span></div>';
+
+  try{
+    var result=await extractPdfText(file);
+    iepExtractedText=result.text;
+    var preview=iepExtractedText.substring(0,200).replace(/\n/g,' ')+'...';
+    info.innerHTML='<div style="font-weight:700;margin-bottom:4px">'+esc(file.name)+' · '+result.pages+' pages</div><div style="font-size:12px;color:var(--warm-gray)">'+esc(preview)+'</div>';
+    document.getElementById('iepAnalyzeActions').style.display='block';
+  }catch(e){
+    console.error('PDF extract error:',e);
+    info.innerHTML='<div style="color:var(--terracotta)">Could not read this PDF. Try a different file or use the "Explain IEP Text" tool to paste text manually.</div>';
+  }
+}
+
+async function analyzeIep(){
+  if(!iepExtractedText){showToast('Upload a PDF first');return}
+  var btn=document.getElementById('iepAnalyzeBtn');
+  btn.disabled=true;btn.textContent='Analyzing...';
+  var resultEl=document.getElementById('iepAnalyzeResult');
+  resultEl.innerHTML='<div style="text-align:center;padding:32px;color:var(--warm-gray)"><div style="font-size:32px;margin-bottom:8px">🔍</div><div>Reading your IEP and analyzing goals, services, and accommodations...</div><div style="font-size:12px;margin-top:8px;color:var(--warm-gray-light)">This may take 15-30 seconds</div></div>';
+
+  try{
+    var childCtx=S.user?await fetchChildContext():{};
+    var pat=childCtx.patterns||{};
+    var childInfo='';
+    if(S.child)childInfo+='Child: '+S.child;
+    if(S.age)childInfo+=(childInfo?', ':'')+' age '+S.age;
+    if(S.dx)childInfo+=(childInfo?', ':'')+'diagnosis: '+S.dx;
+
+    var patInfo='';
+    if(pat.hasData){
+      if(pat.topBehaviors&&pat.topBehaviors.length)patInfo+='\nBehavioral data - Most frequent behaviors: '+pat.topBehaviors.map(function(b){return b.behavior}).join(', ');
+      if(pat.topTriggers&&pat.topTriggers.length)patInfo+='\nCommon triggers: '+pat.topTriggers.map(function(t){return t.trigger}).join(', ');
+      if(pat.strategyEffectiveness&&pat.strategyEffectiveness.length)patInfo+='\nStrategy effectiveness: '+pat.strategyEffectiveness.slice(0,3).map(function(s){return'"'+s.strategy+'" '+s.successRate+'%'}).join(', ');
+    }
+
+    var iepText=iepExtractedText.substring(0,12000);
+
+    var prompt='Analyze this IEP document and return ONLY valid JSON.\n\n'+(childInfo?'CHILD INFO: '+childInfo+'\n':'')+(patInfo?'BEHAVIORAL DATA:'+patInfo+'\n':'')+'\nIEP DOCUMENT TEXT:\n'+iepText+'\n\nReturn this exact JSON structure:\n{"summary":"2-3 sentence overview","goals":[{"area":"skill area","goal_text":"original goal from document","plain_english":"what this means in simple terms","measurement":"how progress is measured","questions":["question parent should ask"]}],"services":[{"type":"service name","frequency":"how often","provider":"who provides it","notes":"any details"}],"accommodations":["accommodation 1","accommodation 2"],"gaps":[{"concern":"what seems missing or concerning","explanation":"why this matters for this specific child","action":"what parent should do about it"}]}';
+
+    var r=await authFetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,system:'You are an IEP document analyst helping parents understand their child\'s Individualized Education Program. Extract and explain all components in plain English. Be warm, supportive, and empowering. Cross-reference with the child\'s behavioral data when available to identify gaps. Return ONLY valid JSON, no markdown, no commentary.',messages:[{role:'user',content:prompt}]})});
+    var d=await r.json();
+    var text='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)text+=d.content[i].text;
+
+    text=text.replace(/```json\s*/,'').replace(/```\s*/,'').trim();
+    var analysis=JSON.parse(text);
+    renderIepResults(analysis);
+  }catch(e){
+    console.error('IEP analysis error:',e);
+    resultEl.innerHTML='<div class="iep-section" style="margin-top:16px;text-align:center;color:var(--terracotta)"><div style="font-size:24px;margin-bottom:8px">⚠️</div>Could not analyze this IEP. The document may be too complex or formatted unusually.<br><br><button class="btn btn-outline" onclick="renderAnalyzeWizard()">Try Again</button></div>';
+  }
+  btn.disabled=false;btn.textContent='Analyze My IEP';
+}
+
+function renderIepResults(a){
+  var h='';
+
+  if(a.summary){
+    h+='<div class="iep-section" style="margin-top:16px;background:var(--sage-light);border-radius:16px;padding:20px"><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:8px">Summary</div><div style="font-size:14px;line-height:1.7">'+esc(a.summary)+'</div></div>';
+  }
+
+  if(a.goals&&a.goals.length){
+    h+='<div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-top:20px;margin-bottom:12px">Goals ('+a.goals.length+')</div>';
+    for(var i=0;i<a.goals.length;i++){
+      var g=a.goals[i];
+      h+='<div class="iep-result-card">';
+      if(g.area)h+='<div class="iep-goal-area" style="color:var(--sage-dark)">'+esc(g.area)+'</div>';
+      if(g.goal_text)h+='<div class="iep-goal-original">'+esc(g.goal_text)+'</div>';
+      h+='<div class="iep-goal-plain">'+esc(g.plain_english)+'</div>';
+      if(g.measurement)h+='<div style="font-size:12px;color:var(--warm-gray);margin-top:8px"><strong>Measured by:</strong> '+esc(g.measurement)+'</div>';
+      if(g.questions&&g.questions.length){
+        h+='<div style="margin-top:10px;padding:10px 12px;background:var(--cream);border-radius:10px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--warm-gray);margin-bottom:6px">Questions to Ask</div>';
+        for(var q=0;q<g.questions.length;q++)h+='<div style="font-size:13px;margin-bottom:4px;padding-left:12px;border-left:2px solid var(--sage)">'+esc(g.questions[q])+'</div>';
+        h+='</div>';
+      }
+      h+='</div>';
+    }
+  }
+
+  if(a.services&&a.services.length){
+    h+='<div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-top:20px;margin-bottom:12px">Services</div>';
+    h+='<div class="iep-result-card"><table class="iep-service-table"><thead><tr><th>Service</th><th>Frequency</th><th>Provider</th></tr></thead><tbody>';
+    for(var s=0;s<a.services.length;s++){
+      var sv=a.services[s];
+      h+='<tr><td>'+esc(sv.type)+'</td><td>'+esc(sv.frequency||'—')+'</td><td>'+esc(sv.provider||'—')+'</td></tr>';
+    }
+    h+='</tbody></table></div>';
+  }
+
+  if(a.accommodations&&a.accommodations.length){
+    h+='<div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-top:20px;margin-bottom:12px">Accommodations</div>';
+    h+='<div class="iep-result-card">';
+    for(var ac=0;ac<a.accommodations.length;ac++){
+      h+='<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><div style="color:var(--sage);font-size:16px;flex-shrink:0">✓</div><div style="font-size:14px">'+esc(a.accommodations[ac])+'</div></div>';
+    }
+    h+='</div>';
+  }
+
+  if(a.gaps&&a.gaps.length){
+    h+='<div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-top:20px;margin-bottom:12px">Gaps & Concerns</div>';
+    for(var gc=0;gc<a.gaps.length;gc++){
+      var gap=a.gaps[gc];
+      h+='<div class="iep-result-card gap">';
+      h+='<div style="font-weight:700;font-size:14px;margin-bottom:6px">'+esc(gap.concern)+'</div>';
+      h+='<div style="font-size:13px;color:var(--warm-gray);line-height:1.6;margin-bottom:8px">'+esc(gap.explanation)+'</div>';
+      h+='<div style="font-size:13px;font-weight:600;color:var(--sage-dark)">→ '+esc(gap.action)+'</div>';
+      h+='</div>';
+    }
+  }
+
+  h+='<div style="display:flex;gap:8px;margin-top:20px;margin-bottom:20px">';
+  h+='<button class="btn btn-p" style="flex:1" onclick="copyIepAnalysis()">📋 Copy Analysis</button>';
+  h+='<button class="btn btn-outline" style="flex:1" onclick="discussIepWithCoach()">💬 Discuss with Coach</button>';
+  h+='</div>';
+  h+='<button class="btn btn-s" style="width:100%" onclick="renderAnalyzeWizard()">Upload a Different IEP</button>';
+
+  document.getElementById('iepAnalyzeResult').innerHTML=h;
+  window._lastIepAnalysis=a;
+}
+
+function copyIepAnalysis(){
+  var a=window._lastIepAnalysis;
+  if(!a){showToast('No analysis to copy');return}
+  var t='IEP ANALYSIS\n\n';
+  if(a.summary)t+='SUMMARY\n'+a.summary+'\n\n';
+  if(a.goals&&a.goals.length){
+    t+='GOALS\n';
+    a.goals.forEach(function(g,i){t+=(i+1)+'. '+g.plain_english+'\n   Original: '+g.goal_text+'\n   Measured by: '+(g.measurement||'N/A')+'\n\n'});
+  }
+  if(a.services&&a.services.length){
+    t+='SERVICES\n';
+    a.services.forEach(function(s){t+='- '+s.type+': '+(s.frequency||'N/A')+' ('+(s.provider||'N/A')+')\n'});
+    t+='\n';
+  }
+  if(a.accommodations&&a.accommodations.length){
+    t+='ACCOMMODATIONS\n';
+    a.accommodations.forEach(function(ac){t+='- '+ac+'\n'});
+    t+='\n';
+  }
+  if(a.gaps&&a.gaps.length){
+    t+='GAPS & CONCERNS\n';
+    a.gaps.forEach(function(g){t+='- '+g.concern+': '+g.explanation+' → '+g.action+'\n'});
+  }
+  navigator.clipboard.writeText(t).then(function(){showToast('Analysis copied!')}).catch(function(){showToast('Tap and hold to copy')});
+}
+
+function discussIepWithCoach(){
+  var a=window._lastIepAnalysis;
+  if(!a)return;
+  iepBack();iepBack();
+  switchTab('tCoach');
+  var summary='I just analyzed my child\'s IEP. Here\'s what was found: '+a.summary;
+  if(a.gaps&&a.gaps.length)summary+=' Key concerns: '+a.gaps.map(function(g){return g.concern}).join(', ')+'.';
+  summary+=' Can you help me understand what to do next?';
+  var input=document.getElementById('chatInput');
+  if(input){input.value=summary;input.focus()}
+}
+
 // ═══ SATISFACTION SURVEY ═══
 var surveyData = {rating:null, tried:null, worked:null};
 var aiInteractionCount = 0;
