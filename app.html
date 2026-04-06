@@ -1026,10 +1026,10 @@ var isProviderSignup=false;
 function toggleProviderMode(){
   isProviderSignup=!isProviderSignup;
   document.getElementById('authProviderFields').classList.toggle('hidden',!isProviderSignup);
-  document.getElementById('authProviderToggle').querySelector('a').textContent=isProviderSignup?'← Back to Parent signup':'I'm a Provider / BCBA';
+  document.getElementById('authProviderToggle').querySelector('a').textContent=isProviderSignup?'← Back to Parent signup':'I\'m a Provider / BCBA';
   if(isProviderSignup&&!document.getElementById('authCptCodes').innerHTML){
     var codes=['97151','97152','97153','97154','97155','97156','97157','97158'];
-    var h='';codes.forEach(function(c){h+='<button type="button" class="chip" onclick="this.classList.toggle('on')" style="font-size:12px;padding:6px 10px">'+c+'</button>'});
+    var h='';codes.forEach(function(c){h+='<button type="button" class="chip" onclick="this.classList.toggle(\'on\')" style="font-size:12px;padding:6px 10px">'+c+'</button>'});
     document.getElementById('authCptCodes').innerHTML=h;
   }
 }
@@ -1081,6 +1081,7 @@ async function handleAuth(){
         }
             var pendingToken=sessionStorage.getItem('mv_invite_token');
       if(pendingToken){sessionStorage.removeItem('mv_invite_token');try{var ir=await authFetch(API_URL+'accept-invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:pendingToken})});var id=await ir.json();if(id.success){showToast('You\'ve joined the care team!');await loadProfile();applyRole()}}catch(e){}}
+      }
     } else {
       result=await sb.auth.signInWithPassword({email:email,password:pass});
       if(result.error)throw result.error;
@@ -1345,7 +1346,7 @@ function applyRole(){
 
   // Provider pending verification check
   if(S.role==='provider'&&S.profile&&!S.profile.provider_verified){
-    document.getElementById('mainScroll').innerHTML='<div style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">⏳</div><div style="font-family:Fraunces,serif;font-size:22px;font-weight:800;margin-bottom:8px">Account Under Review</div><div style="font-size:14px;color:var(--warm-gray);line-height:1.6;max-width:340px;margin:0 auto">Your provider account is being reviewed by our clinical team. You'll receive an email once approved.</div><div style="margin-top:20px;padding:16px;background:var(--cream);border-radius:14px;font-size:13px;text-align:left"><div style="font-weight:700;margin-bottom:4px">Your Info</div><div>NPI: '+(S.profile.npi_number||'—')+'</div><div>License: '+(S.profile.license_type||'—')+' ('+(S.profile.license_state||'—')+') #'+(S.profile.license_number||'—')+'</div></div></div>';
+    document.getElementById('mainScroll').innerHTML='<div style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">⏳</div><div style="font-family:Fraunces,serif;font-size:22px;font-weight:800;margin-bottom:8px">Account Under Review</div><div style="font-size:14px;color:var(--warm-gray);line-height:1.6;max-width:340px;margin:0 auto">Your provider account is being reviewed by our clinical team. You\'ll receive an email once approved.</div><div style="margin-top:20px;padding:16px;background:var(--cream);border-radius:14px;font-size:13px;text-align:left"><div style="font-weight:700;margin-bottom:4px">Your Info</div><div>NPI: '+(S.profile.npi_number||'—')+'</div><div>License: '+(S.profile.license_type||'—')+' ('+(S.profile.license_state||'—')+') #'+(S.profile.license_number||'—')+'</div></div></div>';
     document.querySelectorAll('.nb').forEach(function(b){b.style.display='none'});
     document.getElementById('chatBar').style.display='none';
     return;
