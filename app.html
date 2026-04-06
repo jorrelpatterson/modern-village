@@ -1079,6 +1079,8 @@ async function handleAuth(){
           closeAuth();
           showOnboarding();
         }
+            var pendingToken=sessionStorage.getItem('mv_invite_token');
+      if(pendingToken){sessionStorage.removeItem('mv_invite_token');try{var ir=await authFetch(API_URL+'accept-invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:pendingToken})});var id=await ir.json();if(id.success){showToast('You\'ve joined the care team!');await loadProfile();applyRole()}}catch(e){}}
     } else {
       result=await sb.auth.signInWithPassword({email:email,password:pass});
       if(result.error)throw result.error;
@@ -1087,6 +1089,8 @@ async function handleAuth(){
       await loadProfile();
       closeAuth();
       enterApp();
+            var pendingToken=sessionStorage.getItem('mv_invite_token');
+      if(pendingToken){sessionStorage.removeItem('mv_invite_token');try{var ir=await authFetch(API_URL+'accept-invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:pendingToken})});var id=await ir.json();if(id.success){showToast('You\'ve joined the care team!');await loadProfile();applyRole()}}catch(e){}}
     }
   }catch(e){
     errEl.textContent=e.message||'Something went wrong';
@@ -1245,12 +1249,36 @@ async function init(){
           S.user=session.data.session.user;
           await loadProfile();
           enterApp();
+          await checkInviteToken();
           return;
         }
       }
     } catch(e){ console.error('Session check failed:', e); }
     showAuth(false);
   },2600);
+}
+async function checkInviteToken(){
+  var params=new URLSearchParams(window.location.search);
+  var token=params.get('invite');
+  if(!token)return false;
+  if(!S.user){
+    sessionStorage.setItem('mv_invite_token',token);
+    return false;
+  }
+  try{
+    var r=await authFetch(API_URL+'accept-invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:token})});
+    var d=await r.json();
+    if(d.success){
+      showToast('You\'ve joined the care team!');
+      await loadProfile();
+      window.history.replaceState({},'',window.location.pathname);
+      return true;
+    } else {
+      showToast(d.error||'Could not accept invite');
+    }
+  }catch(e){console.error('Invite accept error:',e)}
+  window.history.replaceState({},'',window.location.pathname);
+  return false;
 }
 init();
 
