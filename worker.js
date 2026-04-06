@@ -60,6 +60,7 @@ export default {
     try { body = await request.json(); } catch { return new Response('{"error":"Invalid JSON"}', { status: 400, headers: h }); }
 
     const url = new URL(request.url);
+
     const authToken = request.headers.get('Authorization')?.replace('Bearer ', '');
 
     // ═══ EMAIL ═══
@@ -110,32 +111,6 @@ export default {
         }
         return new Response('{"valid":false}', { headers: h });
       } catch { return new Response('{"valid":false}', { status: 500, headers: h }); }
-    }
-
-    // ═══ TEMP: ADMIN PASSWORD RESET (remove after use) ═══
-    if (url.pathname === '/admin-reset-password') {
-      const targetEmail = body.email;
-      const newPassword = body.password;
-      if (!targetEmail || !newPassword) return new Response('{"error":"Missing email or password"}', { status: 400, headers: h });
-
-      // Find user by email
-      const findRes = await fetch(env.SUPABASE_URL + '/auth/v1/admin/users?page=1&per_page=50', {
-        headers: { 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'apikey': env.SUPABASE_SERVICE_KEY }
-      });
-      const usersData = await findRes.json();
-      const users = usersData.users || usersData || [];
-      const targetUser = users.find(u => u.email === targetEmail);
-      if (!targetUser) return new Response('{"error":"User not found"}', { status: 404, headers: h });
-
-      // Update password via admin API
-      const updateRes = await fetch(env.SUPABASE_URL + '/auth/v1/admin/users/' + targetUser.id, {
-        method: 'PUT',
-        headers: { 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'apikey': env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: newPassword })
-      });
-      const result = await updateRes.json();
-      if (!updateRes.ok) return new Response(JSON.stringify({error: result}), { status: 500, headers: h });
-      return new Response('{"success":true}', { headers: h });
     }
 
     // ═══ INVITE ═══

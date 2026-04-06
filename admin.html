@@ -380,7 +380,6 @@ async function doLogin(){
 
   // Check admin role
   var profile = await sb.from('profiles').select('is_admin').eq('id',result.data.user.id).single();
-  console.log("ADMIN DEBUG:", JSON.stringify(profile));
   if(!profile.data || !profile.data.is_admin){
     errEl.textContent='Access denied. Admin privileges required.';
     errEl.style.display='block';
