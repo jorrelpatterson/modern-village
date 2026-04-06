@@ -33,3 +33,9 @@ _Add new bugs below with the next number. Move to "Fixed" section when resolved.
 ## Fixed
 
 _(move resolved bugs here with date)_
+
+---
+
+## Roadmap — Future Features
+
+7. **Child/Teen login** — Simplified self-regulation view: coping strategies, mood check-ins, routine viewer. No access to parent logs or clinical data. `access_level: 'self'` already defined in `child_access`. Parent creates the child's account from their settings. (Phase 4)
