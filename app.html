@@ -963,7 +963,7 @@ var S = {
   tab:'coach', msgs:[], typing:false, likes:{}, topic:'All',
   subscribed:false, freeUsed:0, freeLimit:3,
   booking:{session:null,date:null,time:null},
-  authMode:'signup', conversationId:null
+  role:'parent', authMode:'signup', conversationId:null
 };
 
 var PROVIDERS = [
@@ -1282,10 +1282,42 @@ function enterApp(){
   document.getElementById('commAv').textContent=initial;
   if(S.child){var p=document.getElementById('ceProfile');p.classList.remove('hidden');p.innerHTML='Coaching for <strong>'+esc(S.child)+'</strong>'+(S.age?' \u00b7 '+esc(S.age):'')+(S.dx?' \u00b7 '+esc(S.dx):'')}
   renderChildSwitcher();
+  applyRole();
   renderSb();renderSugs();renderProvider();renderTopics();renderCommunityPosts();updateFreeCtr();
   checkReferralOnSignup();
   handleCheckoutReturn();
   if(S.user){checkDailyCheckin();loadStreak();}
+}
+
+function applyRole(){
+  S.role=S.profile&&S.profile.role||'parent';
+
+  // Provider pending verification check
+  if(S.role==='provider'&&S.profile&&!S.profile.provider_verified){
+    document.getElementById('mainScroll').innerHTML='<div style="text-align:center;padding:60px 20px"><div style="font-size:48px;margin-bottom:16px">⏳</div><div style="font-family:Fraunces,serif;font-size:22px;font-weight:800;margin-bottom:8px">Account Under Review</div><div style="font-size:14px;color:var(--warm-gray);line-height:1.6;max-width:340px;margin:0 auto">Your provider account is being reviewed by our clinical team. You'll receive an email once approved.</div><div style="margin-top:20px;padding:16px;background:var(--cream);border-radius:14px;font-size:13px;text-align:left"><div style="font-weight:700;margin-bottom:4px">Your Info</div><div>NPI: '+(S.profile.npi_number||'—')+'</div><div>License: '+(S.profile.license_type||'—')+' ('+(S.profile.license_state||'—')+') #'+(S.profile.license_number||'—')+'</div></div></div>';
+    document.querySelectorAll('.nb').forEach(function(b){b.style.display='none'});
+    document.getElementById('chatBar').style.display='none';
+    return;
+  }
+
+  // Tab visibility per role
+  var tabMap={
+    parent:['coach','pros','community','track'],
+    provider:['track'],
+    caregiver:['track'],
+    teacher:[]
+  };
+  var visibleTabs=tabMap[S.role]||tabMap.parent;
+  document.querySelectorAll('.nb').forEach(function(b){
+    var t=b.getAttribute('data-t');
+    b.style.display=visibleTabs.indexOf(t)>=0?'':'none';
+  });
+
+  // Default to first visible tab
+  if(visibleTabs.length)switchTab(visibleTabs[0]);
+
+  // Chat bar only for parents
+  document.getElementById('chatBar').style.display=S.role==='parent'?'block':'none';
 }
 
 async function handleCheckoutReturn(){
@@ -1431,7 +1463,8 @@ function renderSb(){
   var displayName=S.name||( S.user?S.user.email:'Guest');
   document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Signed in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+displayName+'</div>'+(S.child?'<div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Parent of '+S.child+(S.age?', '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'')+'</div>':'');
   updateSubSt();
-  var items=[{label:"My Profile",action:"openProfile()"},{label:"Saved Strategies",action:"openStrategies()"},{label:"🧠 Child Insights",action:"openInsights()"},{label:"Progress Dashboard",action:"openProgress()"},{label:"Routine Builder",action:"openRoutines()"},{label:"IEP Toolkit",action:"openIep()"},{label:"Resources",action:"openResources()"},{label:"Behavior Tracker",action:"switchTab('track')"},{label:"Booking History",action:"openBookingHistory()"},{label:"\ud83c\udf81 Invite Friends — Get 1 Month Free",action:"openReferral()",highlight:true},{label:"Settings",soon:true}];
+  var allItems=[{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent']},{label:"🧠 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver']},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"🎁 Invite Friends — Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Care Team",action:"openCareTeam()",roles:['parent']}];
+  var items=allItems.filter(function(item){return !item.roles||item.roles.indexOf(S.role)>=0});
   var h='';for(var i=0;i<items.length;i++){var item=items[i];if(item.soon){h+='<div class="sb-item" onclick="showToast(\'Coming soon!\')"><span>'+item.label+'</span><span class="sb-soon">Soon</span></div>'}else{h+='<div class="sb-item'+(item.highlight?' sb-highlight':'')+'" onclick="closeSb();'+item.action+'"><span>'+item.label+'</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray-light)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>'}}
   if(S.user)h+='<div class="sb-logout" onclick="logout()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out</div>';
   document.getElementById('sbMenu').innerHTML=h;
