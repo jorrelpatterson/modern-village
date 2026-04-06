@@ -198,7 +198,7 @@
     <div id="pgUsers" class="page">
       <div class="page-hdr"><div><h1>Users</h1><p>All registered families</p></div></div>
       <div class="stats" id="userStats"></div>
-      <div class="panel"><div class="panel-hdr"><div class="panel-title">All Users</div></div><div class="panel-body"><table class="tbl" id="userTable"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Child</th><th>Age</th><th>Diagnosis</th><th>Plan</th><th>Messages</th><th>Joined</th></tr></thead><tbody id="userBody"></tbody></table></div></div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">All Users</div></div><div class="panel-body"><table class="tbl" id="userTable"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Child</th><th>Age</th><th>Diagnosis</th><th>Plan</th><th>Messages</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="userBody"></tbody></table></div></div>
     </div>
 
     <!-- AI REVIEWS -->
@@ -528,9 +528,9 @@ async function loadUsers(){
   var h='';
   r.data.forEach(function(u){
     var d=new Date(u.created_at);
-    h+='<tr><td>'+(u.name?esc(u.name):'<span style="color:var(--warm-gray-light)">—</span>')+'</td><td style="font-size:12px">'+esc(u.email||'—')+'</td><td><span class="tag '+(u.role==='provider'?'tag-sage':u.role==='caregiver'?'tag-blue':u.role==='teacher'?'tag-free':'')+'">'+esc(u.role||'parent')+'</span></td><td>'+(u.child_name?esc(u.child_name):'—')+'</td><td>'+(u.child_age||'—')+'</td><td>'+(u.diagnosis||'—')+'</td><td><span class="tag '+(u.subscription_status==='pro'?'tag-sage':'tag-free')+'">'+(u.subscription_status==='pro'?'Pro':'Free')+'</span></td><td>'+(u.free_messages_used||0)+'</td><td>'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td></tr>';
+    h+='<tr><td>'+(u.name?esc(u.name):'<span style="color:var(--warm-gray-light)">—</span>')+'</td><td style="font-size:12px">'+esc(u.email||'—')+'</td><td><span class="tag '+(u.role==='provider'?'tag-sage':u.role==='caregiver'?'tag-blue':u.role==='teacher'?'tag-free':'')+'">'+esc(u.role||'parent')+'</span></td><td>'+(u.child_name?esc(u.child_name):'—')+'</td><td>'+(u.child_age||'—')+'</td><td>'+(u.diagnosis||'—')+'</td><td><span class="tag '+(u.subscription_status==='pro'?'tag-sage':'tag-free')+'">'+(u.subscription_status==='pro'?'Pro':'Free')+'</span></td><td>'+(u.free_messages_used||0)+'</td><td>'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td>'+'<td><button style="padding:4px 10px;border-radius:6px;border:1px solid var(--sand);background:white;cursor:pointer;font-size:11px;font-family:inherit" onclick="resetUserPassword(\x27'+esc(u.email||'')+'\x27)">Reset PW</button></td></tr>';
   });
-  document.getElementById('userBody').innerHTML=h||'<tr><td colspan="9" class="empty">No users yet</td></tr>';
+  document.getElementById('userBody').innerHTML=h||'<tr><td colspan="10" class="empty">No users yet</td></tr>';
 }
 
 // ═══ AI REVIEWS ═══
@@ -1162,6 +1162,25 @@ async function loadInvites(){
   document.getElementById('inviteSection').innerHTML=h;
 }
 
+
+async function resetUserPassword(email){
+  if(!email){showToast('No email for this user');return}
+  var newPass=prompt('New password for '+email+':');
+  if(!newPass||newPass.length<8){showToast('Password must be 8+ characters');return}
+  var session=await sb.auth.getSession();
+  var token=session.data.session?.access_token;
+  if(!token){showToast('Not logged in');return}
+  try{
+    var r=await fetch('https://village-api.jorrelpatterson.workers.dev/admin/reset-password',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({email:email,password:newPass})
+    });
+    var d=await r.json();
+    if(d.success)showToast('Password reset!');
+    else showToast('Error: '+(d.error||'Failed'));
+  }catch(e){showToast('Error resetting password')}
+}
 </script>
 </body>
 </html>
