@@ -158,6 +158,22 @@
 .survey-submit:disabled{opacity:0.5;cursor:default}
 .survey-skip{background:none;border:none;color:var(--warm-gray-light);font-size:13px;cursor:pointer;margin-top:10px;display:block;text-align:center;width:100%}
 
+/* Care Team Notes */
+.note-card{background:white;border-radius:16px;padding:16px 20px;border:1px solid var(--sand);margin-bottom:12px}
+.note-author{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.note-avatar{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}
+.note-name{font-weight:700;font-size:14px}
+.note-role-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:0.5px}
+.note-time{font-size:11px;color:var(--warm-gray-light)}
+.note-content{font-size:14px;line-height:1.6;margin-bottom:8px}
+.note-actions{display:flex;gap:12px;font-size:12px}
+.note-action{background:none;border:none;cursor:pointer;color:var(--warm-gray-light);font-weight:600;font-size:12px;padding:0}.note-action:hover{color:var(--sage-dark)}
+.note-comments{margin-left:20px;padding-left:16px;border-left:2px solid var(--sand);margin-top:8px}
+.note-comment{padding:8px 0}
+.note-comment-author{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.note-comment-avatar{width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
+.note-input{width:100%;padding:14px 18px;border:2px solid var(--sand);border-radius:14px;font-size:14px;font-family:DM Sans,sans-serif;resize:none;min-height:60px}.note-input:focus{border-color:var(--sage);outline:none}
+
 /* Routine Builder */
 .routine-card{background:white;border-radius:16px;padding:20px;border:1px solid var(--sand);margin-bottom:12px}
 .routine-card-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
@@ -554,6 +570,24 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
         </div>
         <h3 style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:16px">Recent Logs</h3>
         <div id="logsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARE TEAM NOTES -->
+  <div id="careNotesPage" class="overlay-page">
+    <div class="overlay-hdr">
+      <button class="overlay-back" onclick="closeOverlay('careNotesPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="overlay-title">Care Team Notes</div>
+    </div>
+    <div class="overlay-body">
+      <div class="overlay-inner">
+        <div id="careNotesChildName" style="font-size:13px;color:var(--warm-gray);margin-bottom:12px"></div>
+        <div style="margin-bottom:20px">
+          <textarea id="careNoteInput" class="note-input" placeholder="Write a note for the care team..." rows="2"></textarea>
+          <button class="btn btn-p" style="width:100%;margin-top:8px" id="careNoteSubmitBtn" onclick="postCareNote()">Post Note</button>
+        </div>
+        <div id="careNotesList"></div>
       </div>
     </div>
   </div>
