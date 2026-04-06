@@ -122,7 +122,7 @@ export default {
       const role = body.role;
       const childId = body.child_id;
       if (!email || !email.includes('@')) return new Response('{"error":"Invalid email"}', { status: 400, headers: h });
-      if (!['caregiver','teacher'].includes(role)) return new Response('{"error":"Invalid role"}', { status: 400, headers: h });
+      if (!['caregiver','teacher','provider'].includes(role)) return new Response('{"error":"Invalid role"}', { status: 400, headers: h });
       if (!childId) return new Response('{"error":"Missing child_id"}', { status: 400, headers: h });
 
       // Verify child belongs to user
@@ -191,7 +191,7 @@ export default {
       if (invite.email !== user.email.toLowerCase().trim()) return new Response('{"error":"This invite was sent to ' + invite.email + '"}', { status: 403, headers: h });
 
       // Set user role
-      const accessLevel = invite.role === 'caregiver' ? 'daily' : 'school';
+      const accessLevel = invite.role === 'caregiver' ? 'daily' : invite.role === 'provider' ? 'clinical' : 'school';
       await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id, {
         method: 'PATCH',
         headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
