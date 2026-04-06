@@ -179,6 +179,8 @@
     <div class="sb-item" data-page="screener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Screener Leads</div>
     <div class="sb-item" data-page="analytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>District Analytics</div>
     <div class="sb-item" data-page="referrals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>Referrals</div>
+    <div class="sb-item" data-page="verification"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Verify Providers</div>
+    <div class="sb-item" data-page="invites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>Invites</div>
   </aside>
 
   <main class="main">
@@ -196,7 +198,7 @@
     <div id="pgUsers" class="page">
       <div class="page-hdr"><div><h1>Users</h1><p>All registered families</p></div></div>
       <div class="stats" id="userStats"></div>
-      <div class="panel"><div class="panel-hdr"><div class="panel-title">All Users</div></div><div class="panel-body"><table class="tbl" id="userTable"><thead><tr><th>Name</th><th>Email</th><th>Child</th><th>Age</th><th>Diagnosis</th><th>Plan</th><th>Messages</th><th>Joined</th></tr></thead><tbody id="userBody"></tbody></table></div></div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">All Users</div></div><div class="panel-body"><table class="tbl" id="userTable"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Child</th><th>Age</th><th>Diagnosis</th><th>Plan</th><th>Messages</th><th>Joined</th></tr></thead><tbody id="userBody"></tbody></table></div></div>
     </div>
 
     <!-- AI REVIEWS -->
@@ -299,6 +301,18 @@
     <div id="pgBlog" class="page">
       <div class="page-hdr"><div><h1>Blog Management</h1><p>Create and manage blog posts</p></div><button class="btn btn-sage" onclick="openBlogEditor()">+ New Post</button></div>
       <div class="panel"><div class="panel-hdr"><div class="panel-title">All Posts</div></div><div class="panel-body" id="blogPosts"></div></div>
+    </div>
+
+    <!-- VERIFY PROVIDERS -->
+    <div id="pgVerification" class="page">
+      <h2>Verify Providers</h2>
+      <div id="verifySection"></div>
+    </div>
+
+    <!-- INVITE MONITOR -->
+    <div id="pgInvites" class="page">
+      <h2>Invite Monitor</h2>
+      <div id="inviteSection"></div>
     </div>
 
     <!-- BLOG EDITOR (overlay) -->
@@ -443,6 +457,8 @@ async function loadPage(pg){
   else if(pg==='screener') await loadScreenerLeads();
   else if(pg==='analytics') await loadAnalytics();
   else if(pg==='referrals') await loadReferrals();
+  else if(pg==='verification') loadVerification();
+  else if(pg==='invites') loadInvites();
 }
 
 // ═══ DASHBOARD ═══
@@ -502,7 +518,7 @@ function statCard(label, val, change){
 
 // ═══ USERS ═══
 async function loadUsers(){
-  var r = await sb.from('profiles').select('*').order('created_at',{ascending:false});
+  var r = await sb.from('profiles').select('id,name,email,role,child_name,child_age,diagnosis,subscription_status,free_messages_used,created_at').order('created_at',{ascending:false});
   if(!r.data)return;
   var total=r.data.length, pro=0, free=0;
   r.data.forEach(function(u){if(u.subscription_status==='pro')pro++;else free++});
@@ -512,9 +528,9 @@ async function loadUsers(){
   var h='';
   r.data.forEach(function(u){
     var d=new Date(u.created_at);
-    h+='<tr><td>'+(u.name?esc(u.name):'<span style="color:var(--warm-gray-light)">—</span>')+'</td><td style="font-size:12px">'+esc(u.email||'—')+'</td><td>'+(u.child_name?esc(u.child_name):'—')+'</td><td>'+(u.child_age||'—')+'</td><td>'+(u.diagnosis||'—')+'</td><td><span class="tag '+(u.subscription_status==='pro'?'tag-sage':'tag-free')+'">'+(u.subscription_status==='pro'?'Pro':'Free')+'</span></td><td>'+(u.free_messages_used||0)+'</td><td>'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td></tr>';
+    h+='<tr><td>'+(u.name?esc(u.name):'<span style="color:var(--warm-gray-light)">—</span>')+'</td><td style="font-size:12px">'+esc(u.email||'—')+'</td><td><span class="tag '+(u.role==='provider'?'tag-sage':u.role==='caregiver'?'tag-blue':u.role==='teacher'?'tag-free':'')+'">'+esc(u.role||'parent')+'</span></td><td>'+(u.child_name?esc(u.child_name):'—')+'</td><td>'+(u.child_age||'—')+'</td><td>'+(u.diagnosis||'—')+'</td><td><span class="tag '+(u.subscription_status==='pro'?'tag-sage':'tag-free')+'">'+(u.subscription_status==='pro'?'Pro':'Free')+'</span></td><td>'+(u.free_messages_used||0)+'</td><td>'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td></tr>';
   });
-  document.getElementById('userBody').innerHTML=h||'<tr><td colspan="8" class="empty">No users yet</td></tr>';
+  document.getElementById('userBody').innerHTML=h||'<tr><td colspan="9" class="empty">No users yet</td></tr>';
 }
 
 // ═══ AI REVIEWS ═══
@@ -1083,6 +1099,69 @@ async function loadBehavior(){
   });
   document.getElementById('behaviorBody').innerHTML=h||'<tr><td colspan="7" class="empty">No logs yet</td></tr>';
 }
+// ═══ VERIFY PROVIDERS ═══
+async function loadVerification(){
+  var r=await sb.from('profiles').select('id,name,email,npi_number,license_type,license_state,license_number,cpt_codes,provider_verified,created_at').eq('role','provider').order('created_at',{ascending:false});
+  var providers=r.data||[];
+  var unverified=providers.filter(function(p){return !p.provider_verified});
+  var verified=providers.filter(function(p){return p.provider_verified});
+
+  var h='<div class="panel"><div class="panel-hdr"><div class="panel-title">Pending Verification</div><span class="tag tag-yellow">'+unverified.length+'</span></div><div class="panel-body">';
+  if(!unverified.length)h+='<div class="empty">No pending providers</div>';
+  unverified.forEach(function(p){
+    var d=new Date(p.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    h+='<div style="padding:16px;background:#FFFDF5;border-radius:12px;margin-bottom:10px;border-left:4px solid #E8C84A">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:start"><div><strong>'+esc(p.name||p.email)+'</strong><div style="font-size:12px;color:#999;margin-top:2px">'+esc(p.email)+' · Applied '+d+'</div></div><div style="display:flex;gap:6px"><button class="btn btn-sm btn-sage" onclick="verifyProvider(''+p.id+'')">Approve</button><button class="btn btn-sm btn-outline" style="color:var(--terracotta);border-color:var(--terracotta)" onclick="rejectProvider(''+p.id+'')">Reject</button></div></div>';
+    h+='<div style="margin-top:8px;font-size:13px"><strong>NPI:</strong> '+(p.npi_number||'—')+' · <strong>License:</strong> '+(p.license_type||'—')+' ('+(p.license_state||'—')+') #'+(p.license_number||'—')+'</div>';
+    if(p.cpt_codes&&p.cpt_codes.length)h+='<div style="margin-top:4px;font-size:12px"><strong>CPT:</strong> '+p.cpt_codes.join(', ')+'</div>';
+    h+='</div>';
+  });
+  h+='</div></div>';
+
+  h+='<div class="panel" style="margin-top:16px"><div class="panel-hdr"><div class="panel-title">Verified Providers</div><span class="tag tag-sage">'+verified.length+'</span></div><div class="panel-body">';
+  if(!verified.length)h+='<div class="empty">No verified providers yet</div>';
+  verified.forEach(function(p){
+    h+='<div style="padding:12px;background:var(--sage-light);border-radius:12px;margin-bottom:8px;border-left:4px solid var(--sage)"><strong>'+esc(p.name||p.email)+'</strong> · '+(p.license_type||'')+' · NPI: '+(p.npi_number||'—')+'</div>';
+  });
+  h+='</div></div>';
+
+  document.getElementById('verifySection').innerHTML=h;
+}
+
+async function verifyProvider(id){
+  await sb.from('profiles').update({provider_verified:true}).eq('id',id);
+  showToast('Provider approved');
+  loadVerification();
+}
+
+async function rejectProvider(id){
+  if(!confirm('Reject this provider? This will delete their account.'))return;
+  await sb.from('profiles').delete().eq('id',id);
+  showToast('Provider rejected and removed');
+  loadVerification();
+}
+
+// ═══ INVITE MONITOR ═══
+async function loadInvites(){
+  var r=await sb.from('invites').select('*').order('created_at',{ascending:false}).limit(200);
+  var invites=r.data||[];
+
+  var h='<div class="panel"><div class="panel-hdr"><div class="panel-title">All Invites</div><span class="tag tag-blue">'+invites.length+'</span></div><div class="panel-body">';
+  if(!invites.length)h+='<div class="empty">No invites sent yet</div>';
+  else{
+    h+='<table class="tbl"><thead><tr><th>Email</th><th>Role</th><th>Status</th><th>Sent</th></tr></thead><tbody>';
+    invites.forEach(function(inv){
+      var d=new Date(inv.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      var statusClass=inv.status==='accepted'?'tag-sage':inv.status==='pending'?'tag-yellow':'tag-red';
+      h+='<tr><td>'+esc(inv.email)+'</td><td>'+esc(inv.role)+'</td><td><span class="tag '+statusClass+'">'+inv.status+'</span></td><td>'+d+'</td></tr>';
+    });
+    h+='</tbody></table>';
+  }
+  h+='</div></div>';
+
+  document.getElementById('inviteSection').innerHTML=h;
+}
+
 </script>
 </body>
 </html>
