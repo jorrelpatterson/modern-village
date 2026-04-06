@@ -806,7 +806,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
             <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800">Your Children</div>
             <button class="btn btn-s" style="padding:8px 16px;font-size:13px" onclick="openAddChild()">+ Add Child</button>
           </div>
-          <div id="profChildrenList"></div>
+          <div id="profChildren"></div>
         </div>
 
         <!-- Goals -->
@@ -909,6 +909,18 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     <button class="nb" data-t="community" onclick="switchTab('community')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="nl">Community</span></button>
     <button class="nb" data-t="track" onclick="switchTab('track')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2" stroke-linecap="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><span class="nl">Track</span></button>
   </div></nav>
+  <!-- INVITE MODAL -->
+  <div id="inviteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px">
+    <div style="background:white;border-radius:20px;padding:24px;max-width:380px;width:100%">
+      <div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:4px">Invite to Care Team</div>
+      <div style="font-size:13px;color:var(--warm-gray);margin-bottom:16px" id="inviteChildLabel"></div>
+      <div style="margin-bottom:12px"><label class="fl">Their email</label><input id="inviteEmail" class="fi" type="email" placeholder="caregiver@email.com"></div>
+      <div style="margin-bottom:16px"><label class="fl">Their role</label><select id="inviteRole" class="fi"><option value="caregiver">Caregiver (grandparent, aide, co-parent)</option><option value="teacher">Teacher</option></select></div>
+      <input type="hidden" id="inviteChildId">
+      <div style="display:flex;gap:8px"><button class="btn btn-p" style="flex:1" id="inviteSendBtn" onclick="sendInvite()">Send Invite</button><button class="btn btn-s" onclick="closeInviteModal()">Cancel</button></div>
+      <div id="inviteError" style="display:none;margin-top:8px;font-size:12px;color:var(--terracotta)"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -3687,7 +3699,7 @@ function openProfile(){
 }
 
 function renderProfileChildren(){
-  var el=document.getElementById('profChildrenList');
+  var el=document.getElementById('profChildren');
   if(!el)return;
   if(!S.children.length){
     el.innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray)"><div style="font-size:24px;margin-bottom:8px">&#128118;</div><div style="font-size:14px">No children added yet</div><button class="btn btn-s" style="margin-top:12px" onclick="openAddChild()">Add Your First Child</button></div>';
@@ -3705,11 +3717,77 @@ function renderProfileChildren(){
     if(!isActive) h+='<button class="btn btn-s" style="padding:6px 12px;font-size:11px" onclick="switchChild(\''+c.id+'\')">Set Active</button>';
     h+='<button style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--warm-gray);font-size:12px" onclick="editChild(\''+c.id+'\')">Edit</button>';
     if(S.children.length>1) h+='<button style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--terracotta);font-size:12px" onclick="removeChild(\''+c.id+'\')">Remove</button>';
-    h+='</div></div></div>';
+    h+='</div></div>';
+    if(S.role==='parent'){
+      h+='<div id="careTeam_'+c.id+'" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--sand)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--warm-gray)">Care Team</div><button class="btn btn-s" style="padding:4px 10px;font-size:11px" onclick="showInviteModal(\''+c.id+'\',\''+esc(c.name)+'\')">+ Invite</button></div><div id="careTeamList_'+c.id+'"><div style="font-size:12px;color:var(--warm-gray-light)">Loading...</div></div></div>';
+    }
+    h+='</div>';
   });
+  el.innerHTML=h;
+  if(S.role==='parent') S.children.forEach(function(c){loadCareTeam(c.id)});
+}
+
+async function loadCareTeam(childId){
+  var el=document.getElementById('careTeamList_'+childId);
+  if(!el)return;
+  var r=await sb.from('child_access').select('*').eq('child_id',childId).is('revoked_at',null);
+  var members=(r.data||[]).filter(function(m){return m.access_level!=='full'});
+  if(!members.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--warm-gray-light)">No one else has access yet</div>';
+    return;
+  }
+  var h='';
+  for(var i=0;i<members.length;i++){
+    var m=members[i];
+    var pr=await sb.from('profiles').select('name,email').eq('id',m.user_id).single();
+    var name=pr.data?pr.data.name||pr.data.email:'Unknown';
+    var roleBadge=m.role==='caregiver'?'Caregiver':'Teacher';
+    var badgeColor=m.role==='caregiver'?'var(--lavender)':'var(--sky)';
+    var d=new Date(m.granted_at).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0">';
+    h+='<div style="width:28px;height:28px;border-radius:8px;background:'+badgeColor+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--charcoal)">'+esc(name[0].toUpperCase())+'</div>';
+    h+='<div style="flex:1"><div style="font-size:13px;font-weight:600">'+esc(name)+'</div><div style="font-size:11px;color:var(--warm-gray-light)">'+roleBadge+' \u00b7 Added '+d+'</div></div>';
+    h+='<button style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--terracotta);font-weight:600" onclick="revokeAccess(\''+m.id+'\',\''+childId+'\')">Revoke</button>';
+    h+='</div>';
+  }
   el.innerHTML=h;
 }
 
+function showInviteModal(childId,childName){
+  document.getElementById('inviteChildId').value=childId;
+  document.getElementById('inviteChildLabel').textContent='For '+childName;
+  document.getElementById('inviteEmail').value='';
+  document.getElementById('inviteError').style.display='none';
+  document.getElementById('inviteModal').style.display='flex';
+}
+function closeInviteModal(){document.getElementById('inviteModal').style.display='none'}
+
+async function sendInvite(){
+  var email=document.getElementById('inviteEmail').value.trim().toLowerCase();
+  var role=document.getElementById('inviteRole').value;
+  var childId=document.getElementById('inviteChildId').value;
+  var errEl=document.getElementById('inviteError');
+  errEl.style.display='none';
+  if(!email||!email.includes('@')){errEl.textContent='Enter a valid email';errEl.style.display='block';return}
+  var btn=document.getElementById('inviteSendBtn');
+  btn.disabled=true;btn.textContent='Sending...';
+  try{
+    var r=await authFetch(API_URL+'invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,role:role,child_id:childId})});
+    var d=await r.json();
+    if(d.error){errEl.textContent=d.error;errEl.style.display='block'}
+    else{closeInviteModal();showToast('Invite sent to '+email);loadCareTeam(childId)}
+  }catch(e){errEl.textContent='Failed to send invite';errEl.style.display='block'}
+  btn.disabled=false;btn.textContent='Send Invite';
+}
+
+async function revokeAccess(accessId,childId){
+  if(!confirm('Remove this person\'s access?'))return;
+  await sb.from('child_access').update({revoked_at:new Date().toISOString()}).eq('id',accessId);
+  showToast('Access revoked');
+  loadCareTeam(childId);
+}
+
+function openCareTeam(){openProfile()}
 async function saveProfile(){
   var name = document.getElementById('profName').value.trim();
 
