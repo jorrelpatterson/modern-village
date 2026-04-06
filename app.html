@@ -672,6 +672,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
             <button class="routine-template" onclick="loadTemplate('bedtime')">🌙 Bedtime</button>
             <button class="routine-template" onclick="loadTemplate('mealtime')">🍽️ Mealtime</button>
             <button class="routine-template" onclick="loadTemplate('blank')">✏️ Blank</button>
+            <button class="routine-template" style="background:var(--lavender);border-color:var(--lavender);color:#6B5B8D" onclick="showAIRoutineForm()">✨ AI Suggest</button>
           </div>
         </div>
 
@@ -701,6 +702,27 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
           <div style="display:flex;gap:8px">
             <button class="btn btn-p" style="flex:1" onclick="addStep()">Add Step</button>
             <button class="btn btn-s" onclick="hideStepForm()">Cancel</button>
+          </div>
+        </div>
+
+        <!-- AI Routine Form (hidden by default) -->
+        <div id="aiRoutineForm" class="routine-form hidden">
+          <div style="font-weight:700;font-size:15px;margin-bottom:4px">AI-Generated Routine</div>
+          <div style="font-size:12px;color:var(--warm-gray);margin-bottom:12px">Based on your child's behavioral patterns</div>
+          <div style="margin-bottom:12px">
+            <label class="fl">What kind of routine?</label>
+            <select id="aiRoutineContext" class="fi">
+              <option value="morning">Morning routine</option>
+              <option value="afterschool">After school / arrival home</option>
+              <option value="bedtime">Bedtime / wind-down</option>
+              <option value="transitions">Transition between activities</option>
+              <option value="homework">Homework / focus time</option>
+              <option value="mealtime">Mealtime</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-p" style="flex:1" id="aiRoutineBtn" onclick="generateAIRoutine()">✨ Generate Routine</button>
+            <button class="btn btn-s" onclick="hideAIRoutineForm()">Cancel</button>
           </div>
         </div>
 
@@ -2876,6 +2898,7 @@ function pickIcon(el, ic){
 }
 
 function loadTemplate(key){
+  routineSource='manual';
   var t=TEMPLATES[key];
   routineSteps=t.steps.map(function(s){return{icon:s.icon,name:s.name,dur:s.dur}});
   document.getElementById('routineTitle').value=t.title;
@@ -3061,6 +3084,60 @@ async function deleteSavedRoutine(id){
   if(r.error){showToast('Error deleting');return}
   loadSavedRoutines2();
   showToast('Routine deleted');
+}
+
+function showAIRoutineForm(){document.getElementById('aiRoutineForm').classList.remove('hidden');document.getElementById('stepForm').classList.add('hidden')}
+function hideAIRoutineForm(){document.getElementById('aiRoutineForm').classList.add('hidden')}
+
+async function generateAIRoutine(){
+  if(!S.user){showToast('Sign in first');return}
+  var ctx=document.getElementById('aiRoutineContext').value;
+  var btn=document.getElementById('aiRoutineBtn');
+  btn.disabled=true;btn.textContent='Generating...';
+
+  try{
+    var childCtx=await fetchChildContext();
+    var pat=childCtx.patterns||{};
+    var childInfo='Child: '+(S.child||'my child');
+    if(S.age)childInfo+=', age '+S.age;
+    if(S.dx)childInfo+=', diagnosis: '+S.dx;
+
+    var patInfo='';
+    if(pat.hasData){
+      if(pat.topBehaviors&&pat.topBehaviors.length)patInfo+='\nMost frequent behaviors: '+pat.topBehaviors.map(function(b){return b.behavior+' ('+b.count+'x)'}).join(', ');
+      if(pat.topTriggers&&pat.topTriggers.length)patInfo+='\nCommon triggers: '+pat.topTriggers.map(function(t){return t.trigger+' ('+t.count+'x)'}).join(', ');
+      if(pat.peakTimeOfDay)patInfo+='\nPeak incident time: '+pat.peakTimeOfDay;
+      if(pat.strategyEffectiveness&&pat.strategyEffectiveness.length){
+        var best=pat.strategyEffectiveness[0];
+        if(best.successRate>50)patInfo+='\nBest strategy: "'+best.strategy+'" ('+best.successRate+'% success)';
+      }
+    }
+
+    var prompt='Create a '+ctx+' routine for this child.\n\n'+childInfo+patInfo+'\n\nReturn ONLY valid JSON, no other text. Format:\n{"title":"...","steps":[{"icon":"emoji","name":"step name","dur":minutes_number_or_null,"tip":"brief ABA-informed tip"}]}\n\nInclude 5-8 steps. Make steps concrete and age-appropriate. Tips should be 1 sentence referencing ABA principles (visual supports, reinforcement, antecedent strategies, etc). If behavioral data shows specific triggers or patterns, address them in the routine structure.';
+
+    var r=await authFetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'You are an ABA-trained routine builder. Create structured daily routines for children with autism, ADHD, and other neurodevelopmental conditions. Return ONLY valid JSON. No markdown, no commentary.',messages:[{role:'user',content:prompt}]})});
+    var d=await r.json();
+    var text='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)text+=d.content[i].text;
+
+    // Parse JSON — handle potential markdown wrapping
+    text=text.replace(/```json\s*/,'').replace(/```\s*/,'').trim();
+    var parsed=JSON.parse(text);
+
+    if(parsed.title)document.getElementById('routineTitle').value=parsed.title;
+    if(parsed.steps&&parsed.steps.length){
+      routineSteps=parsed.steps.map(function(s){return{icon:s.icon||'⏰',name:s.name||'Step',dur:s.dur||null,tip:s.tip||null}});
+      routineSource='ai';
+      renderRoutineSteps();
+      hideAIRoutineForm();
+      showToast('Routine generated! Edit and save when ready.');
+    } else {
+      showToast('Could not generate routine. Try again.');
+    }
+  }catch(e){
+    console.error('AI routine error:',e);
+    showToast('Error generating routine. Try again.');
+  }
+  btn.disabled=false;btn.textContent='✨ Generate Routine';
 }
 
 // ═══ PROGRESS DASHBOARD ═══
