@@ -78,6 +78,35 @@
 .iep-checkbox{width:22px;height:22px;border-radius:6px;border:2px solid var(--sand-dark);background:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s}
 .iep-check-item.checked .iep-checkbox{background:var(--sage);border-color:var(--sage)}
 .iep-check-text{font-size:14px;line-height:1.5}
+
+/* === DAILY CHECK-IN === */
+.ci-modal-wrap{position:fixed;inset:0;background:rgba(45,45,45,0.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s}
+.ci-modal{background:var(--cream);border-radius:24px 24px 0 0;padding:28px 24px 40px;width:100%;max-width:480px;animation:slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1)}
+.ci-modal-handle{width:40px;height:4px;background:var(--sand-dark);border-radius:2px;margin:0 auto 20px}
+.ci-modal-title{font-family:'Fraunces',serif;font-size:22px;font-weight:800;text-align:center;margin-bottom:6px}
+.ci-modal-sub{font-size:14px;color:var(--warm-gray);text-align:center;margin-bottom:24px;line-height:1.5}
+.ci-ratings{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.ci-rating-btn{padding:18px 12px;border-radius:16px;border:2px solid var(--sand);background:white;cursor:pointer;transition:all 0.15s;text-align:center;font-family:'DM Sans',sans-serif}
+.ci-rating-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.08)}
+.ci-rating-icon{font-size:28px;display:block;margin-bottom:4px}
+.ci-rating-label{font-size:13px;font-weight:700;display:block}
+.ci-optional{margin-bottom:12px}
+.ci-opt-label{font-size:12px;font-weight:700;color:var(--warm-gray);margin-bottom:6px}
+.ci-opt-input{width:100%;padding:10px 14px;border:1.5px solid var(--sand);border-radius:12px;font-size:14px;font-family:'DM Sans',sans-serif;color:var(--charcoal);background:white}
+.ci-opt-input:focus{outline:none;border-color:var(--sage)}
+.ci-submit-btn{width:100%;padding:16px;border-radius:14px;border:none;background:var(--sage);color:white;font-size:16px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.15s;margin-top:16px}
+.ci-submit-btn:hover{background:var(--sage-dark)}
+.ci-skip{display:block;text-align:center;margin-top:12px;background:none;border:none;font-size:13px;color:var(--warm-gray-light);cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px}
+/* Streak Badge */
+.streak-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:linear-gradient(135deg,#FF6B35,#FF9A5C);border-radius:20px;font-size:13px;font-weight:700;color:white;animation:scaleIn 0.4s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 2px 12px rgba(255,107,53,0.35)}
+/* Predictions Card */
+.predictions-card{background:linear-gradient(135deg,rgba(122,158,126,0.1),rgba(107,163,199,0.06));border:1.5px solid rgba(122,158,126,0.25);border-radius:16px;padding:16px;margin-bottom:4px;animation:fadeUp 0.4s}
+.predictions-title{font-size:11px;font-weight:700;color:var(--sage-dark);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px}
+.prediction-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.prediction-item:last-child{margin-bottom:0}
+.prediction-dot{width:7px;height:7px;border-radius:50%;background:var(--sage);flex-shrink:0;margin-top:5px}
+.prediction-text{font-size:13px;line-height:1.5;color:var(--charcoal)}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .iep-right-card{padding:16px;background:var(--cream);border-radius:14px;margin-bottom:10px;border-left:4px solid var(--sage)}
 .iep-right-title{font-weight:700;font-size:14px;margin-bottom:4px}
 .iep-right-desc{font-size:13px;color:var(--warm-gray);line-height:1.5}
@@ -521,6 +550,19 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   </div>
 
   <!-- BOOKING HISTORY PAGE -->
+  <div id="insightsPage" class="overlay-page">
+    <div class="overlay-hdr">
+      <button class="overlay-back" onclick="closeOverlay('insightsPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="overlay-title">🧠 Child Insights</div>
+    </div>
+    <div class="overlay-body">
+      <div class="overlay-inner" id="insightsContent" style="padding-bottom:40px">
+        <div style="text-align:center;padding:40px 20px"><div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div><div style="margin-top:12px;font-size:14px;color:var(--warm-gray)">Analyzing patterns...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOOKING HISTORY PAGE -->
   <div id="bookingHistoryPage" class="overlay-page">
     <div class="overlay-hdr">
       <button class="overlay-back" onclick="closeOverlay('bookingHistoryPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -757,7 +799,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   <header class="hdr"><div class="hdr-left"><button class="hdr-menu" onclick="openSb()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div style="display:flex;align-items:center;gap:8px"><div class="hdr-logo"><svg width="18" height="18" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 24C8 32 14 38 22 38C30 38 36 32 36 24C36 14 22 6 22 6Z" fill="white" opacity="0.9"/><circle cx="22" cy="24" r="4" fill="white"/></svg></div><span class="hdr-name">Modern <span>Village</span></span></div></div><div class="hdr-av" id="hdrAv" onclick="openSb()">?</div></header>
 
   <div class="scroll" id="mainScroll"><div class="minner">
-    <div id="tCoach" class="tab on"><div id="childSwitcher" style="display:none;gap:8px;padding:0 0 12px;overflow-x:auto;flex-wrap:wrap"></div><div id="upgradeBanner" style="display:none"></div><div id="coachEmpty" class="ce"><div class="ce-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/><path d="M19 15L19.75 17.25L22 18L19.75 18.75L19 21L18.25 18.75L16 18L18.25 17.25L19 15Z" opacity="0.6"/></svg></div><h2>Modern Village Coach</h2><p>ABA-powered behavior strategies delivered as step-by-step cards.</p><div id="ceProfile" class="ce-profile hidden"></div><div id="freeCtr" class="free-ctr"></div><div id="sugs" style="margin-top:20px;display:flex;flex-direction:column;gap:8px"></div><div class="ariana-banner" onclick="switchTab('pros')"><div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--lavender),rgba(212,200,232,0.6));display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div><div style="flex:1"><div style="font-weight:700;font-size:14px">Need deeper support? Book a Pro session</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Certified BCBAs — from $55/session</div></div><div style="color:var(--warm-gray-light);font-size:18px">&rarr;</div></div></div><div id="chatMsgs" class="msgs hidden"></div><div id="paywall" class="paywall hidden"><div class="paywall-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/></svg></div><h3>Unlock Unlimited Coaching</h3><p>Upgrade for unlimited ABA strategy cards.</p><div class="pw-price">$19<span style="font-size:18px;font-weight:500">.99</span></div><div class="pw-period">per month &middot; cancel anytime</div><ul class="pw-feats"><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Unlimited strategy cards</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Save &amp; revisit strategies</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Behavior tracking</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Available 24/7</li></ul><button class="pw-btn" onclick="subscribe()">Start Modern Village Coach &mdash; $19.99/mo</button><div style="display:flex;gap:8px;margin-top:12px;align-items:center"><input id="promoInput" class="fi" style="flex:1;padding:10px 14px;font-size:14px;text-align:center;text-transform:uppercase" placeholder="Have a code?" maxlength="20"><button class="btn btn-s" style="padding:10px 16px" onclick="redeemCode()">Redeem</button></div><button class="pw-skip" onclick="dismissPw()">Maybe later</button></div></div>
+    <div id="tCoach" class="tab on"><div id="childSwitcher" style="display:none;gap:8px;padding:0 0 12px;overflow-x:auto;flex-wrap:wrap"></div><div id="upgradeBanner" style="display:none"></div><div id="streakArea" style="display:none;padding:4px 0 8px"></div><div id="predictionsArea" style="display:none;margin-bottom:8px"></div><div id="coachEmpty" class="ce"><div class="ce-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/><path d="M19 15L19.75 17.25L22 18L19.75 18.75L19 21L18.25 18.75L16 18L18.25 17.25L19 15Z" opacity="0.6"/></svg></div><h2>Modern Village Coach</h2><p>ABA-powered behavior strategies delivered as step-by-step cards.</p><div id="ceProfile" class="ce-profile hidden"></div><div id="freeCtr" class="free-ctr"></div><div id="sugs" style="margin-top:20px;display:flex;flex-direction:column;gap:8px"></div><div class="ariana-banner" onclick="switchTab('pros')"><div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--lavender),rgba(212,200,232,0.6));display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div><div style="flex:1"><div style="font-weight:700;font-size:14px">Need deeper support? Book a Pro session</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Certified BCBAs — from $55/session</div></div><div style="color:var(--warm-gray-light);font-size:18px">&rarr;</div></div></div><div id="chatMsgs" class="msgs hidden"></div><div id="paywall" class="paywall hidden"><div class="paywall-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/></svg></div><h3>Unlock Unlimited Coaching</h3><p>Upgrade for unlimited ABA strategy cards.</p><div class="pw-price">$19<span style="font-size:18px;font-weight:500">.99</span></div><div class="pw-period">per month &middot; cancel anytime</div><ul class="pw-feats"><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Unlimited strategy cards</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Save &amp; revisit strategies</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Behavior tracking</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Available 24/7</li></ul><button class="pw-btn" onclick="subscribe()">Start Modern Village Coach &mdash; $19.99/mo</button><div style="display:flex;gap:8px;margin-top:12px;align-items:center"><input id="promoInput" class="fi" style="flex:1;padding:10px 14px;font-size:14px;text-align:center;text-transform:uppercase" placeholder="Have a code?" maxlength="20"><button class="btn btn-s" style="padding:10px 16px" onclick="redeemCode()">Redeem</button></div><button class="pw-skip" onclick="dismissPw()">Maybe later</button></div></div>
     <div id="tPros" class="tab"><div id="providerView"></div></div>
     <div id="tComm" class="tab"><div style="margin-bottom:16px"><h2 style="font-family:'Fraunces',serif;font-size:24px;font-weight:800">Your Village</h2><p style="color:var(--warm-gray);font-size:14px;margin-top:4px">Real parents. Real stories. Real support.</p></div><div id="topicPills" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin-bottom:8px"></div>
       <!-- Compose -->
@@ -875,7 +917,7 @@ var S = {
 };
 
 var PROVIDERS = [
-  {id:'ariana',name:"Ariana Roberts",initials:"AR",creds:["BCBA"],badge:"Board Certified Behavior Analyst",specialty:["Autism (ASD)","Early Intervention","Social Skills","Parent Coaching"],bio:"Ariana brings deep expertise in behavior analysis to every family she works with. She specializes in helping parents of autistic children build structure, reduce stress, and celebrate progress. Her approach blends ABA strategies with practical warmth \u2014 because parents need both evidence and encouragement.",rating:5.0,reviews:48,price30:55,price60:95,families:200,experience:"8 yrs",color:"var(--lavender)",active:true,videoUrl:"https://doxy.me/v2/check-in/arianaroberts/",email:"ArianaRPatterson@gmail.com"}
+  {id:'ariana',name:"Ariana Roberts",initials:"AR",creds:["BCBA"],badge:"Board Certified Behavior Analyst",specialty:["Autism (ASD)","ADHD","Early Intervention","Social Skills","Parent Coaching"],bio:"Ariana brings deep expertise in behavior analysis to every family she works with. She specializes in helping parents of neurodivergent children build structure, reduce stress, and celebrate progress. Her approach blends ABA strategies with practical warmth \u2014 because parents need both evidence and encouragement.",rating:5.0,reviews:48,price30:55,price60:95,families:200,experience:"8 yrs",color:"var(--lavender)",active:true,videoUrl:"https://doxy.me/v2/check-in/arianaroberts/",email:"ArianaRPatterson@gmail.com"}
 ];
 var selectedProvider = null;
 var TIMES = ["9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM"];
@@ -1153,6 +1195,7 @@ function enterApp(){
   renderSb();renderSugs();renderProvider();renderTopics();renderCommunityPosts();updateFreeCtr();
   checkReferralOnSignup();
   handleCheckoutReturn();
+  if(S.user){checkDailyCheckin();loadStreak();}
 }
 
 async function handleCheckoutReturn(){
@@ -1298,7 +1341,7 @@ function renderSb(){
   var displayName=S.name||( S.user?S.user.email:'Guest');
   document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Signed in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+displayName+'</div>'+(S.child?'<div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Parent of '+S.child+(S.age?', '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'')+'</div>':'');
   updateSubSt();
-  var items=[{label:"My Profile",action:"openProfile()"},{label:"Saved Strategies",action:"openStrategies()"},{label:"Progress Dashboard",action:"openProgress()"},{label:"Routine Builder",action:"openRoutines()"},{label:"IEP Toolkit",action:"openIep()"},{label:"Resources",action:"openResources()"},{label:"Behavior Tracker",action:"switchTab('track')"},{label:"Booking History",action:"openBookingHistory()"},{label:"\ud83c\udf81 Invite Friends — Get 1 Month Free",action:"openReferral()",highlight:true},{label:"Settings",soon:true}];
+  var items=[{label:"My Profile",action:"openProfile()"},{label:"Saved Strategies",action:"openStrategies()"},{label:"🧠 Child Insights",action:"openInsights()"},{label:"Progress Dashboard",action:"openProgress()"},{label:"Routine Builder",action:"openRoutines()"},{label:"IEP Toolkit",action:"openIep()"},{label:"Resources",action:"openResources()"},{label:"Behavior Tracker",action:"switchTab('track')"},{label:"Booking History",action:"openBookingHistory()"},{label:"\ud83c\udf81 Invite Friends — Get 1 Month Free",action:"openReferral()",highlight:true},{label:"Settings",soon:true}];
   var h='';for(var i=0;i<items.length;i++){var item=items[i];if(item.soon){h+='<div class="sb-item" onclick="showToast(\'Coming soon!\')"><span>'+item.label+'</span><span class="sb-soon">Soon</span></div>'}else{h+='<div class="sb-item'+(item.highlight?' sb-highlight':'')+'" onclick="closeSb();'+item.action+'"><span>'+item.label+'</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray-light)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>'}}
   if(S.user)h+='<div class="sb-logout" onclick="logout()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out</div>';
   document.getElementById('sbMenu').innerHTML=h;
@@ -1332,7 +1375,14 @@ function updateFreeCtr(){
     banner.innerHTML='<div onclick="showPw()" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:'+urgency+';border-radius:12px;cursor:pointer;margin-bottom:12px;transition:all 0.2s"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:14px">'+(l<=1?'&#9889;':'&#10024;')+'</span><span style="font-size:13px;font-weight:600;color:'+textColor+'">Free Plan &middot; '+l+' message'+(l!==1?'s':'')+' left</span></div><span style="font-size:12px;font-weight:700;color:'+textColor+';white-space:nowrap">Upgrade &rarr;</span></div>';
   }
 }
-function renderSugs(){var sugs=[{cat:"Meltdown",color:"var(--terracotta)",q:"My child is having a meltdown and I don't know what to do"},{cat:"Routine",color:"var(--sky-dark)",q:"Help me build a morning routine that works"},{cat:"Aggression",color:"var(--terracotta)",q:"My child keeps hitting when frustrated"},{cat:"Transitions",color:"var(--sage)",q:"We struggle with transitioning between activities"},{cat:"Regulation",color:"#7B6FA0",q:"How do I teach my child to calm down on their own?"}];var h='';for(var i=0;i<sugs.length;i++){var s=sugs[i];h+='<button class="sug" style="animation:fadeUp 0.5s '+(0.1+i*0.08)+'s both" data-q="'+s.q.replace(/"/g,'&quot;')+'"><div class="sug-cat" style="color:'+s.color+'">'+s.cat+'</div>'+s.q+'</button>'}document.getElementById('sugs').innerHTML=h}
+function renderSugs(){var sugs=[{cat:"Meltdown",color:"var(--terracotta)",q:"My child is having a meltdown and I don't know what to do"},{cat:"Routine",color:"var(--sky-dark)",q:"Help me build a morning routine that works"},{cat:"Aggression",color:"var(--terracotta)",q:"My child keeps hitting when frustrated"},{cat:"Transitions",color:"var(--sage)",q:"We struggle with transitioning between activities"},{cat:"Regulation",color:"#7B6FA0",q:"How do I teach my child to calm down on their own?"}];var h='';
+// Adaptive insights banner (if user has logged behaviors)
+if(S.user&&childInsights&&childInsights.patterns&&childInsights.patterns.hasData){var ci=childInsights.patterns;var cn=S.child||'your child';h+='<div onclick="openInsights()" style="background:linear-gradient(135deg,rgba(122,158,126,0.12),rgba(107,163,199,0.08));border:1px solid rgba(122,158,126,0.2);border-radius:14px;padding:14px 16px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:var(--sage);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:18px">🧠</span></div><div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--dark)">I know '+esc(cn)+'\'s patterns</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">'+(ci.trend==='improving'?'Incidents down '+ci.trendPct+'% this month! ':ci.recentCount+' incidents this month. ')+(ci.topBehaviors&&ci.topBehaviors[0]?'Top: '+ci.topBehaviors[0].behavior:'')+'</div></div><div style="color:var(--warm-gray-light);font-size:16px">&rarr;</div></div>';
+}
+for(var i=0;i<sugs.length;i++){var s=sugs[i];h+='<button class="sug" style="animation:fadeUp 0.5s '+(0.1+i*0.08)+'s both" data-q="'+s.q.replace(/"/g,'&quot;')+'"><div class="sug-cat" style="color:'+s.color+'">'+s.cat+'</div>'+s.q+'</button>'}document.getElementById('sugs').innerHTML=h;
+// Pre-fetch insights data for banner on next render
+if(S.user&&!childInsights){fetchChildContext().then(function(){renderSugs()})}
+}
 function canSend(){return S.subscribed||S.freeUsed<S.freeLimit}
 function showPw(){document.getElementById('paywall').classList.remove('hidden');document.getElementById('coachEmpty').classList.add('hidden');document.getElementById('chatBar').style.display='none'}
 function dismissPw(){document.getElementById('paywall').classList.add('hidden');if(S.msgs.length)document.getElementById('chatMsgs').classList.remove('hidden');else document.getElementById('coachEmpty').classList.remove('hidden');document.getElementById('chatBar').style.display='block'}
@@ -1393,7 +1443,11 @@ async function redeemCode(){
   }
 }
 
-function buildSys(){var p=S.profile||{};var goals=p.goals&&p.goals.length?p.goals.join(', '):'';return 'You are Modern Village Coach, an AI behavior support assistant. A board certified behavior analyst oversees your clinical accuracy.\nCHILD PROFILE:\n'+(S.name?'- Parent: '+S.name+(p.parent_relationship?' ('+p.parent_relationship+')':'')+'\n':'')+(S.child?'- Child: '+S.child+'\n':'')+(S.age?'- Age: '+S.age+'\n':'')+(p.child_gender?'- Gender: '+p.child_gender+'\n':'')+(p.child_grade?'- Grade: '+p.child_grade+'\n':'')+(S.dx?'- Diagnosis: '+S.dx+'\n':'')+(goals?'- Goals: '+goals+'\n':'')+'\nFORMAT:\n[EMPATHY] 1-2 warm sentences. Use names. [/EMPATHY]\n[ASSESSMENT] Brief ABA assessment. 2-3 sentences. [/ASSESSMENT]\n[STRATEGY] 3 numbered steps. Bold title: explanation with "quoted scripts". [/STRATEGY]\n[REINFORCE] One reinforcement tip with exact words. [/REINFORCE]\n[FOLLOWUP] 2 questions separated by |. Under 10 words each. [/FOLLOWUP]\n\nRULES: Always use markers. Adapt to age/diagnosis/goals. Never diagnose. For crisis: 988/911 + book a Pro session.'}
+// ═══ ADAPTIVE AI ENGINE ═══
+var childInsights=null;
+async function fetchChildContext(){if(!S.user)return {};var ctx={logs:[],strategies:[],patterns:{},conversationTopics:[],checkins:[]};try{var logsR=await sb.from('behavior_logs').select('*').eq('user_id',S.user.id).order('logged_at',{ascending:false}).limit(100);ctx.logs=logsR.data||[];var stratR=await sb.from('saved_strategies').select('title,topic,created_at').eq('user_id',S.user.id).order('created_at',{ascending:false}).limit(20);ctx.strategies=stratR.data||[];var convR=await sb.from('conversations').select('topic,updated_at').eq('user_id',S.user.id).order('updated_at',{ascending:false}).limit(15);ctx.conversationTopics=(convR.data||[]).map(function(c){return c.topic});var checkinR=await sb.from('daily_checkins').select('date,rating,win_text,concern_text,strategy_worked,streak_count').eq('user_id',S.user.id).order('date',{ascending:false}).limit(14);ctx.checkins=checkinR.data||[];ctx.patterns=detectPatterns(ctx.logs)}catch(e){console.error('Context fetch:',e)}childInsights=ctx;renderPredictionsCard(ctx);return ctx}
+function detectPatterns(logs){if(!logs||logs.length<3)return{hasData:false};var p={hasData:true},now=new Date(),d30=new Date(now);d30.setDate(d30.getDate()-30);var d60=new Date(now);d60.setDate(d60.getDate()-60);var recent=logs.filter(function(l){return new Date(l.logged_at)>=d30}),older=logs.filter(function(l){var d=new Date(l.logged_at);return d>=d60&&d<d30});p.recentCount=recent.length;p.olderCount=older.length;if(older.length>0){p.trend=recent.length<older.length?'improving':recent.length>older.length?'increasing':'stable';p.trendPct=Math.round(Math.abs(recent.length-older.length)/older.length*100)}else{p.trend='new_user'}var hb={morning:0,afternoon:0,evening:0,night:0};recent.forEach(function(l){var h=new Date(l.logged_at).getHours();if(h>=5&&h<12)hb.morning++;else if(h>=12&&h<17)hb.afternoon++;else if(h>=17&&h<21)hb.evening++;else hb.night++});var pt=Object.entries(hb).sort(function(a,b){return b[1]-a[1]})[0];if(pt&&pt[1]>=3)p.peakTimeOfDay=pt[0];var db=[0,0,0,0,0,0,0],dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];recent.forEach(function(l){db[new Date(l.logged_at).getDay()]++});var pk=db.indexOf(Math.max.apply(null,db)),mn=db.indexOf(Math.min.apply(null,db));if(db[pk]>=3){p.hardestDay=dn[pk];p.hardestDayCount=db[pk]}if(db[mn]===0&&recent.length>=7)p.bestDay=dn[mn];var bc={};logs.forEach(function(l){var b=l.behavior.toLowerCase().substring(0,40);bc[b]=(bc[b]||0)+1});p.topBehaviors=Object.entries(bc).sort(function(a,b){return b[1]-a[1]}).slice(0,5).map(function(e){return{behavior:e[0],count:e[1]}});var tc={};logs.forEach(function(l){if(l.trigger_desc){var t=l.trigger_desc.toLowerCase().substring(0,40);tc[t]=(tc[t]||0)+1}});p.topTriggers=Object.entries(tc).sort(function(a,b){return b[1]-a[1]}).slice(0,3).map(function(e){return{trigger:e[0],count:e[1]}});var so={};logs.forEach(function(l){if(l.strategy_used&&l.outcome){var s=l.strategy_used.substring(0,40);if(!so[s])so[s]={improved:0,escalated:0,no_change:0,total:0};so[s][l.outcome]=(so[s][l.outcome]||0)+1;so[s].total++}});p.strategyEffectiveness=Object.entries(so).map(function(e){var r=e[1].total>0?Math.round(e[1].improved/e[1].total*100):0;return{strategy:e[0],successRate:r,timesUsed:e[1].total}}).sort(function(a,b){return b.successRate-a.successRate}).slice(0,5);var rs=recent.filter(function(l){return l.intensity==='severe'}).length,os=older.filter(function(l){return l.intensity==='severe'}).length;p.severeTrend=older.length>0?(rs<os?'decreasing':rs>os?'increasing':'stable'):'unknown';var durs=recent.filter(function(l){return l.duration_minutes}).map(function(l){return l.duration_minutes});p.avgDuration=durs.length>0?Math.round(durs.reduce(function(a,b){return a+b},0)/durs.length):null;if(recent.length>0){var dates=recent.map(function(l){return new Date(l.logged_at).toDateString()});var ud=[...new Set(dates)].sort(function(a,b){return new Date(a)-new Date(b)});var mg=0;for(var i=1;i<ud.length;i++){var g=Math.round((new Date(ud[i])-new Date(ud[i-1]))/86400000);if(g>mg)mg=g}p.longestCalm=mg}var lc={};logs.forEach(function(l){if(l.location)lc[l.location.toLowerCase()]=(lc[l.location.toLowerCase()]||0)+1});p.topLocations=Object.entries(lc).sort(function(a,b){return b[1]-a[1]}).slice(0,3);return p}
+function buildSys(context){var p=S.profile||{},goals=p.goals&&p.goals.length?p.goals.join(', '):'',ctx=context||{},pat=ctx.patterns||{};var sys='You are Modern Village Coach, an AI behavior support assistant that LEARNS and ADAPTS to each child over time. A board certified behavior analyst oversees your clinical accuracy.\n\nCHILD PROFILE:\n';if(S.name)sys+='- Parent: '+S.name+(p.parent_relationship?' ('+p.parent_relationship+')':'')+'\n';if(S.child)sys+='- Child: '+S.child+'\n';if(S.age)sys+='- Age: '+S.age+'\n';if(p.child_gender)sys+='- Gender: '+p.child_gender+'\n';if(p.child_grade)sys+='- Grade: '+p.child_grade+'\n';if(S.dx)sys+='- Diagnosis: '+S.dx+'\n';if(goals)sys+='- Goals: '+goals+'\n';if(pat.hasData){sys+='\nBEHAVIORAL HISTORY (from parent\'s logged data):\n';sys+='- Total incidents logged: '+(ctx.logs?ctx.logs.length:0)+'\n';if(pat.trend&&pat.trend!=='new_user')sys+='- 30-day trend: '+pat.trend+(pat.trendPct?' ('+pat.trendPct+'% vs previous month)':'')+'\n';if(pat.topBehaviors&&pat.topBehaviors.length>0)sys+='- Most frequent behaviors: '+pat.topBehaviors.map(function(b){return b.behavior+' ('+b.count+'x)'}).join(', ')+'\n';if(pat.topTriggers&&pat.topTriggers.length>0)sys+='- Common triggers: '+pat.topTriggers.map(function(t){return t.trigger+' ('+t.count+'x)'}).join(', ')+'\n';if(pat.peakTimeOfDay)sys+='- Peak time for incidents: '+pat.peakTimeOfDay+'\n';if(pat.hardestDay)sys+='- Hardest day: '+pat.hardestDay+' ('+pat.hardestDayCount+' incidents in last 30 days)\n';if(pat.bestDay)sys+='- Best day (zero incidents): '+pat.bestDay+'\n';if(pat.avgDuration)sys+='- Average incident duration: '+pat.avgDuration+' min\n';if(pat.severeTrend&&pat.severeTrend!=='unknown')sys+='- Severe incident trend: '+pat.severeTrend+'\n';if(pat.longestCalm&&pat.longestCalm>1)sys+='- Longest calm streak: '+pat.longestCalm+' days\n';if(pat.topLocations&&pat.topLocations.length>0)sys+='- Common locations: '+pat.topLocations.map(function(l){return l[0]+' ('+l[1]+'x)'}).join(', ')+'\n';if(pat.strategyEffectiveness&&pat.strategyEffectiveness.length>0){sys+='\nSTRATEGY HISTORY:\n';pat.strategyEffectiveness.forEach(function(s){sys+='- "'+s.strategy+'": '+s.successRate+'% success ('+s.timesUsed+' uses)\n'});var best=pat.strategyEffectiveness[0];if(best&&best.successRate>50)sys+='→ BEST strategy: "'+best.strategy+'" — build on this!\n';var worst=pat.strategyEffectiveness[pat.strategyEffectiveness.length-1];if(worst&&worst.successRate<30&&worst.timesUsed>=3)sys+='→ LEAST effective: "'+worst.strategy+'" — suggest alternatives.\n'}}if(ctx.logs&&ctx.logs.length>0){sys+='\nRECENT INCIDENTS (last 5):\n';ctx.logs.slice(0,5).forEach(function(l){var d=new Date(l.logged_at);sys+='- '+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+': '+l.behavior;if(l.trigger_desc)sys+=' (trigger: '+l.trigger_desc+')';if(l.outcome)sys+=' ['+l.outcome+']';if(l.strategy_used)sys+=' [tried: '+l.strategy_used+']';sys+='\n'})}if(ctx.conversationTopics&&ctx.conversationTopics.length>0){sys+='\nPAST TOPICS (avoid repeating):\n';ctx.conversationTopics.slice(0,8).forEach(function(t){sys+='- '+t+'\n'})}if(ctx.strategies&&ctx.strategies.length>0)sys+='\nParent has saved '+ctx.strategies.length+' strategies.\n';if(ctx.checkins&&ctx.checkins.length>0){sys+='\nRECENT DAILY CHECK-INS (parent mood log — use this to calibrate your tone):\n';ctx.checkins.slice(0,7).forEach(function(c){var d=new Date(c.date+'T12:00:00');sys+='- '+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+': '+c.rating.toUpperCase();if(c.win_text)sys+=' [WIN: '+c.win_text+']';if(c.concern_text)sys+=' [CONCERN: '+c.concern_text+']';if(c.strategy_worked)sys+=' [WORKED: '+c.strategy_worked+']';sys+='\n'});var rr=ctx.checkins.slice(0,5).map(function(c){return c.rating});var td=rr.filter(function(r){return r==='tough'||r==='crisis'}).length;var gd=rr.filter(function(r){return r==='great'}).length;if(td>=3)sys+='-> PARENT ALERT: '+td+' tough/crisis days in last '+rr.length+' check-ins. Lead with extra warmth and empathy today.\n';if(gd>=3)sys+='-> MOMENTUM: '+gd+' great days recently! Celebrate and build on this positive streak.\n'}sys+='\nADAPTIVE RULES:\n- Reference the child\'s ACTUAL logged data. Say "Based on your logs..." or "I noticed..."\n- If you see patterns (time, triggers, locations), proactively share insights.\n- If a strategy failed (low success rate), suggest something DIFFERENT.\n- If a strategy works (high success rate), reinforce it and build on it.\n- Celebrate improvements when the data shows them.\n- Use the child\'s name naturally.\n';if(pat.hasData&&pat.trend==='improving')sys+='- DATA SHOWS IMPROVEMENT! Lead with celebration.\n';if(pat.hasData&&pat.trend==='increasing')sys+='- DATA SHOWS INCREASE. Be extra supportive. Explore what changed.\n';sys+='\nFORMAT:\n[EMPATHY] 1-2 warm sentences. Use names. Reference data if relevant. [/EMPATHY]\n[ASSESSMENT] Brief ABA assessment. Connect to logged patterns. [/ASSESSMENT]\n[STRATEGY] 3 numbered steps. Bold title: explanation with "quoted scripts". Suggest NEW strategies they haven\'t tried. [/STRATEGY]\n[REINFORCE] One reinforcement tip with exact words. [/REINFORCE]\n[FOLLOWUP] 2 questions separated by |. Under 10 words each. [/FOLLOWUP]\n\nRULES: Always use markers. Adapt to age/diagnosis/goals/history. Never diagnose. For crisis: 988/911 + book a Pro session.';return sys}
 function parseResp(text){var s={},markers=['EMPATHY','ASSESSMENT','STRATEGY','REINFORCE','FOLLOWUP'];for(var i=0;i<markers.length;i++){var m=markers[i],re=new RegExp('\\['+m+'\\]([\\s\\S]*?)\\[\\/'+m+'\\]','i'),x=text.match(re);if(x)s[m.toLowerCase()]=x[1].trim()}if(!s.empathy&&!s.strategy)s.plain=text;return s}
 function parseSteps(text){var lines=text.split('\n').filter(function(l){return l.trim()}),steps=[];for(var i=0;i<lines.length;i++){var l=lines[i],m=l.match(/^\d+[\.\)]\s*\*?\*?(.+?)\*?\*?:\s*(.+)/);if(m)steps.push({t:m[1].replace(/\*/g,'').trim(),b:m[2].trim()});else if(l.match(/^\d+[\.\)]/))steps.push({t:'',b:l.replace(/^\d+[\.\)]\s*/,'').trim()})}return steps.length?steps:[{t:'',b:text}]}
 
@@ -1429,8 +1483,11 @@ async function send(text){
   document.getElementById('cTa').value='';renderChat();scrollBot();updSend();
   S.typing=true;renderChat();scrollBot();
   try{
+    // ═══ ADAPTIVE AI: Fetch child's behavioral context before calling AI ═══
+    var childCtx = S.user ? await fetchChildContext() : {};
+    var systemPrompt = buildSys(childCtx);
     var apiMsgs=[];for(var i=0;i<S.msgs.length;i++)apiMsgs.push({role:S.msgs[i].role==='user'?'user':'assistant',content:S.msgs[i].content});
-    var r=await authFetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,system:buildSys(),messages:apiMsgs})});
+    var r=await authFetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,system:systemPrompt,messages:apiMsgs})});
     var d=await r.json();var raw='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)raw+=d.content[i].text;
     if(!raw)raw="I'm here to help!";
     S.msgs.push({role:'assistant',content:raw,time:now(),parsed:parseResp(raw)});
@@ -2018,22 +2075,30 @@ async function postComment(postId, parentCommentId){
     return;
   }
 
-  var r = await sb.from('community_comments').insert({
-    post_id: postId,
-    user_id: S.user.id,
-    author_name: S.name || 'Anonymous',
-    content: text,
-    parent_comment_id: parentCommentId || null,
-    status: check.flagged.length ? 'flagged' : 'active',
-    flagged_words: check.flagged.length ? check.flagged : null
-  });
+  try {
+    var r = await sb.from('community_comments').insert({
+      post_id: postId,
+      user_id: S.user.id,
+      author_name: S.name || S.user.email.split('@')[0] || 'Anonymous',
+      content: text,
+      parent_comment_id: parentCommentId || null,
+      status: check.flagged.length ? 'flagged' : 'active',
+      flagged_words: check.flagged.length ? check.flagged : null
+    }).select();
 
-  if(!r.error){
-    await loadComments(postId);
-    var countEl = document.getElementById('cc_'+postId);
-    if(countEl) countEl.textContent = parseInt(countEl.textContent||0) + 1;
-  } else {
-    showToast('Error posting comment');
+    if(r.error){
+      console.error('Comment insert error:', r.error);
+      showToast('Error: ' + (r.error.message || 'Could not post comment'));
+    } else {
+      input.value = '';
+      await loadComments(postId);
+      var countEl = document.getElementById('cc_'+postId);
+      if(countEl) countEl.textContent = parseInt(countEl.textContent||0) + 1;
+      showToast('Comment posted!');
+    }
+  } catch(e) {
+    console.error('Comment error:', e);
+    showToast('Error posting comment. Please try again.');
   }
 }
 
@@ -2153,6 +2218,158 @@ async function deleteStrategy(id){
   await sb.from('saved_strategies').delete().eq('id',id);
   showToast('Strategy removed');
   loadSavedStrategies();
+}
+
+// ═══ CHILD INSIGHTS DASHBOARD ═══
+async function openInsights(){
+  if(!S.user){showAuth(true);return}
+  closeSb();
+  document.getElementById('insightsPage').classList.add('open');
+  var el=document.getElementById('insightsContent');
+  el.innerHTML='<div style="text-align:center;padding:40px 20px"><div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div><div style="margin-top:12px;font-size:14px;color:var(--warm-gray)">Analyzing patterns...</div></div>';
+  var ctx=await fetchChildContext();
+  renderInsights(ctx);
+}
+
+function renderInsights(ctx){
+  var el=document.getElementById('insightsContent');
+  var pat=ctx.patterns||{};
+  var logs=ctx.logs||[];
+  var childName=S.child||'your child';
+
+  if(!pat.hasData){
+    el.innerHTML='<div style="text-align:center;padding:40px 20px"><div style="font-size:48px;margin-bottom:16px">🧠</div><div style="font-family:Fraunces,serif;font-size:22px;font-weight:800;margin-bottom:8px">Insights Unlock With Data</div><div style="font-size:14px;color:var(--warm-gray);line-height:1.6;max-width:300px;margin:0 auto">Log at least 3 behaviors in the Tracker and the AI will start detecting patterns — time of day, triggers, what strategies work, and more.</div><button class="btn btn-p" style="margin-top:20px" onclick="closeOverlay(\'insightsPage\');switchTab(\'track\')">Start Logging</button></div>';
+    return;
+  }
+
+  var h='';
+
+  // Header
+  h+='<div style="text-align:center;margin-bottom:24px"><div style="font-family:Fraunces,serif;font-size:22px;font-weight:800;color:var(--dark)">'+esc(childName)+'\'s Insights</div><div style="font-size:13px;color:var(--warm-gray);margin-top:4px">Based on '+logs.length+' logged behaviors</div></div>';
+
+  // Trend card
+  if(pat.trend&&pat.trend!=='new_user'){
+    var trendColor=pat.trend==='improving'?'#5C7F60':pat.trend==='increasing'?'#C4745A':'#6BA3C7';
+    var trendIcon=pat.trend==='improving'?'📉':pat.trend==='increasing'?'📈':'➡️';
+    var trendText=pat.trend==='improving'?'Incidents are DOWN '+pat.trendPct+'% vs last month!':pat.trend==='increasing'?'Incidents are up '+pat.trendPct+'% vs last month':'Incidents are holding steady';
+    h+='<div style="background:linear-gradient(135deg,'+trendColor+'15,'+trendColor+'08);border:1px solid '+trendColor+'30;border-radius:16px;padding:20px;margin-bottom:16px;text-align:center">';
+    h+='<div style="font-size:32px;margin-bottom:8px">'+trendIcon+'</div>';
+    h+='<div style="font-size:16px;font-weight:700;color:'+trendColor+'">30-Day Trend</div>';
+    h+='<div style="font-size:15px;color:var(--dark);margin-top:4px;font-weight:600">'+trendText+'</div>';
+    if(pat.trend==='improving')h+='<div style="font-size:13px;color:var(--warm-gray);margin-top:8px">Keep doing what you\'re doing! 💪</div>';
+    h+='</div>';
+  }
+
+  // Stats row
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">';
+  h+='<div style="background:white;border-radius:14px;padding:16px;text-align:center;border:1px solid var(--sand)"><div style="font-size:24px;font-weight:800;color:var(--sage)">'+pat.recentCount+'</div><div style="font-size:11px;color:var(--warm-gray);margin-top:2px">This Month</div></div>';
+  h+='<div style="background:white;border-radius:14px;padding:16px;text-align:center;border:1px solid var(--sand)"><div style="font-size:24px;font-weight:800;color:var(--sky)">'+(pat.avgDuration||'—')+'</div><div style="font-size:11px;color:var(--warm-gray);margin-top:2px">Avg Duration (min)</div></div>';
+  h+='<div style="background:white;border-radius:14px;padding:16px;text-align:center;border:1px solid var(--sand)"><div style="font-size:24px;font-weight:800;color:var(--lavender)">'+(pat.longestCalm||'—')+'</div><div style="font-size:11px;color:var(--warm-gray);margin-top:2px">Best Calm Streak (days)</div></div>';
+  h+='</div>';
+
+  // Pattern cards
+  // Peak time
+  if(pat.peakTimeOfDay){
+    var timeLabels={morning:'🌅 Morning (5am-12pm)',afternoon:'☀️ Afternoon (12-5pm)',evening:'🌆 Evening (5-9pm)',night:'🌙 Night (9pm-5am)'};
+    h+='<div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--sand)">';
+    h+='<div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:4px">⏰ Peak Time for Incidents</div>';
+    h+='<div style="font-size:15px;color:var(--warm-gray)">'+(timeLabels[pat.peakTimeOfDay]||pat.peakTimeOfDay)+'</div>';
+    h+='<div style="font-size:12px;color:var(--sage);margin-top:6px">💡 Consider adding a transition routine before this time block</div>';
+    h+='</div>';
+  }
+
+  // Hardest day
+  if(pat.hardestDay){
+    h+='<div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--sand)">';
+    h+='<div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:4px">📅 Hardest Day of the Week</div>';
+    h+='<div style="font-size:15px;color:var(--warm-gray)">'+pat.hardestDay+'s ('+pat.hardestDayCount+' incidents in last 30 days)</div>';
+    if(pat.bestDay)h+='<div style="font-size:12px;color:var(--sage);margin-top:6px">🌟 Best day: '+pat.bestDay+'s — zero incidents!</div>';
+    h+='</div>';
+  }
+
+  // Top behaviors
+  if(pat.topBehaviors&&pat.topBehaviors.length>0){
+    h+='<div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--sand)">';
+    h+='<div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:10px">🔄 Most Frequent Behaviors</div>';
+    pat.topBehaviors.forEach(function(b){
+      var pct=logs.length>0?Math.round(b.count/logs.length*100):0;
+      h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">';
+      h+='<div style="flex:1"><div style="font-size:13px;color:var(--dark);font-weight:500;text-transform:capitalize">'+esc(b.behavior)+'</div>';
+      h+='<div style="background:var(--sand);border-radius:6px;height:6px;margin-top:4px;overflow:hidden"><div style="background:var(--terracotta);height:100%;width:'+pct+'%;border-radius:6px"></div></div></div>';
+      h+='<div style="font-size:12px;color:var(--warm-gray);white-space:nowrap">'+b.count+'x</div>';
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+
+  // Top triggers
+  if(pat.topTriggers&&pat.topTriggers.length>0){
+    h+='<div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--sand)">';
+    h+='<div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:10px">⚡ Common Triggers</div>';
+    pat.topTriggers.forEach(function(t){
+      h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+      h+='<div style="width:8px;height:8px;border-radius:50%;background:var(--terracotta);flex-shrink:0"></div>';
+      h+='<div style="font-size:13px;color:var(--dark);text-transform:capitalize;flex:1">'+esc(t.trigger)+'</div>';
+      h+='<div style="font-size:12px;color:var(--warm-gray)">'+t.count+'x</div>';
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+
+  // Strategy effectiveness
+  if(pat.strategyEffectiveness&&pat.strategyEffectiveness.length>0){
+    h+='<div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--sand)">';
+    h+='<div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:10px">🎯 Strategy Effectiveness</div>';
+    pat.strategyEffectiveness.forEach(function(s){
+      var col=s.successRate>=60?'var(--sage)':s.successRate>=30?'var(--sky)':'var(--terracotta)';
+      var emoji=s.successRate>=60?'✅':s.successRate>=30?'🔄':'❌';
+      h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
+      h+='<div style="font-size:16px">'+emoji+'</div>';
+      h+='<div style="flex:1"><div style="font-size:13px;color:var(--dark);font-weight:500">'+esc(s.strategy)+'</div>';
+      h+='<div style="display:flex;align-items:center;gap:8px;margin-top:4px"><div style="background:var(--sand);border-radius:6px;height:6px;flex:1;overflow:hidden"><div style="background:'+col+';height:100%;width:'+s.successRate+'%;border-radius:6px"></div></div>';
+      h+='<div style="font-size:11px;color:'+col+';font-weight:600">'+s.successRate+'%</div></div></div>';
+      h+='<div style="font-size:11px;color:var(--warm-gray)">'+s.timesUsed+' uses</div>';
+      h+='</div>';
+    });
+    h+='<div style="font-size:12px;color:var(--sage);margin-top:8px;padding-top:8px;border-top:1px solid var(--sand)">💡 The AI Coach uses this data to recommend strategies that work for '+esc(childName)+'</div>';
+    h+='</div>';
+  }
+
+  // Location patterns
+  if(pat.topLocations&&pat.topLocations.length>0){
+    h+='<div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--sand)">';
+    h+='<div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:10px">📍 Where Incidents Happen</div>';
+    pat.topLocations.forEach(function(l){
+      h+='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;color:var(--dark);text-transform:capitalize">'+esc(l[0])+'</span><span style="font-size:12px;color:var(--warm-gray)">'+l[1]+'x</span></div>';
+    });
+    h+='</div>';
+  }
+
+  // Severity trend
+  if(pat.severeTrend&&pat.severeTrend!=='unknown'){
+    var sevColor=pat.severeTrend==='decreasing'?'var(--sage)':pat.severeTrend==='increasing'?'var(--terracotta)':'var(--sky)';
+    var sevEmoji=pat.severeTrend==='decreasing'?'✅':pat.severeTrend==='increasing'?'⚠️':'➡️';
+    h+='<div style="background:white;border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--sand)">';
+    h+='<div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:4px">'+sevEmoji+' Severe Incidents Trend</div>';
+    h+='<div style="font-size:14px;color:'+sevColor+';font-weight:600;text-transform:capitalize">'+pat.severeTrend+'</div>';
+    h+='</div>';
+  }
+
+  // CTA — Ask the coach
+  h+='<div style="background:linear-gradient(135deg,var(--sage-light),rgba(232,240,232,0.4));border-radius:16px;padding:20px;text-align:center;margin-top:8px;border:1px solid rgba(122,158,126,0.2)">';
+  h+='<div style="font-family:Fraunces,serif;font-size:16px;font-weight:800;margin-bottom:6px">Your AI Coach knows all of this</div>';
+  h+='<div style="font-size:13px;color:var(--warm-gray);margin-bottom:14px">Every conversation is personalized using '+esc(childName)+'\'s behavioral history, patterns, and what strategies have worked.</div>';
+  h+='<button class="btn btn-p" onclick="closeOverlay(\'insightsPage\');switchTab(\'coach\')">Ask the Coach</button>';
+  h+='</div>';
+
+  // Share with provider CTA
+  h+='<div style="background:linear-gradient(135deg,var(--lavender),rgba(212,200,232,0.3));border-radius:16px;padding:20px;text-align:center;margin-top:12px;border:1px solid rgba(212,200,232,0.3)">';
+  h+='<div style="font-family:Fraunces,serif;font-size:16px;font-weight:800;margin-bottom:6px">Share With Your Provider</div>';
+  h+='<div style="font-size:13px;color:var(--warm-gray);margin-bottom:14px">Book a session to review '+esc(childName)+'\'s insights together and fine-tune your approach.</div>';
+  h+='<button class="btn btn-p" style="background:var(--lavender)" onclick="closeOverlay(\'insightsPage\');switchTab(\'pros\')">Book a Session</button>';
+  h+='</div>';
+
+  el.innerHTML=h;
 }
 
 // ═══ BOOKING HISTORY ═══
@@ -3056,6 +3273,165 @@ async function saveProfile(){
     showToast('Profile saved!');
   } else { showToast('Error saving profile'); }
 }
+
+// ═══ DAILY CHECK-IN SYSTEM ═══
+var checkinRating=null;
+
+function selectCheckinRating(r){
+  checkinRating=r;
+  var colors={great:'#7A9E7E',ok:'#6BA3C7',tough:'#C4745A',crisis:'#E05252'};
+  ['great','ok','tough','crisis'].forEach(function(x){
+    var id='ci'+x.charAt(0).toUpperCase()+x.slice(1);
+    var btn=document.getElementById(id);
+    if(!btn)return;
+    btn.style.borderColor=x===r?colors[r]:'var(--sand)';
+    btn.style.background=x===r?colors[r]+'22':'white';
+  });
+  document.getElementById('checkinOptional').style.display='block';
+  var sb2=document.getElementById('ciSubmitBtn');
+  sb2.disabled=false;
+  sb2.style.opacity='1';
+}
+
+async function checkDailyCheckin(){
+  if(!S.user)return;
+  try{
+    var today=new Date().toISOString().split('T')[0];
+    var res=await sb.from('daily_checkins').select('id').eq('user_id',S.user.id).eq('date',today).maybeSingle();
+    if(!res.data)setTimeout(showCheckinModal,2500);
+  }catch(e){console.error('Checkin check:',e);}
+}
+
+function showCheckinModal(){
+  var h=new Date().getHours();
+  var title=h>=17?'How was today? 🌱':h>=12?'Afternoon check-in 🌤️':'Morning check-in ☀️';
+  document.getElementById('checkinTitle').textContent=title;
+  checkinRating=null;
+  document.getElementById('checkinOptional').style.display='none';
+  var s=document.getElementById('ciSubmitBtn');
+  s.disabled=true;s.style.opacity='0.5';s.textContent='Log Check-in';
+  ['Great','Ok','Tough','Crisis'].forEach(function(x){
+    var btn=document.getElementById('ci'+x);
+    if(btn){btn.style.borderColor='var(--sand)';btn.style.background='white';}
+  });
+  ['ciWin','ciConcern','ciStrategy'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('checkinModal').classList.remove('hidden');
+}
+
+function closeCheckinModal(){
+  document.getElementById('checkinModal').classList.add('hidden');
+}
+
+async function submitCheckin(){
+  if(!checkinRating||!S.user)return;
+  var btn=document.getElementById('ciSubmitBtn');
+  btn.textContent='Saving...';btn.disabled=true;
+  try{
+    var today=new Date().toISOString().split('T')[0];
+    var {data:recent}=await sb.from('daily_checkins').select('date').eq('user_id',S.user.id).order('date',{ascending:false}).limit(30);
+    var streak=calculateStreak(recent||[],today);
+    await sb.from('daily_checkins').upsert({
+      user_id:S.user.id,date:today,rating:checkinRating,
+      win_text:document.getElementById('ciWin').value.trim()||null,
+      concern_text:document.getElementById('ciConcern').value.trim()||null,
+      strategy_worked:document.getElementById('ciStrategy').value.trim()||null,
+      streak_count:streak
+    },{onConflict:'user_id,date'});
+    closeCheckinModal();
+    S.todayStreak=streak;
+    renderStreakBadge(streak);
+    fetchChildContext();
+    var msgs={great:'🌟 Great day logged! Keep it up!',ok:'😊 Check-in saved. Every day counts!',tough:'💙 Tough day noted. Coach is here to help.',crisis:'🚨 Checked in. Reach out for support if needed.'};
+    showToast(msgs[checkinRating]);
+  }catch(e){
+    console.error('Checkin save:',e);
+    showToast('Could not save check-in');
+    btn.textContent='Log Check-in';btn.disabled=false;btn.style.opacity='1';
+  }
+}
+
+function calculateStreak(records,today){
+  if(!records||records.length===0)return 1;
+  var dates=records.map(function(r){return r.date;}).sort().reverse();
+  var streak=1;
+  var d=new Date(today+'T12:00:00');
+  for(var i=0;i<dates.length;i++){
+    var prev=new Date(d);
+    prev.setDate(prev.getDate()-1);
+    var prevStr=prev.toISOString().split('T')[0];
+    if(dates[i]===prevStr){streak++;d=prev;}
+    else if(dates[i]!==today)break;
+  }
+  return streak;
+}
+
+async function loadStreak(){
+  if(!S.user)return;
+  try{
+    var today=new Date().toISOString().split('T')[0];
+    var {data}=await sb.from('daily_checkins').select('date,streak_count').eq('user_id',S.user.id).order('date',{ascending:false}).limit(1);
+    if(data&&data.length>0&&data[0].date===today){
+      S.todayStreak=data[0].streak_count||1;
+      renderStreakBadge(S.todayStreak);
+    }
+  }catch(e){}
+}
+
+function renderStreakBadge(streak){
+  var area=document.getElementById('streakArea');
+  if(!area||!streak||streak<1)return;
+  area.style.display='block';
+  var emoji=streak>=30?'🏆':streak>=14?'⚡':streak>=7?'🔥':'✨';
+  area.innerHTML='<div class="streak-badge">'+emoji+' '+streak+'-day streak</div>';
+}
+
+function generatePredictions(ctx){
+  if(!ctx||!ctx.patterns||!ctx.patterns.hasData)return[];
+  var pat=ctx.patterns,predictions=[];
+  var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+  if(pat.hardestDay&&pat.hardestDayCount>=3){
+    if(days[tomorrow.getDay()]===pat.hardestDay)
+      predictions.push('Tomorrow is '+pat.hardestDay+' — your toughest day. Plan extra support and decompression time.');
+    else
+      predictions.push(pat.hardestDay+'s tend to be hardest ('+pat.hardestDayCount+' incidents). Prepare support strategies ahead of time.');
+  }
+  if(pat.peakTimeOfDay){
+    var tl={morning:'mornings',afternoon:'afternoons',evening:'evenings',night:'nights'};
+    predictions.push('Most incidents happen in the '+tl[pat.peakTimeOfDay]+'. Build in decompression time before then.');
+  }
+  if(pat.trend==='improving'&&pat.trendPct>15)
+    predictions.push('Incidents are down '+pat.trendPct+'% this month 🎉 What\'s working — keep going!');
+  else if(pat.trend==='increasing'&&pat.trendPct>15)
+    predictions.push('Incidents up '+pat.trendPct+'% vs. last month. Consider booking a session with a BCBA.');
+  if(pat.strategyEffectiveness&&pat.strategyEffectiveness.length>0){
+    var best=pat.strategyEffectiveness[0];
+    if(best.successRate>60&&best.timesUsed>=3)
+      predictions.push('"'+best.strategy+'" works '+best.successRate+'% of the time — your most effective tool right now.');
+  }
+  if(ctx.checkins&&ctx.checkins.length>=3){
+    var recent=ctx.checkins.slice(0,5).map(function(c){return c.rating;});
+    var tough=recent.filter(function(r){return r==='tough'||r==='crisis';}).length;
+    if(tough>=3)predictions.push('You\'ve had '+tough+' tough days recently. You\'re doing hard work — the coach is here for you.');
+  }
+  return predictions.slice(0,3);
+}
+
+function renderPredictionsCard(ctx){
+  var area=document.getElementById('predictionsArea');
+  if(!area)return;
+  if(!ctx||!ctx.patterns||!ctx.patterns.hasData){area.style.display='none';return;}
+  var predictions=generatePredictions(ctx);
+  if(predictions.length===0){area.style.display='none';return;}
+  area.style.display='block';
+  var items=predictions.map(function(p){
+    return '<div class="prediction-item"><div class="prediction-dot"></div><div class="prediction-text">'+esc(p)+'</div></div>';
+  }).join('');
+  area.innerHTML='<div class="predictions-card"><div class="predictions-title">🧠 Coach Insights</div>'+items+'</div>';
+}
+
 </script>
 <!-- ADD/EDIT CHILD MODAL -->
 <div id="addChildModal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px">
@@ -3138,5 +3514,48 @@ async function saveProfile(){
     <div id="refHistory" style="background:var(--cream);border-radius:12px;padding:12px;max-height:150px;overflow-y:auto"></div>
   </div>
 </div>
+<!-- Daily Check-in Modal -->
+<div id="checkinModal" class="ci-modal-wrap hidden">
+  <div class="ci-modal">
+    <div class="ci-modal-handle"></div>
+    <div id="checkinTitle" class="ci-modal-title">How was today? 🌱</div>
+    <div class="ci-modal-sub">A quick check-in helps your AI coach learn your patterns and get smarter over time</div>
+    <div class="ci-ratings">
+      <button class="ci-rating-btn" id="ciGreat" onclick="selectCheckinRating('great')">
+        <span class="ci-rating-icon">🌟</span>
+        <span class="ci-rating-label">Great</span>
+      </button>
+      <button class="ci-rating-btn" id="ciOk" onclick="selectCheckinRating('ok')">
+        <span class="ci-rating-icon">😊</span>
+        <span class="ci-rating-label">OK</span>
+      </button>
+      <button class="ci-rating-btn" id="ciTough" onclick="selectCheckinRating('tough')">
+        <span class="ci-rating-icon">😔</span>
+        <span class="ci-rating-label">Tough</span>
+      </button>
+      <button class="ci-rating-btn" id="ciCrisis" onclick="selectCheckinRating('crisis')">
+        <span class="ci-rating-icon">🚨</span>
+        <span class="ci-rating-label">Crisis</span>
+      </button>
+    </div>
+    <div id="checkinOptional" style="display:none">
+      <div class="ci-optional">
+        <div class="ci-opt-label">What went well? (optional)</div>
+        <input id="ciWin" class="ci-opt-input" placeholder="e.g. Bedtime routine went smoothly ✨">
+      </div>
+      <div class="ci-optional" style="margin-top:10px">
+        <div class="ci-opt-label">Any concerns? (optional)</div>
+        <input id="ciConcern" class="ci-opt-input" placeholder="e.g. Struggled with transitions at school">
+      </div>
+      <div class="ci-optional" style="margin-top:10px">
+        <div class="ci-opt-label">Strategy that worked? (optional)</div>
+        <input id="ciStrategy" class="ci-opt-input" placeholder="e.g. Visual timer, deep breathing">
+      </div>
+    </div>
+    <button class="ci-submit-btn" id="ciSubmitBtn" onclick="submitCheckin()" disabled style="opacity:0.5">Log Check-in</button>
+    <button class="ci-skip" onclick="closeCheckinModal()">Skip for today</button>
+  </div>
+</div>
+
 </body>
 </html>
