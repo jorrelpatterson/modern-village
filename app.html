@@ -3266,10 +3266,10 @@ async function loadSavedRoutines2(){
     var icons=(rt.steps||[]).map(function(s){return s.icon}).join(' ');
     var childName='';
     if(rt.child_id&&S.children){var ch=S.children.find(function(c){return c.id===rt.child_id});if(ch)childName=ch.name}
-    h+='<div class="routine-card" style="cursor:pointer" data-id="'+rt.id+'" onclick="loadSavedRoutine(''+rt.id+'')">';
+    h+='<div class="routine-card" style="cursor:pointer" data-id="'+rt.id+'" onclick="loadSavedRoutine(\''+rt.id+'\')">';
     h+='<div class="routine-card-hdr"><div class="routine-card-title">'+esc(rt.title)+'</div><div style="display:flex;gap:6px;align-items:center">';
     if(rt.source==='ai')h+='<span style="font-size:11px;background:var(--lavender);color:#6B5B8D;padding:2px 8px;border-radius:6px;font-weight:700">AI</span>';
-    h+='<span class="routine-card-time">'+ds+'</span><button class="routine-step-del" onclick="event.stopPropagation();deleteSavedRoutine(''+rt.id+'')">&times;</button></div></div>';
+    h+='<span class="routine-card-time">'+ds+'</span><button class="routine-step-del" onclick="event.stopPropagation();deleteSavedRoutine(\''+rt.id+'\')">&times;</button></div></div>';
     h+='<div style="font-size:14px;margin-bottom:4px">'+icons+'</div>';
     h+='<div style="font-size:12px;color:var(--warm-gray-light)">'+rt.steps.length+' steps'+(childName?' · '+esc(childName):'')+'</div>';
     h+='</div>';
