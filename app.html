@@ -654,6 +654,13 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     </div>
     <div class="overlay-body">
       <div class="overlay-inner">
+        <!-- Child selector for routines -->
+        <div id="routineChildSelector" style="margin-bottom:16px;display:none">
+          <div style="font-size:13px;font-weight:600;color:var(--warm-gray);margin-bottom:8px">Building routine for:</div>
+          <select id="routineChildFilter" class="fi" onchange="loadSavedRoutines2()" style="padding:10px 14px;border-radius:12px;font-size:14px">
+          </select>
+        </div>
+
         <!-- Templates -->
         <div style="margin-bottom:20px">
           <div style="font-size:13px;font-weight:600;color:var(--warm-gray);margin-bottom:8px">Start from a template:</div>
@@ -2830,6 +2837,21 @@ async function openRoutines(){
         showToast('Routines synced to your account!');
       }
     }catch(e){console.error('Routine migration:',e)}
+  }
+
+  // Populate child selector
+  var csel=document.getElementById('routineChildSelector');
+  var cfilt=document.getElementById('routineChildFilter');
+  if(S.children&&S.children.length>1){
+    csel.style.display='block';
+    var ch='<option value="">All children</option>';
+    for(var j=0;j<S.children.length;j++){
+      var c=S.children[j];
+      ch+='<option value="'+c.id+'"'+(S.activeChild&&S.activeChild.id===c.id?' selected':'')+'>'+esc(c.name)+'</option>';
+    }
+    cfilt.innerHTML=ch;
+  } else {
+    csel.style.display='none';
   }
 
   loadSavedRoutines2();
