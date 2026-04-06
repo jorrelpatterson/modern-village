@@ -112,6 +112,32 @@ export default {
       } catch { return new Response('{"valid":false}', { status: 500, headers: h }); }
     }
 
+    // ═══ TEMP: ADMIN PASSWORD RESET (remove after use) ═══
+    if (url.pathname === '/admin-reset-password') {
+      const targetEmail = body.email;
+      const newPassword = body.password;
+      if (!targetEmail || !newPassword) return new Response('{"error":"Missing email or password"}', { status: 400, headers: h });
+
+      // Find user by email
+      const findRes = await fetch(env.SUPABASE_URL + '/auth/v1/admin/users?page=1&per_page=50', {
+        headers: { 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'apikey': env.SUPABASE_SERVICE_KEY }
+      });
+      const usersData = await findRes.json();
+      const users = usersData.users || usersData || [];
+      const targetUser = users.find(u => u.email === targetEmail);
+      if (!targetUser) return new Response('{"error":"User not found"}', { status: 404, headers: h });
+
+      // Update password via admin API
+      const updateRes = await fetch(env.SUPABASE_URL + '/auth/v1/admin/users/' + targetUser.id, {
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'apikey': env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword })
+      });
+      const result = await updateRes.json();
+      if (!updateRes.ok) return new Response(JSON.stringify({error: result}), { status: 500, headers: h });
+      return new Response('{"success":true}', { headers: h });
+    }
+
     // ═══ INVITE ═══
     if (url.pathname === '/invite') {
       if (!checkRate(ip, 'email')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
@@ -122,7 +148,7 @@ export default {
       const role = body.role;
       const childId = body.child_id;
       if (!email || !email.includes('@')) return new Response('{"error":"Invalid email"}', { status: 400, headers: h });
-      if (!['caregiver','teacher','provider'].includes(role)) return new Response('{"error":"Invalid role"}', { status: 400, headers: h });
+      if (!['caregiver','teacher'].includes(role)) return new Response('{"error":"Invalid role"}', { status: 400, headers: h });
       if (!childId) return new Response('{"error":"Missing child_id"}', { status: 400, headers: h });
 
       // Verify child belongs to user
@@ -191,7 +217,7 @@ export default {
       if (invite.email !== user.email.toLowerCase().trim()) return new Response('{"error":"This invite was sent to ' + invite.email + '"}', { status: 403, headers: h });
 
       // Set user role
-      const accessLevel = invite.role === 'caregiver' ? 'daily' : invite.role === 'provider' ? 'clinical' : 'school';
+      const accessLevel = invite.role === 'caregiver' ? 'daily' : 'school';
       await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id, {
         method: 'PATCH',
         headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
