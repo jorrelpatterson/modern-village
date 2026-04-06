@@ -1122,19 +1122,29 @@ async function loadProfile(){
 
 async function loadChildren(){
   if(!S.user)return;
-  var r=await sb.from('children').select('*').eq('user_id',S.user.id).order('created_at',{ascending:true});
-  S.children=r.data||[];
-  // If no children in table but profile has legacy child data, migrate it
-  if(!S.children.length && S.profile && S.profile.child_name){
-    var legacy={user_id:S.user.id,name:S.profile.child_name,age:S.profile.child_age||null,gender:S.profile.child_gender||null,school:S.profile.child_school||null,grade:S.profile.child_grade||null,birthday:S.profile.child_birthday||null};
-    if(S.profile.diagnosis){
-      legacy.diagnosis=Array.isArray(S.profile.diagnosis)?S.profile.diagnosis:[S.profile.diagnosis];
+  S.role=S.profile&&S.profile.role||'parent';
+
+  if(S.role==='parent'){
+    var r=await sb.from('children').select('*').eq('user_id',S.user.id).order('created_at',{ascending:true});
+    S.children=r.data||[];
+    if(!S.children.length && S.profile && S.profile.child_name){
+      var legacy={user_id:S.user.id,name:S.profile.child_name,age:S.profile.child_age||null,gender:S.profile.child_gender||null,school:S.profile.child_school||null,grade:S.profile.child_grade||null,birthday:S.profile.child_birthday||null};
+      if(S.profile.diagnosis){legacy.diagnosis=Array.isArray(S.profile.diagnosis)?S.profile.diagnosis:[S.profile.diagnosis]}
+      if(S.profile.goals) legacy.goals=S.profile.goals;
+      var ins=await sb.from('children').insert(legacy).select();
+      if(ins.data&&ins.data.length){S.children=ins.data;await sb.from('profiles').update({active_child_id:ins.data[0].id}).eq('id',S.user.id)}
     }
-    if(S.profile.goals) legacy.goals=S.profile.goals;
-    var ins=await sb.from('children').insert(legacy).select();
-    if(ins.data&&ins.data.length){S.children=ins.data;await sb.from('profiles').update({active_child_id:ins.data[0].id}).eq('id',S.user.id)}
+  } else {
+    var accessR=await sb.from('child_access').select('child_id').eq('user_id',S.user.id).is('revoked_at',null);
+    var childIds=(accessR.data||[]).map(function(a){return a.child_id});
+    if(childIds.length){
+      var r=await sb.from('children').select('*').in('id',childIds);
+      S.children=r.data||[];
+    } else {
+      S.children=[];
+    }
   }
-  // Set active child
+
   var activeId=S.profile&&S.profile.active_child_id;
   if(activeId){
     S.activeChild=S.children.find(function(c){return c.id===activeId})||S.children[0]||null;
@@ -1144,6 +1154,7 @@ async function loadChildren(){
   }
   syncActiveChild();
   renderChildSwitcher();
+  renderProfileChildren();
 }
 
 function syncActiveChild(){
