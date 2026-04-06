@@ -1635,7 +1635,7 @@ function updateSubSt(){
 }
 
 // ═══ TAB SWITCHING ═══
-function switchTab(t){S.tab=t;var tabs=document.querySelectorAll('.tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('on');var m={coach:'tCoach',pros:'tPros',community:'tComm',track:'tTrack',clients:'tClients'};document.getElementById(m[t]).classList.add('on');var btns=document.querySelectorAll('.nb');for(var i=0;i<btns.length;i++){var b=btns[i],a=b.getAttribute('data-t')===t;b.classList.toggle('on',a);var s=b.querySelector('svg'),d=b.querySelector('.ndot');if(a){if(!d){d=document.createElement('div');d.className='ndot';b.appendChild(d)}s.setAttribute('stroke',t==='coach'?'none':'#7A9E7E');if(t==='coach')s.setAttribute('fill','#7A9E7E')}else{if(d)d.remove();s.setAttribute('stroke','#9E9790');s.setAttribute('fill','none')}}document.getElementById('chatBar').style.display=t==='coach'?'block':'none';document.getElementById('mainScroll').scrollTop=0;if(t==='track')loadLogs();if(t==='community')renderCommunityPosts()}
+function switchTab(t){S.tab=t;var tabs=document.querySelectorAll('.tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('on');var m={coach:'tCoach',pros:'tPros',community:'tComm',track:'tTrack',clients:'tClients'};document.getElementById(m[t]).classList.add('on');var btns=document.querySelectorAll('.nb');for(var i=0;i<btns.length;i++){var b=btns[i],a=b.getAttribute('data-t')===t;b.classList.toggle('on',a);var s=b.querySelector('svg'),d=b.querySelector('.ndot');if(a){if(!d){d=document.createElement('div');d.className='ndot';b.appendChild(d)}s.setAttribute('stroke',t==='coach'?'none':'#7A9E7E');if(t==='coach')s.setAttribute('fill','#7A9E7E')}else{if(d)d.remove();s.setAttribute('stroke','#9E9790');s.setAttribute('fill','none')}}document.getElementById('chatBar').style.display=t==='coach'?'block':'none';document.getElementById('mainScroll').scrollTop=0;if(t==='track')loadLogs();if(t==='community')renderCommunityPosts();if(t==='clients')loadClients()}
 
 // ═══ AI COACH ═══
 function updateFreeCtr(){
@@ -3933,6 +3933,268 @@ async function revokeAccess(accessId,childId){
   showToast('Access revoked');
   loadCareTeam(childId);
 }
+
+// ═══ PROVIDER DASHBOARD ═══
+async function loadClients(){
+  if(!S.user||S.role!=='provider')return;
+  var el=document.getElementById('clientList');
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading clients...</div>';
+  var accessR=await sb.from('child_access').select('child_id').eq('user_id',S.user.id).eq('access_level','clinical').is('revoked_at',null);
+  var childIds=(accessR.data||[]).map(function(a){return a.child_id});
+  if(!childIds.length){
+    el.innerHTML='<div style="text-align:center;padding:32px;color:var(--warm-gray-light)"><div style="font-size:40px;margin-bottom:8px">\ud83d\udc65</div><div style="font-size:15px;font-weight:600">No clients yet</div><div style="font-size:13px;margin-top:4px">Parents can invite you from their Care Team settings</div></div>';
+    document.getElementById('clientCount').textContent='0 clients';
+    return;
+  }
+  var childR=await sb.from('children').select('*').in('id',childIds);
+  var children=childR.data||[];
+  document.getElementById('clientCount').textContent=children.length+' client'+(children.length!==1?'s':'');
+
+  var h='';
+  for(var i=0;i<children.length;i++){
+    var c=children[i];
+    var dx=c.diagnosis&&c.diagnosis.length?c.diagnosis.join(', '):'';
+    var logsR=await sb.from('behavior_logs').select('logged_at,behavior,intensity').eq('user_id',c.user_id).order('logged_at',{ascending:false}).limit(30);
+    var logs=logsR.data||[];
+    var lastIncident=logs.length?new Date(logs[0].logged_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'No logs';
+    var pat=detectPatterns(logs);
+    var trend=pat.trend||'new_user';
+    var trendLabel=trend==='improving'?'Improving':trend==='increasing'?'Increasing':trend==='stable'?'Stable':'New';
+
+    var sessR=await sb.from('session_notes').select('billing_status').eq('provider_id',S.user.id).eq('child_id',c.id);
+    var sessions=sessR.data||[];
+    var drafts=sessions.filter(function(s){return s.billing_status==='draft'}).length;
+    var submitted=sessions.filter(function(s){return s.billing_status==='submitted'}).length;
+
+    h+='<div class="client-card" onclick="openClientDetail(\x27'+c.id+'\x27)">';
+    h+='<div style="display:flex;align-items:center;gap:12px"><div class="client-avatar">'+esc((c.name||'?')[0].toUpperCase())+'</div><div style="flex:1"><div style="font-weight:700;font-size:15px">'+esc(c.name)+'</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">'+(c.age||'')+(dx?(c.age?' \u00b7 ':'')+dx:'')+'</div></div>';
+    if(trend!=='new_user')h+='<span class="client-trend '+trend+'">'+trendLabel+'</span>';
+    h+='</div>';
+    h+='<div style="display:flex;gap:16px;margin-top:10px">';
+    h+='<div class="client-stat">Last: '+lastIncident+'</div>';
+    h+='<div class="client-stat">'+sessions.length+' sessions</div>';
+    if(drafts)h+='<div class="client-stat"><span class="session-badge billing-draft">'+drafts+' draft</span></div>';
+    if(submitted)h+='<div class="client-stat"><span class="session-badge billing-submitted">'+submitted+' pending</span></div>';
+    h+='</div></div>';
+  }
+  el.innerHTML=h;
+}
+
+var providerActiveChild=null;
+var providerActiveTab='logs';
+
+async function openClientDetail(childId){
+  var childR=await sb.from('children').select('*').eq('id',childId).single();
+  if(!childR.data)return;
+  providerActiveChild=childR.data;
+  S.activeChild=providerActiveChild;
+  syncActiveChild();
+
+  document.getElementById('clientDetailTitle').textContent=providerActiveChild.name;
+  var dx=providerActiveChild.diagnosis&&providerActiveChild.diagnosis.length?providerActiveChild.diagnosis.join(', '):'';
+  document.getElementById('clientDetailProfile').innerHTML='<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--sage-light);border-radius:14px"><div class="client-avatar" style="width:48px;height:48px;font-size:20px">'+esc((providerActiveChild.name||'?')[0].toUpperCase())+'</div><div><div style="font-weight:700;font-size:16px">'+esc(providerActiveChild.name)+'</div><div style="font-size:13px;color:var(--warm-gray);margin-top:2px">'+(providerActiveChild.age||'')+(dx?(providerActiveChild.age?' \u00b7 ':'')+dx:'')+'</div></div></div>';
+
+  document.getElementById('clientDetailTabs').innerHTML='<button class="cdtab active" onclick="switchClientTab(\x27logs\x27,this)">Behavior Logs</button><button class="cdtab" onclick="switchClientTab(\x27sessions\x27,this)">Session Notes</button><button class="cdtab" onclick="switchClientTab(\x27notes\x27,this)">Care Notes</button><button class="cdtab" onclick="switchClientTab(\x27insights\x27,this)">Insights</button>';
+  providerActiveTab='logs';
+
+  document.getElementById('clientDetailPage').classList.add('open');
+  loadClientTab();
+}
+
+function switchClientTab(tab,btn){
+  providerActiveTab=tab;
+  document.querySelectorAll('.cdtab').forEach(function(t){t.classList.remove('active')});
+  if(btn)btn.classList.add('active');
+  loadClientTab();
+}
+
+async function loadClientTab(){
+  var el=document.getElementById('clientDetailContent');
+  if(!providerActiveChild)return;
+
+  if(providerActiveTab==='logs'){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div>';
+    var r=await sb.from('behavior_logs').select('*').eq('user_id',providerActiveChild.user_id).order('logged_at',{ascending:false}).limit(30);
+    var logs=r.data||[];
+    if(!logs.length){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--warm-gray-light)">No behavior logs yet</div>';return}
+    var h='';
+    for(var i=0;i<logs.length;i++){
+      var l=logs[i];
+      var d=new Date(l.logged_at);
+      var timeStr=d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' at '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      h+='<div class="session-card"><div style="display:flex;justify-content:space-between"><div style="font-weight:700;font-size:14px">'+esc(l.behavior)+'</div><div style="font-size:11px;color:var(--warm-gray-light)">'+timeStr+'</div></div>';
+      if(l.trigger_desc)h+='<div style="font-size:13px;color:var(--warm-gray);margin-top:4px"><strong>Trigger:</strong> '+esc(l.trigger_desc)+'</div>';
+      if(l.strategy_used)h+='<div style="font-size:13px;color:var(--warm-gray);margin-top:2px"><strong>Strategy:</strong> '+esc(l.strategy_used)+'</div>';
+      if(l.duration_minutes)h+='<div style="font-size:13px;color:var(--warm-gray);margin-top:2px"><strong>Duration:</strong> '+l.duration_minutes+' min</div>';
+      h+='<div style="display:flex;gap:6px;margin-top:6px">';
+      if(l.intensity)h+='<span class="session-badge billing-'+(l.intensity==='severe'?'denied':l.intensity==='moderate'?'submitted':'draft')+'">'+l.intensity+'</span>';
+      if(l.outcome)h+='<span class="session-badge billing-'+(l.outcome==='improved'?'paid':l.outcome==='escalated'?'denied':'draft')+'">'+l.outcome.replace('_',' ')+'</span>';
+      h+='</div>';
+      if(l.logged_by_name)h+='<div style="font-size:11px;color:var(--warm-gray-light);margin-top:4px">Logged by '+esc(l.logged_by_name)+'</div>';
+      h+='</div>';
+    }
+    el.innerHTML=h;
+
+  } else if(providerActiveTab==='sessions'){
+    loadSessionNotes();
+
+  } else if(providerActiveTab==='notes'){
+    el.innerHTML='<div style="margin-bottom:16px"><textarea id="careNoteInputInline" class="note-input" placeholder="Write a note..." rows="2"></textarea><button class="btn btn-p" style="width:100%;margin-top:8px" onclick="postCareNoteInline()">Post Note</button></div><div id="careNotesInline"><div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div></div>';
+    var r=await sb.from('care_notes').select('*').eq('child_id',providerActiveChild.id).order('created_at',{ascending:false}).limit(50);
+    var notes=r.data||[];
+    var nh='';
+    for(var i=0;i<notes.length;i++){
+      var n=notes[i];
+      var roleColor=n.author_role==='caregiver'?'var(--lavender)':n.author_role==='teacher'?'var(--sky)':n.author_role==='provider'?'var(--sage-light)':'var(--sand)';
+      var badgeColor=n.author_role==='caregiver'?'#6B5B8D':n.author_role==='teacher'?'#2a6496':n.author_role==='provider'?'var(--sage-dark)':'var(--warm-gray)';
+      nh+='<div class="note-card"><div class="note-author"><div class="note-avatar" style="background:'+roleColor+';color:'+badgeColor+'">'+esc((n.author_name||'?')[0].toUpperCase())+'</div><div><div class="note-name">'+esc(n.author_name)+'</div><div style="display:flex;gap:6px;align-items:center;margin-top:2px"><span class="note-role-badge" style="background:'+roleColor+';color:'+badgeColor+'">'+esc(n.author_role)+'</span><span class="note-time">'+renderNoteTime(new Date(n.created_at))+'</span></div></div></div><div class="note-content">'+esc(n.content)+'</div></div>';
+    }
+    document.getElementById('careNotesInline').innerHTML=nh||'<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">No notes yet</div>';
+
+  } else if(providerActiveTab==='insights'){
+    el.innerHTML='<div style="text-align:center;padding:20px"><div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div><div style="margin-top:12px;font-size:14px;color:var(--warm-gray)">Analyzing patterns...</div></div>';
+    var logsR=await sb.from('behavior_logs').select('*').eq('user_id',providerActiveChild.user_id).order('logged_at',{ascending:false}).limit(100);
+    var ctx={logs:logsR.data||[],strategies:[],patterns:{},conversationTopics:[],checkins:[]};
+    ctx.patterns=detectPatterns(ctx.logs);
+    renderInsights(ctx);
+  }
+}
+
+async function postCareNoteInline(){
+  var input=document.getElementById('careNoteInputInline');
+  if(!input)return;
+  var text=input.value.trim();
+  if(!text){showToast('Write something');return}
+  await sb.from('care_notes').insert({child_id:providerActiveChild.id,author_id:S.user.id,author_name:S.name||S.user.email.split('@')[0]||'Anonymous',author_role:S.role||'provider',content:text});
+  input.value='';showToast('Note posted!');loadClientTab();
+}
+
+// ═══ SESSION NOTES ═══
+async function loadSessionNotes(){
+  var el=document.getElementById('clientDetailContent');
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div>';
+  if(!providerActiveChild)return;
+  var r=await sb.from('session_notes').select('*').eq('provider_id',S.user.id).eq('child_id',providerActiveChild.id).order('session_date',{ascending:false});
+  var notes=r.data||[];
+
+  var h='<button class="btn btn-p" style="width:100%;margin-bottom:16px" onclick="openSessionNoteForm()">+ New Session Note</button>';
+  if(!notes.length){h+='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">No session notes yet</div>';el.innerHTML=h;return}
+
+  for(var i=0;i<notes.length;i++){
+    var n=notes[i];
+    var d=new Date(n.session_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    var typeLabel=n.session_type.replace(/_/g,' ');
+    h+='<div class="session-card">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:start"><div><div style="font-weight:700;font-size:14px">'+d+'</div><div style="display:flex;gap:6px;margin-top:4px"><span class="session-badge billing-draft" style="text-transform:capitalize">'+typeLabel+'</span>';
+    if(n.cpt_code)h+='<span class="session-badge billing-submitted">'+n.cpt_code+'</span>';
+    h+='<span class="session-badge billing-'+n.billing_status+'">'+n.billing_status+'</span>';
+    h+='</div></div><div style="font-size:12px;color:var(--warm-gray-light)">'+n.duration_minutes+' min'+(n.shared_with_parent?' \u00b7 Shared':'')+'</div></div>';
+    if(n.ai_narrative)h+='<div style="font-size:13px;line-height:1.6;margin-top:10px;color:var(--warm-gray)">'+esc(n.ai_narrative.substring(0,200))+(n.ai_narrative.length>200?'...':'')+'</div>';
+    h+='<div style="display:flex;gap:8px;margin-top:10px">';
+    h+='<button class="btn btn-s" style="padding:4px 12px;font-size:11px" onclick="event.stopPropagation();openSuperbill(\x27'+n.id+'\x27)">Superbill</button>';
+    h+='<select style="padding:4px 8px;border-radius:8px;border:1px solid var(--sand);font-size:11px;font-family:inherit" onchange="updateBillingStatus(\x27'+n.id+'\x27,this.value)"><option value="draft"'+(n.billing_status==='draft'?' selected':'')+'>Draft</option><option value="submitted"'+(n.billing_status==='submitted'?' selected':'')+'>Submitted</option><option value="paid"'+(n.billing_status==='paid'?' selected':'')+'>Paid</option><option value="denied"'+(n.billing_status==='denied'?' selected':'')+'>Denied</option></select>';
+    h+='</div></div>';
+  }
+  el.innerHTML=h;
+}
+
+function openSessionNoteForm(){
+  document.getElementById('sessionNoteFormPage').classList.add('open');
+  var cptOptions='<option value="">Select CPT...</option>';
+  var cpts=S.profile&&S.profile.cpt_codes||['97151','97153','97155'];
+  cpts.forEach(function(c){cptOptions+='<option value="'+c+'">'+c+'</option>'});
+
+  var today=new Date().toISOString().split('T')[0];
+  document.getElementById('sessionNoteFormContent').innerHTML='<div style="display:flex;flex-direction:column;gap:14px">'+
+    '<div><label class="fl">Session Date</label><input id="snDate" class="fi" type="date" value="'+today+'"></div>'+
+    '<div style="display:flex;gap:12px"><div style="flex:1"><label class="fl">Duration (min)</label><input id="snDuration" class="fi" type="number" placeholder="60" value="60"></div><div style="flex:1"><label class="fl">CPT Code</label><select id="snCpt" class="fi">'+cptOptions+'</select></div></div>'+
+    '<div><label class="fl">Session Type</label><select id="snType" class="fi"><option value="direct_therapy">Direct Therapy</option><option value="assessment">Assessment</option><option value="supervision">Supervision</option><option value="parent_training">Parent Training</option><option value="caregiver_training">Caregiver Training</option></select></div>'+
+    '<div><label class="fl">Goals Addressed (one per line)</label><textarea id="snGoals" class="fi" rows="3" style="resize:none" placeholder="Reduce elopement behavior\nIncrease manding frequency"></textarea></div>'+
+    '<div><label class="fl">Interventions Used</label><textarea id="snInterventions" class="fi" rows="3" style="resize:none" placeholder="DTT, natural environment training, token economy..."></textarea></div>'+
+    '<div><label class="fl">Client Response</label><textarea id="snResponse" class="fi" rows="3" style="resize:none" placeholder="How did the child respond to interventions?"></textarea></div>'+
+    '<div><label class="fl">Next Steps</label><textarea id="snNextSteps" class="fi" rows="2" style="resize:none" placeholder="Plan for next session..."></textarea></div>'+
+    '<div style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="snShared" checked><label for="snShared" style="font-size:13px">Share with parent</label></div>'+
+    '<div id="snNarrativeArea"></div>'+
+    '<button class="btn btn-outline" style="width:100%" id="snGenBtn" onclick="generateSessionNarrative()">Generate Clinical Note</button>'+
+    '<button class="btn btn-p" style="width:100%" onclick="saveSessionNote()">Save Session Note</button>'+
+    '</div>';
+}
+
+async function generateSessionNarrative(){
+  var btn=document.getElementById('snGenBtn');
+  btn.disabled=true;btn.textContent='Generating...';
+
+  var goals=(document.getElementById('snGoals').value||'').trim();
+  var interventions=(document.getElementById('snInterventions').value||'').trim();
+  var response=(document.getElementById('snResponse').value||'').trim();
+  var nextSteps=(document.getElementById('snNextSteps').value||'').trim();
+  var sessionType=document.getElementById('snType').value.replace(/_/g,' ');
+  var duration=document.getElementById('snDuration').value;
+
+  var childInfo='Child: '+(S.child||providerActiveChild.name);
+  if(providerActiveChild.age)childInfo+=', age '+providerActiveChild.age;
+  if(providerActiveChild.diagnosis)childInfo+=', dx: '+providerActiveChild.diagnosis.join(', ');
+
+  var logsR=await sb.from('behavior_logs').select('*').eq('user_id',providerActiveChild.user_id).order('logged_at',{ascending:false}).limit(20);
+  var recentLogs=(logsR.data||[]).slice(0,5).map(function(l){return l.behavior+(l.trigger_desc?' (trigger: '+l.trigger_desc+')':'')+(l.outcome?' ['+l.outcome+']':'')}).join('; ');
+
+  var prompt='Generate a clinical session note.\n\n'+childInfo+'\nSession type: '+sessionType+'\nDuration: '+duration+' minutes\n';
+  if(goals)prompt+='Goals addressed: '+goals+'\n';
+  if(interventions)prompt+='Interventions: '+interventions+'\n';
+  if(response)prompt+='Client response: '+response+'\n';
+  if(nextSteps)prompt+='Next steps: '+nextSteps+'\n';
+  if(recentLogs)prompt+='Recent behavioral data: '+recentLogs+'\n';
+  prompt+='\nWrite a 150-250 word professional clinical narrative suitable for insurance documentation.';
+
+  try{
+    var r=await authFetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:'You are a clinical documentation assistant for Board Certified Behavior Analysts (BCBAs). Generate professional, insurance-ready session narratives. Use clinical ABA terminology. Write in third person. Include: session context, interventions applied, client response with specific behavioral observations, and clinical recommendations.',messages:[{role:'user',content:prompt}]})});
+    var d=await r.json();
+    var text='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)text+=d.content[i].text;
+    document.getElementById('snNarrativeArea').innerHTML='<div><label class="fl">Clinical Narrative (AI-generated \u2014 review and edit)</label><textarea id="snNarrative" class="fi" rows="8" style="resize:vertical;font-size:13px;line-height:1.6">'+esc(text)+'</textarea></div>';
+  }catch(e){
+    showToast('Error generating narrative');console.error(e);
+  }
+  btn.disabled=false;btn.textContent='Regenerate Clinical Note';
+}
+
+async function saveSessionNote(){
+  if(!providerActiveChild){showToast('No client selected');return}
+  var date=document.getElementById('snDate').value;
+  var duration=parseInt(document.getElementById('snDuration').value);
+  if(!date||!duration){showToast('Enter date and duration');return}
+
+  var goalsText=document.getElementById('snGoals').value.trim();
+  var goals=goalsText?goalsText.split('\n').map(function(g){return g.trim()}).filter(function(g){return g}):[];
+  var narrativeEl=document.getElementById('snNarrative');
+
+  var note={
+    provider_id:S.user.id,
+    child_id:providerActiveChild.id,
+    session_date:date,
+    duration_minutes:duration,
+    cpt_code:document.getElementById('snCpt').value||null,
+    session_type:document.getElementById('snType').value,
+    goals_addressed:goals.length?goals:null,
+    interventions:document.getElementById('snInterventions').value.trim()||null,
+    client_response:document.getElementById('snResponse').value.trim()||null,
+    next_steps:document.getElementById('snNextSteps').value.trim()||null,
+    ai_narrative:narrativeEl?narrativeEl.value.trim()||null:null,
+    shared_with_parent:document.getElementById('snShared').checked,
+    billing_status:'draft'
+  };
+
+  var r=await sb.from('session_notes').insert(note);
+  if(r.error){showToast('Error saving note');console.error(r.error);return}
+  showToast('Session note saved!');
+  closeOverlay('sessionNoteFormPage');
+  loadSessionNotes();
+}
+
+async function updateBillingStatus(noteId,status){
+  await sb.from('session_notes').update({billing_status:status,updated_at:new Date().toISOString()}).eq('id',noteId);
+  showToast('Status updated');
+}
+
 
 function openCareNotes(){
   if(!S.user){showAuth(true);return}
