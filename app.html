@@ -1104,6 +1104,7 @@ async function switchChild(childId){
   var displayName=S.name||S.user.email.split('@')[0];
   document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Signed in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+esc(displayName)+'</div>'+(S.child?'<div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Parent of '+esc(S.child)+(S.age?', '+esc(S.age):'')+(S.dx?' \u00b7 '+esc(S.dx):'')+'</div>':'');
   if(S.user) sb.from('profiles').update({active_child_id:childId}).eq('id',S.user.id);
+  renderProfileChildren();
 }
 
 function openAddChild(){
@@ -1146,6 +1147,7 @@ async function saveChild(){
   }
   document.getElementById('addChildModal').style.display='none';
   await loadChildren();
+  renderProfileChildren();
   if(editId) switchChild(editId);
   showToast(document.getElementById('addChildId').value?'Child updated':'Child added!');
 }
