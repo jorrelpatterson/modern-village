@@ -112,6 +112,109 @@ export default {
       } catch { return new Response('{"valid":false}', { status: 500, headers: h }); }
     }
 
+    // ═══ INVITE ═══
+    if (url.pathname === '/invite') {
+      if (!checkRate(ip, 'email')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+
+      const email = (body.email || '').toLowerCase().trim();
+      const role = body.role;
+      const childId = body.child_id;
+      if (!email || !email.includes('@')) return new Response('{"error":"Invalid email"}', { status: 400, headers: h });
+      if (!['caregiver','teacher'].includes(role)) return new Response('{"error":"Invalid role"}', { status: 400, headers: h });
+      if (!childId) return new Response('{"error":"Missing child_id"}', { status: 400, headers: h });
+
+      // Verify child belongs to user
+      const childCheck = await fetch(env.SUPABASE_URL + '/rest/v1/children?id=eq.' + childId + '&user_id=eq.' + user.id + '&select=id,name', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const children = await childCheck.json();
+      if (!children.length) return new Response('{"error":"Child not found"}', { status: 403, headers: h });
+      const childName = children[0].name;
+
+      // Get inviter name
+      const profCheck = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=name', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const profs = await profCheck.json();
+      const inviterName = (profs[0] && profs[0].name) || 'A parent';
+
+      // Create invite token
+      const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+
+      // Insert invite
+      const invRes = await fetch(env.SUPABASE_URL + '/rest/v1/invites', {
+        method: 'POST',
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+        body: JSON.stringify({ invited_by: user.id, email, role, child_id: childId, token, status: 'pending' })
+      });
+      if (!invRes.ok) return new Response('{"error":"Failed to create invite"}', { status: 500, headers: h });
+
+      // Send email
+      const roleLabel = role === 'caregiver' ? 'caregiver' : 'teacher';
+      const inviteUrl = 'https://modernvillage.app/app.html?invite=' + token;
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'Modern Village <hello@modernvillage.app>',
+          to: email,
+          subject: inviterName + ' invited you to ' + childName + '\'s care team',
+          html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px"><h2 style="color:#2D2D2D">You\'re invited!</h2><p>' + inviterName + ' has invited you to join <strong>' + childName + '\'s</strong> care team on Modern Village as a <strong>' + roleLabel + '</strong>.</p><p>Modern Village is an ABA-powered platform for families with neurodivergent children.</p><a href="' + inviteUrl + '" style="display:inline-block;padding:14px 28px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;margin:16px 0">Accept Invite</a><p style="font-size:13px;color:#9E9790">This invite expires in 7 days.</p></div>'
+        })
+      });
+
+      return new Response('{"success":true}', { headers: h });
+    }
+
+    // ═══ ACCEPT INVITE ═══
+    if (url.pathname === '/accept-invite') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+
+      const token = body.token;
+      if (!token) return new Response('{"error":"Missing token"}', { status: 400, headers: h });
+
+      // Fetch invite
+      const invRes = await fetch(env.SUPABASE_URL + '/rest/v1/invites?token=eq.' + encodeURIComponent(token) + '&status=eq.pending&select=*', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const invites = await invRes.json();
+      if (!invites.length) return new Response('{"error":"Invite not found or already used"}', { status: 404, headers: h });
+      const invite = invites[0];
+
+      // Check expiry
+      if (new Date(invite.expires_at) < new Date()) return new Response('{"error":"Invite expired"}', { status: 410, headers: h });
+
+      // Check email matches
+      if (invite.email !== user.email.toLowerCase().trim()) return new Response('{"error":"This invite was sent to ' + invite.email + '"}', { status: 403, headers: h });
+
+      // Set user role
+      const accessLevel = invite.role === 'caregiver' ? 'daily' : 'school';
+      await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id, {
+        method: 'PATCH',
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ role: invite.role })
+      });
+
+      // Create child_access
+      await fetch(env.SUPABASE_URL + '/rest/v1/child_access', {
+        method: 'POST',
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ child_id: invite.child_id, user_id: user.id, role: invite.role, access_level: accessLevel, granted_by: invite.invited_by })
+      });
+
+      // Update invite
+      await fetch(env.SUPABASE_URL + '/rest/v1/invites?id=eq.' + invite.id, {
+        method: 'PATCH',
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ status: 'accepted', accepted_at: new Date().toISOString(), accepted_by: user.id })
+      });
+
+      return new Response(JSON.stringify({ success: true, child_id: invite.child_id, role: invite.role }), { headers: h });
+    }
+
     // ═══ AI CHAT ═══
     if (!checkRate(ip, 'ai')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
     const user = await verifyToken(authToken, env);
