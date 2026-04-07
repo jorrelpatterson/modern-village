@@ -169,7 +169,16 @@ export default {
       const to = (body.to || '').toLowerCase().trim();
       const isOwn = to === (user.email || '').toLowerCase().trim();
       const isProvider = ALLOWED_EMAIL_RECIPIENTS.some(e => e.toLowerCase() === to);
-      if (!isOwn && !isProvider) return new Response('{"error":"Unauthorized recipient"}', { status: 403, headers: h });
+      // Check if sender is admin
+      let isAdmin = false;
+      if (!isOwn && !isProvider) {
+        const admChk = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=is_admin', {
+          headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+        });
+        const admD = await admChk.json();
+        isAdmin = admD.length && admD[0].is_admin;
+      }
+      if (!isOwn && !isProvider && !isAdmin) return new Response('{"error":"Unauthorized recipient"}', { status: 403, headers: h });
       if (!body.subject || !body.html) return new Response('{"error":"Missing fields"}', { status: 400, headers: h });
 
       try {
