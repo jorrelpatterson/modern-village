@@ -5531,7 +5531,7 @@ async function exportClaims(){
   if(!claims.length){showToast('No claims to export');return}
   var csv='Payer,Payer ID,CPT Code,Units,Amount,Paid Amount,Status,Denied Reason,Created,Submitted,Paid\n';
   claims.forEach(function(c){
-    csv+=[c.payer_name||'',c.payer_id||'',c.cpt_code||'',c.units||'',c.amount||'',c.paid_amount||'',c.status||'',c.denied_reason||'',c.created_at?new Date(c.created_at).toLocaleDateString():'',c.submitted_at?new Date(c.submitted_at).toLocaleDateString():'',c.paid_at?new Date(c.paid_at).toLocaleDateString():''].map(function(v){return '"'+String(v).replace(/"/g,'""')+'"'}).join(',')+='\n';
+    csv+=[c.payer_name||'',c.payer_id||'',c.cpt_code||'',c.units||'',c.amount||'',c.paid_amount||'',c.status||'',c.denied_reason||'',c.created_at?new Date(c.created_at).toLocaleDateString():'',c.submitted_at?new Date(c.submitted_at).toLocaleDateString():'',c.paid_at?new Date(c.paid_at).toLocaleDateString():''].map(function(v){return '"'+String(v).replace(/"/g,'""')+'"'}).join(',')+'\n';
   });
   var blob=new Blob([csv],{type:'text/csv'});
   var a=document.createElement('a');
