@@ -86,6 +86,7 @@
 |---------|-------------|----------|
 | iOS/Android Capacitor wrap | Native app shell, Face ID, App Store distribution | High |
 | Push notifications | Daily check-in triggers, care team note alerts, session reminders, milestone celebrations | High (requires native app) |
+| **Medical billing module** | **Automated claim submission, ERA/EOB processing, payer enrollment, billing dashboard for BCBAs. The hook that makes providers stay.** | **High** |
 | Google Calendar sync | Routines → calendar events, session reminders for Ariana | Medium |
 | Booking reminders | 24hr email cron job before scheduled sessions | Medium |
 | Video behavior clips | Parent uploads video, AI analyzes behavior in context. Use Claude vision or other video-capable AI if needed. BCBA can also review clips. | Medium |
