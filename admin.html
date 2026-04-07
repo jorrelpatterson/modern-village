@@ -181,6 +181,8 @@
     <div class="sb-item" data-page="referrals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>Referrals</div>
     <div class="sb-item" data-page="verification"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Verify Providers</div>
     <div class="sb-item" data-page="invites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>Invites</div>
+    <div class="sb-item" data-page="leads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Leads CRM<span class="sb-badge" id="leadCount">0</span></div>
+    <div class="sb-item" data-page="marketing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>Marketing</div>
   </aside>
 
   <main class="main">
@@ -313,6 +315,28 @@
     <div id="pgInvites" class="page">
       <h2>Invite Monitor</h2>
       <div id="inviteSection"></div>
+    </div>
+
+    <div id="pgLeads" class="page">
+      <h2>Leads CRM</h2>
+      <div class="stats" id="leadStats"></div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <select id="leadTypeFilter" onchange="loadLeads()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px"><option value="">All Types</option><option value="district">Districts</option><option value="provider">Providers</option><option value="selpa">SELPAs</option><option value="grant">Grants</option></select>
+        <select id="leadStatusFilter" onchange="loadLeads()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px"><option value="">All Status</option><option value="not_contacted">Not Contacted</option><option value="emailed">Emailed</option><option value="responded">Responded</option><option value="meeting">Meeting</option><option value="converted">Converted</option><option value="dead">Dead</option></select>
+        <input id="leadSearch" placeholder="Search name, org, city..." oninput="loadLeads()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px;flex:1;min-width:150px">
+        <button onclick="exportLeads()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--sage);background:white;color:var(--sage-dark);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600">Export CSV</button>
+      </div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">Leads</div><span id="leadResultCount" style="font-size:12px;color:var(--warm-gray-light)"></span></div><div class="panel-body"><table class="tbl"><thead><tr><th>Name</th><th>Organization</th><th>Type</th><th>City</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody id="leadBody"></tbody></table></div></div>
+    </div>
+
+    <div id="pgMarketing" class="page">
+      <h2>Marketing</h2>
+      <div class="stats" id="marketingStats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="panel"><div class="panel-hdr"><div class="panel-title">Signups (Last 30 Days)</div></div><div class="panel-body" id="signupChart"></div></div>
+        <div class="panel"><div class="panel-hdr"><div class="panel-title">User Roles</div></div><div class="panel-body" id="roleBreakdown"></div></div>
+      </div>
+      <div class="panel" style="margin-top:16px"><div class="panel-hdr"><div class="panel-title">Conversion Funnel</div></div><div class="panel-body" id="conversionFunnel"></div></div>
     </div>
 
     <!-- BLOG EDITOR (overlay) -->
@@ -459,6 +483,8 @@ async function loadPage(pg){
   else if(pg==='referrals') await loadReferrals();
   else if(pg==='verification') loadVerification();
   else if(pg==='invites') loadInvites();
+  if(pg==='leads') loadLeads();
+  if(pg==='marketing') loadMarketing();
 }
 
 // ═══ DASHBOARD ═══
@@ -1195,6 +1221,120 @@ async function resetUserPassword(email){
     else showToast('Error: '+(d.error||'Failed'));
   }catch(e){showToast('Error resetting password')}
 }
+// ═══ LEADS CRM ═══
+var leadsCache=[];
+async function loadLeads(){
+  var typeF=document.getElementById('leadTypeFilter').value;
+  var statusF=document.getElementById('leadStatusFilter').value;
+  var search=(document.getElementById('leadSearch').value||'').trim().toLowerCase();
+  var q=sb.from('leads').select('*',{count:'exact'});
+  if(typeF)q=q.eq('lead_type',typeF);
+  if(statusF)q=q.eq('outreach_status',statusF);
+  if(search)q=q.or('name.ilike.%'+search+'%,organization.ilike.%'+search+'%,city.ilike.%'+search+'%');
+  q=q.order('created_at',{ascending:false}).limit(100);
+  var r=await q;
+  var leads=r.data||[];
+  leadsCache=leads;
+  var totalR=await sb.from('leads').select('lead_type,outreach_status',{count:'exact'});
+  var all=totalR.data||[];
+  var total=totalR.count||all.length;
+  var districts=all.filter(function(l){return l.lead_type==='district'}).length;
+  var providers=all.filter(function(l){return l.lead_type==='provider'}).length;
+  var contacted=all.filter(function(l){return l.outreach_status!=='not_contacted'}).length;
+  document.getElementById('leadStats').innerHTML=statCard('Total',total,'')+statCard('Districts',districts,'')+statCard('Providers',providers,'')+statCard('Contacted',contacted,total?Math.round(contacted/total*100)+'%':'0%');
+  document.getElementById('leadCount').textContent=total;
+  document.getElementById('leadResultCount').textContent='Showing '+leads.length+' of '+(r.count||0);
+  var h='';
+  leads.forEach(function(l){
+    h+='<tr><td style="font-weight:600;font-size:13px">'+esc(l.name||l.first_name||'\u2014')+'</td>';
+    h+='<td style="font-size:12px">'+esc(l.organization||'\u2014')+'</td>';
+    h+='<td><span class="tag '+(l.lead_type==='district'?'tag-blue':l.lead_type==='provider'?'tag-sage':'tag-free')+'">'+esc(l.lead_type)+'</span></td>';
+    h+='<td style="font-size:12px">'+esc(l.city||'\u2014')+'</td>';
+    h+='<td style="font-size:12px">'+(l.phone?'<a href="tel:'+esc(l.phone)+'" style="color:var(--sage-dark)">'+esc(l.phone)+'</a>':'\u2014')+'</td>';
+    h+='<td><select style="padding:2px 6px;border-radius:6px;border:1px solid var(--sand);font-size:11px;font-family:inherit" onchange="updateLeadStatus(\x27'+l.id+'\x27,this.value)">';
+    ['not_contacted','emailed','responded','meeting','converted','dead'].forEach(function(s){h+='<option value="'+s+'"'+(l.outreach_status===s?' selected':'')+'>'+s.replace(/_/g,' ')+'</option>'});
+    h+='</select></td>';
+    h+='<td><button style="padding:2px 8px;border-radius:6px;border:1px solid var(--sand);background:white;cursor:pointer;font-size:11px;font-family:inherit" onclick="showLeadDetail(\x27'+l.id+'\x27)">View</button></td></tr>';
+  });
+  document.getElementById('leadBody').innerHTML=h||'<tr><td colspan="7" class="empty">No leads found</td></tr>';
+}
+async function updateLeadStatus(id,status){
+  await sb.from('leads').update({outreach_status:status,updated_at:new Date().toISOString()}).eq('id',id);
+  showToast('Status updated');
+}
+function showLeadDetail(id){
+  var l=leadsCache.find(function(x){return x.id===id});
+  if(!l)return;
+  var h='<div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px" onclick="this.remove()">';
+  h+='<div style="background:white;border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto" onclick="event.stopPropagation()">';
+  h+='<h3 style="margin:0 0 4px">'+esc(l.name||l.first_name||'Unknown')+'</h3>';
+  if(l.organization)h+='<div style="font-size:14px;color:var(--warm-gray);margin-bottom:12px">'+esc(l.organization)+'</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;margin-bottom:16px">';
+  if(l.phone)h+='<div><strong>Phone:</strong> <a href="tel:'+esc(l.phone)+'">'+esc(l.phone)+'</a></div>';
+  if(l.email)h+='<div><strong>Email:</strong> <a href="mailto:'+esc(l.email)+'">'+esc(l.email)+'</a></div>';
+  if(l.city)h+='<div><strong>City:</strong> '+esc(l.city)+'</div>';
+  if(l.credential)h+='<div><strong>Credential:</strong> '+esc(l.credential)+'</div>';
+  if(l.specialty)h+='<div><strong>Specialty:</strong> '+esc(l.specialty)+'</div>';
+  h+='<div><strong>Source:</strong> '+esc(l.source)+'</div>';
+  h+='</div>';
+  if(l.notes)h+='<div style="font-size:13px;margin-bottom:12px"><strong>Notes:</strong> '+esc(l.notes)+'</div>';
+  h+='<div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Outreach Notes</label>';
+  h+='<textarea id="leadNotes_'+l.id+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px;resize:none" rows="3" placeholder="Add notes...">'+esc(l.outreach_notes||'')+'</textarea></div>';
+  h+='<button class="btn btn-sm btn-sage" onclick="saveLeadNotes(\x27'+l.id+'\x27)">Save Notes</button>';
+  h+='</div></div>';
+  document.body.insertAdjacentHTML('beforeend',h);
+}
+async function saveLeadNotes(id){
+  var notes=document.getElementById('leadNotes_'+id).value;
+  await sb.from('leads').update({outreach_notes:notes,updated_at:new Date().toISOString()}).eq('id',id);
+  showToast('Notes saved');
+}
+function exportLeads(){
+  if(!leadsCache.length){showToast('No leads to export');return}
+  var csv='Name,Organization,Type,Phone,Email,City,State,Credential,Status,Notes\n';
+  leadsCache.forEach(function(l){csv+=[l.name||'',l.organization||'',l.lead_type||'',l.phone||'',l.email||'',l.city||'',l.state||'',l.credential||'',l.outreach_status||'',l.outreach_notes||''].map(function(v){return '"'+(v||'').replace(/"/g,'""')+'"'}).join(',')+'\n'});
+  var blob=new Blob([csv],{type:'text/csv'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='leads-'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();
+}
+
+// ═══ MARKETING METRICS ═══
+async function loadMarketing(){
+  var r=await sb.from('profiles').select('id,created_at,subscription_status,role,free_messages_used');
+  var users=r.data||[];
+  var total=users.length;
+  var pro=users.filter(function(u){return u.subscription_status==='pro'}).length;
+  var parents=users.filter(function(u){return !u.role||u.role==='parent'}).length;
+  document.getElementById('marketingStats').innerHTML=statCard('Total Users',total,'')+statCard('Pro Subscribers',pro,'')+statCard('Conversion',total?Math.round(pro/total*100)+'%':'0%','')+statCard('Messages',users.reduce(function(a,u){return a+(u.free_messages_used||0)},0),'');
+
+  // Signup chart
+  var now=new Date(),days={};
+  for(var i=29;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);days[d.toISOString().split('T')[0]]=0}
+  users.forEach(function(u){var d=new Date(u.created_at).toISOString().split('T')[0];if(days[d]!==undefined)days[d]++});
+  var maxS=Math.max.apply(null,Object.values(days))||1;
+  var ch='<div style="display:flex;align-items:flex-end;gap:2px;height:120px">';
+  Object.keys(days).forEach(function(d){var c=days[d];var pct=Math.round(c/maxS*100);ch+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%" title="'+d+': '+c+'"><div style="font-size:9px;color:var(--warm-gray-light)">'+(c||'')+'</div><div style="width:100%;background:'+(c?'var(--sage)':'var(--sand)')+';border-radius:3px 3px 0 0;min-height:2px;height:'+Math.max(pct,2)+'%"></div></div>'});
+  ch+='</div><div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--warm-gray-light)"><span>30 days ago</span><span>Today</span></div>';
+  document.getElementById('signupChart').innerHTML=ch;
+
+  // Role breakdown
+  var roles={parent:parents,provider:users.filter(function(u){return u.role==='provider'}).length,caregiver:users.filter(function(u){return u.role==='caregiver'}).length,teacher:users.filter(function(u){return u.role==='teacher'}).length};
+  var rh='';
+  Object.keys(roles).forEach(function(r){var c=roles[r];var pct=total?Math.round(c/total*100):0;rh+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="width:80px;font-size:13px;font-weight:600;text-transform:capitalize">'+r+'</div><div style="flex:1;background:var(--sand);border-radius:4px;height:20px;overflow:hidden"><div style="height:100%;background:var(--sage);width:'+pct+'%;border-radius:4px"></div></div><div style="width:50px;text-align:right;font-size:12px;color:var(--warm-gray)">'+c+'</div></div>'});
+  document.getElementById('roleBreakdown').innerHTML=rh;
+
+  // Funnel
+  var scR=await sb.from('screener_results').select('id',{count:'exact'});
+  var scCount=scR.count||0;
+  var steps=[{l:'Screener',c:scCount,col:'var(--sky)'},{l:'Signups',c:total,col:'var(--sage)'},{l:'Active (3+ msgs)',c:users.filter(function(u){return(u.free_messages_used||0)>=3}).length,col:'var(--sage-dark)'},{l:'Pro',c:pro,col:'var(--terracotta)'}];
+  var maxF=Math.max.apply(null,steps.map(function(s){return s.c}))||1;
+  var fh='';
+  steps.forEach(function(s,i){var pct=Math.round(s.c/maxF*100);fh+='<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600">'+s.l+'</span><span style="font-size:13px;color:var(--warm-gray)">'+s.c+'</span></div><div style="background:var(--sand);border-radius:6px;height:24px;overflow:hidden"><div style="height:100%;background:'+s.col+';width:'+pct+'%;border-radius:6px"></div></div>';if(i>0){var prev=steps[i-1].c;if(prev)fh+='<div style="font-size:11px;color:var(--warm-gray-light);margin-top:2px">'+Math.round(s.c/prev*100)+'% conversion</div>'}fh+='</div>'});
+  document.getElementById('conversionFunnel').innerHTML=fh;
+}
+
 </script>
 </body>
 </html>
