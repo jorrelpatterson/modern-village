@@ -84,3 +84,39 @@ Added billing-specific CSS: .billing-summary, .billing-stat, .claim-card, .claim
 1. `87d0d7f` — SQL migration for claims and payer_enrollments tables
 2. `0dc57ac` — Billing tab in provider client detail
 3. `c843572` — Billing dashboard + payer management
+
+---
+
+## Additional Builds (overnight continuation)
+
+### 6. Admin Billing Overview Tab (`admin.html`)
+New "Billing Overview" tab in admin sidebar showing:
+- Total revenue, outstanding amount, total claims, denial rate
+- Claims by status bar chart (pending/submitted/paid/denied)
+- Revenue by provider bar chart (with provider names)
+- Recent 30 claims table (provider, payer, CPT, units, amount, status, date)
+
+### 7. Client Card Billing Stats (`app.html`)
+Provider client list cards now show:
+- "$X paid" in green (total revenue from this client)
+- "$X pending" in blue (outstanding claims)
+- Replaces the old "draft/pending" session note badges with actual dollar amounts
+
+### 8. Claim CSV Export (`app.html`)
+- "Export CSV" button on the Billing Dashboard
+- Downloads all claims as CSV: payer, CPT, units, amount, paid amount, status, denial reason, dates
+- `exportClaims()` function added
+
+## Updated Commit Log (all on medical-billing branch)
+1. `87d0d7f` — SQL migration for claims and payer_enrollments tables
+2. `0dc57ac` — Billing tab in provider client detail
+3. `c843572` — Billing dashboard + payer management
+4. `4743ddd` — Agent notes
+5. `a7ffb16` — Admin billing overview tab
+6. `1874a34` — Client card billing stats + claim export
+
+## Total Changes
+- `app.html` — ~300 lines added
+- `admin.html` — ~77 lines added
+- `supabase/migrations/20260407_medical_billing.sql` — 83 lines (new)
+- `AGENT-NOTES.md` — this file
