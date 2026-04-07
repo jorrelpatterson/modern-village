@@ -357,17 +357,36 @@ async function sendTestCampaign(){
         <div id="campaignList"></div>
       </div>
 
-      <div id="campaignComposer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px">
-        <div style="background:white;border-radius:16px;padding:24px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto">
+      <div id="campaignComposer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px">
+        <div style="background:white;border-radius:16px;padding:24px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto">
           <h3 style="margin:0 0 16px">New Email Campaign</h3>
-          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Campaign Name</label><input id="campName" class="form-input" placeholder="e.g. BCBA Outreach Wave 1"></div>
-          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Subject Line A</label><input id="campSubjectA" class="form-input" placeholder="Subject line"></div>
-          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Subject Line B (A/B test — optional)</label><input id="campSubjectB" class="form-input" placeholder="Alternative subject line"></div>
-          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Email Body</label><textarea id="campBody" class="form-input" rows="8" placeholder="Write your email content... HTML supported"></textarea></div>
+          <div style="display:flex;gap:8px;margin-bottom:16px">
+            <button id="modeBlast" class="btn btn-sm btn-sage" onclick="setCampaignMode('blast')">Single Blast</button>
+            <button id="modeSequence" class="btn btn-sm btn-outline" onclick="setCampaignMode('sequence')">Drip Sequence (9 emails)</button>
+          </div>
+          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Campaign Name</label><input id="campName" class="form-input" placeholder="e.g. BCBA Outreach Q2"></div>
           <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Target</label><select id="campTarget" class="form-input"><option value="all">All Leads</option><option value="district">Districts Only</option><option value="provider">Providers Only</option><option value="selpa">SELPAs Only</option><option value="not_contacted">Not Yet Contacted</option></select></div>
-          <button class="btn btn-sm btn-outline" onclick="aiGenerateVariants()" id="aiGenBtn" style="margin-bottom:12px;width:100%">✨ AI Generate Subject Lines &amp; Body</button>
-          <div id="campPreview" style="display:none;margin-bottom:12px;padding:16px;background:#f9f9f9;border-radius:12px"></div>
-          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Send Test To</label><div style="display:flex;gap:8px"><input id="campTestEmail" class="form-input" placeholder="your@email.com" style="flex:1"><button class="btn btn-sm btn-outline" onclick="sendTestCampaign()">Send Test</button></div></div><div style="display:flex;gap:8px"><button class="btn btn-sm btn-sage" onclick="saveCampaign()">Save Draft</button><button class="btn btn-sm btn-sage" onclick="saveCampaign(true)">Save &amp; Send</button><button class="btn btn-sm btn-outline" onclick="closeCampaignComposer()">Cancel</button></div>
+
+          <!-- Single blast fields -->
+          <div id="blastFields">
+            <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Subject Line A</label><input id="campSubjectA" class="form-input" placeholder="Subject line"></div>
+            <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Subject Line B (A/B test)</label><input id="campSubjectB" class="form-input" placeholder="Alternative subject"></div>
+            <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Email Body</label><textarea id="campBody" class="form-input" rows="8" placeholder="Email content... HTML supported"></textarea></div>
+            <button class="btn btn-sm btn-outline" onclick="aiGenerateVariants()" id="aiGenBtn" style="margin-bottom:12px;width:100%">&#x2728; AI Generate Subject Lines &amp; Body</button>
+          </div>
+
+          <!-- Sequence fields -->
+          <div id="sequenceFields" style="display:none">
+            <button class="btn btn-sm btn-outline" onclick="aiGenerateSequence()" id="aiSeqBtn" style="margin-bottom:12px;width:100%">&#x2728; AI Generate Full 9-Email Sequence</button>
+            <div id="sequenceSteps"></div>
+          </div>
+
+          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Send Test To</label><div style="display:flex;gap:8px"><input id="campTestEmail" class="form-input" placeholder="your@email.com" style="flex:1"><button class="btn btn-sm btn-outline" onclick="sendTestCampaign()">Send Test</button></div></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-sm btn-sage" onclick="saveCampaign()">Save Draft</button>
+            <button class="btn btn-sm btn-sage" onclick="saveCampaign(true)">Save &amp; Activate</button>
+            <button class="btn btn-sm btn-outline" onclick="closeCampaignComposer()">Cancel</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1393,19 +1412,21 @@ async function loadCampaigns(){
   camps.forEach(function(c){
     var openRate=c.total_sent?Math.round(c.total_opened/c.total_sent*100):0;
     var clickRate=c.total_sent?Math.round(c.total_clicked/c.total_sent*100):0;
-    var statusColor=c.status==='sent'?'tag-sage':c.status==='sending'?'tag-yellow':'tag-free';
-    h+='<div style="padding:16px;background:#f9f9f9;border-radius:12px;margin-bottom:10px">';
-    h+='<div style="display:flex;justify-content:space-between;align-items:start"><div><strong>'+esc(c.name)+'</strong><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">'+esc(c.subject_a)+'</div></div><span class="tag '+statusColor+'">'+c.status+'</span></div>';
+    var statusColor=c.status==='active'?'tag-sage':c.status==='sent'?'tag-sage':c.status==='draft'?'tag-free':'tag-yellow';
+    h+='<div style="padding:16px;background:#f9f9f9;border-radius:12px;margin-bottom:10px'+(c.is_sequence?';border-left:4px solid var(--sage)':'')+'">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:start"><div><strong>'+esc(c.name)+'</strong>';
+    if(c.is_sequence){
+      var steps=c.sequence_steps||[];
+      h+=' <span style="font-size:11px;background:var(--sage-light);color:var(--sage-dark);padding:2px 8px;border-radius:6px;font-weight:700">'+steps.length+'-email sequence</span>';
+    }
+    h+='<div style="font-size:12px;color:var(--warm-gray);margin-top:2px">'+esc(c.subject_a)+'</div></div><span class="tag '+statusColor+'">'+c.status+'</span></div>';
     if(c.total_sent){
       h+='<div style="display:flex;gap:16px;margin-top:10px;font-size:12px">';
       h+='<div><strong>'+c.total_sent+'</strong> sent</div>';
       h+='<div><strong>'+openRate+'%</strong> opened</div>';
       h+='<div><strong>'+clickRate+'%</strong> clicked</div>';
-      h+='<div><strong>'+c.total_bounced+'</strong> bounced</div>';
+      h+='<div><strong>'+(c.total_bounced||0)+'</strong> bounced</div>';
       h+='</div>';
-      if(c.subject_b){
-        h+='<div style="margin-top:8px;font-size:11px;color:var(--warm-gray)">A/B test: "'+esc(c.subject_a)+'" vs "'+esc(c.subject_b)+'"</div>';
-      }
     }
     h+='</div>';
   });
@@ -1413,14 +1434,92 @@ async function loadCampaigns(){
 }
 
 function showCampaignComposer(){
+  campaignMode='blast';
+  sequenceStepsData=[];
   document.getElementById('campName').value='';
   document.getElementById('campSubjectA').value='';
   document.getElementById('campSubjectB').value='';
   document.getElementById('campBody').value='';
-  document.getElementById('campPreview').style.display='none';
+  document.getElementById('campPreview')&&(document.getElementById('campPreview').style.display='none');
+  document.getElementById('blastFields').style.display='block';
+  document.getElementById('sequenceFields').style.display='none';
+  document.getElementById('modeBlast').className='btn btn-sm btn-sage';
+  document.getElementById('modeSequence').className='btn btn-sm btn-outline';
+  document.getElementById('sequenceSteps').innerHTML='';
   document.getElementById('campaignComposer').style.display='flex';
 }
 function closeCampaignComposer(){document.getElementById('campaignComposer').style.display='none'}
+
+var campaignMode='blast';
+var sequenceStepsData=[];
+
+function setCampaignMode(mode){
+  campaignMode=mode;
+  document.getElementById('modeBlast').className='btn btn-sm '+(mode==='blast'?'btn-sage':'btn-outline');
+  document.getElementById('modeSequence').className='btn btn-sm '+(mode==='sequence'?'btn-sage':'btn-outline');
+  document.getElementById('blastFields').style.display=mode==='blast'?'block':'none';
+  document.getElementById('sequenceFields').style.display=mode==='sequence'?'block':'none';
+  if(mode==='sequence'&&!sequenceStepsData.length){
+    renderSequenceSteps();
+  }
+}
+
+function renderSequenceSteps(){
+  var defaults=[
+    {day:0,angle:'Introduction'},
+    {day:3,angle:'Value Proof'},
+    {day:7,angle:'Feature Spotlight'},
+    {day:10,angle:'Case Study'},
+    {day:14,angle:'Objection Handler'},
+    {day:18,angle:'Social Proof'},
+    {day:23,angle:'Urgency / Exclusivity'},
+    {day:28,angle:'Final Value Recap'},
+    {day:35,angle:'Breakup Email'}
+  ];
+  if(!sequenceStepsData.length)sequenceStepsData=defaults.map(function(d){return{day:d.day,angle:d.angle,subject_a:'',subject_b:'',body:''}});
+  var h='';
+  sequenceStepsData.forEach(function(s,i){
+    h+='<div style="padding:14px;background:#f9f9f9;border-radius:12px;margin-bottom:10px;border-left:4px solid var(--sage)">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:700;font-size:14px">Email '+(i+1)+': '+esc(s.angle)+'</div><div style="font-size:12px;color:var(--warm-gray)">Day '+s.day+'</div></div>';
+    h+='<div style="margin-bottom:6px"><input class="form-input" id="seqSubA_'+i+'" placeholder="Subject line A" value="'+esc(s.subject_a||'')+'" style="font-size:12px"></div>';
+    h+='<div style="margin-bottom:6px"><input class="form-input" id="seqSubB_'+i+'" placeholder="Subject line B (A/B)" value="'+esc(s.subject_b||'')+'" style="font-size:12px"></div>';
+    h+='<div><textarea class="form-input" id="seqBody_'+i+'" rows="4" placeholder="Email body HTML..." style="font-size:12px">'+esc(s.body||'')+'</textarea></div>';
+    h+='</div>';
+  });
+  document.getElementById('sequenceSteps').innerHTML=h;
+}
+
+async function aiGenerateSequence(){
+  var btn=document.getElementById('aiSeqBtn');
+  btn.disabled=true;btn.textContent='Generating 9 emails... (this takes a moment)';
+  var target=document.getElementById('campTarget').value;
+  var targetDesc=target==='district'?'school district special education coordinators':target==='provider'?'BCBAs and ABA therapy providers':target==='selpa'?'SELPA directors':'potential partners';
+
+  try{
+    var session=await sb.auth.getSession();
+    var token=session.data.session?.access_token;
+    var r=await fetch('https://village-api.jorrelpatterson.workers.dev/',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:4000,
+        system:'You are a senior marketing strategist with 30+ years in healthcare SaaS and EdTech. You specialize in multi-touch cold outreach sequences for behavioral health platforms. Modern Village is an ABA-powered platform with AI behavior coaching, behavior tracking, IEP analysis, care team collaboration, and a BCBA marketplace. You write warm, empathetic, never-salesy sequences that build trust over time. Each email should have premium HTML design with sage green #7A9E7E accents, highlight boxes with background:#FDF8F0 and border-left:4px solid #7A9E7E, styled CTA buttons (padding:16px 40px, background:#7A9E7E, color:white, border-radius:12px), and generous spacing. Use {name} as a placeholder for personalization. Return valid JSON only.',
+        messages:[{role:'user',content:'Generate a 9-email cold outreach drip sequence for '+targetDesc+'. Return JSON array: [{"day":0,"angle":"Introduction","subject_a":"subject line 1","subject_b":"alt subject","body":"premium HTML email body"},{"day":3,"angle":"Value Proof",...},...]. The 9 angles are: Introduction, Value Proof, Feature Spotlight, Case Study, Objection Handler, Social Proof, Urgency/Exclusivity, Final Value Recap, Breakup Email. Make each email 100-150 words. The sequence should build trust progressively and end with a graceful breakup.'}]
+      })
+    });
+    var d=await r.json();
+    var text='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)text+=d.content[i].text;
+    text=text.replace(/```json\s*/,'').replace(/```\s*/,'').trim();
+    var parsed=JSON.parse(text);
+    if(Array.isArray(parsed)&&parsed.length){
+      sequenceStepsData=parsed;
+      renderSequenceSteps();
+      showToast('9-email sequence generated!');
+    }
+  }catch(e){console.error(e);showToast('Error generating sequence')}
+  btn.disabled=false;btn.textContent='\u2728 AI Generate Full 9-Email Sequence';
+}
 
 async function aiGenerateVariants(){
   var btn=document.getElementById('aiGenBtn');
@@ -1453,30 +1552,71 @@ async function aiGenerateVariants(){
   btn.disabled=false;btn.textContent='\u2728 AI Generate Subject Lines & Body';
 }
 
-async function saveCampaign(sendNow){
+async function saveCampaign(activate){
   var name=document.getElementById('campName').value.trim();
-  var subA=document.getElementById('campSubjectA').value.trim();
-  var body=document.getElementById('campBody').value.trim();
-  if(!name||!subA||!body){showToast('Fill in name, subject, and body');return}
-
-  var subB=document.getElementById('campSubjectB').value.trim()||null;
+  if(!name){showToast('Enter a campaign name');return}
   var target=document.getElementById('campTarget').value;
 
-  // Wrap body in branded template
-  var brandedBody=emailWrapper?emailWrapper(body):body;
+  if(campaignMode==='sequence'){
+    // Collect sequence step data from form
+    for(var i=0;i<sequenceStepsData.length;i++){
+      var subA=document.getElementById('seqSubA_'+i);
+      var subB=document.getElementById('seqSubB_'+i);
+      var body=document.getElementById('seqBody_'+i);
+      if(subA)sequenceStepsData[i].subject_a=subA.value;
+      if(subB)sequenceStepsData[i].subject_b=subB.value;
+      if(body)sequenceStepsData[i].body=body.value;
+    }
+    // Validate at least first step has content
+    if(!sequenceStepsData[0].subject_a||!sequenceStepsData[0].body){showToast('Fill in at least the first email');return}
 
-  var campData={name:name,subject_a:subA,subject_b:subB,body_html:brandedBody,body_html_b:subB?brandedBody:null,lead_filter:{type:target},status:'draft'};
+    var campData={name:name,subject_a:sequenceStepsData[0].subject_a,subject_b:sequenceStepsData[0].subject_b||null,body_html:emailWrapper(sequenceStepsData[0].body),is_sequence:true,sequence_steps:sequenceStepsData,lead_filter:{type:target},status:activate?'active':'draft'};
+    var r=await sb.from('campaigns').insert(campData).select().single();
+    if(r.error){showToast('Error saving');return}
 
-  var r=await sb.from('campaigns').insert(campData).select().single();
-  if(r.error){showToast('Error saving campaign');return}
-
-  closeCampaignComposer();
-  showToast('Campaign saved!');
-
-  if(sendNow&&r.data){
-    await sendCampaign(r.data.id,target);
+    if(activate&&r.data){
+      // Enroll leads
+      await enrollLeadsInSequence(r.data.id,target);
+    }
+    closeCampaignComposer();
+    showToast(activate?'Sequence activated! Emails will send daily.':'Sequence saved as draft.');
+    loadCampaigns();
+  } else {
+    // Original blast logic
+    var subA=document.getElementById('campSubjectA').value.trim();
+    var body=document.getElementById('campBody').value.trim();
+    if(!subA||!body){showToast('Fill in subject and body');return}
+    var subB=document.getElementById('campSubjectB').value.trim()||null;
+    var brandedBody=emailWrapper(body);
+    var campData={name:name,subject_a:subA,subject_b:subB,body_html:brandedBody,body_html_b:subB?brandedBody:null,lead_filter:{type:target},status:'draft'};
+    var r=await sb.from('campaigns').insert(campData).select().single();
+    if(r.error){showToast('Error saving');return}
+    closeCampaignComposer();
+    if(activate&&r.data)await sendCampaign(r.data.id,target);
+    else showToast('Campaign saved!');
+    loadCampaigns();
   }
-  loadCampaigns();
+}
+
+async function enrollLeadsInSequence(campaignId,target){
+  var q=sb.from('leads').select('id,email').not('email','is',null);
+  if(target&&target!=='all'&&target!=='not_contacted')q=q.eq('lead_type',target);
+  if(target==='not_contacted')q=q.eq('outreach_status','not_contacted');
+  q=q.limit(500);
+  var r=await q;
+  var leads=(r.data||[]).filter(function(l){return l.email});
+  if(!leads.length){showToast('No leads with emails found');return}
+
+  var enrolled=0;
+  for(var l of leads){
+    var er=await sb.from('sequence_enrollments').insert({campaign_id:campaignId,lead_id:l.id}).select();
+    if(!er.error)enrolled++;
+  }
+  showToast(enrolled+' leads enrolled in sequence');
+  // Update lead statuses
+  for(var l of leads){
+    await sb.from('leads').update({outreach_status:'emailed',last_contacted_at:new Date().toISOString()}).eq('id',l.id);
+  }
 }
 
 async function sendCampaign(campaignId,target){

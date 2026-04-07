@@ -651,4 +651,84 @@ async function runDailyTasks(env) {
       });
     }
   } catch (e) { console.error('Re-engagement error:', e); }
+  // ── EMAIL SEQUENCES: Process daily sends ──
+  try {
+    // Get all active sequence campaigns
+    const seqR = await fetch(supaUrl + '/rest/v1/campaigns?is_sequence=eq.true&status=eq.active&select=id,sequence_steps', { headers });
+    const sequences = await seqR.json();
+
+    for (const seq of (sequences || [])) {
+      const steps = seq.sequence_steps || [];
+      if (!steps.length) continue;
+
+      // Get active enrollments (not completed, not unsubscribed)
+      const enrollR = await fetch(supaUrl + '/rest/v1/sequence_enrollments?campaign_id=eq.' + seq.id + '&completed=eq.false&unsubscribed=eq.false&select=id,lead_id,current_step,enrolled_at,last_sent_at', { headers });
+      const enrollments = await enrollR.json();
+
+      for (const enr of (enrollments || [])) {
+        const step = steps[enr.current_step];
+        if (!step) {
+          // Completed all steps
+          await fetch(supaUrl + '/rest/v1/sequence_enrollments?id=eq.' + enr.id, { method: 'PATCH', headers, body: JSON.stringify({ completed: true }) });
+          continue;
+        }
+
+        // Check if it's time to send this step
+        const enrollDate = new Date(enr.enrolled_at);
+        const daysSinceEnroll = Math.floor((Date.now() - enrollDate.getTime()) / 86400000);
+        if (daysSinceEnroll < step.day) continue; // Not time yet
+
+        // Check we haven't already sent today
+        if (enr.last_sent_at) {
+          const lastSent = new Date(enr.last_sent_at);
+          const today = new Date();
+          if (lastSent.toISOString().split('T')[0] === today.toISOString().split('T')[0]) continue;
+        }
+
+        // Get lead email
+        const leadR = await fetch(supaUrl + '/rest/v1/leads?id=eq.' + enr.lead_id + '&select=email,name,first_name', { headers });
+        const leads = await leadR.json();
+        if (!leads.length || !leads[0].email) continue;
+        const lead = leads[0];
+
+        // A/B test subject
+        const variant = Math.random() < 0.5 ? 'a' : 'b';
+        const subject = variant === 'b' && step.subject_b ? step.subject_b : step.subject_a;
+        const body = emailWrapper(step.body.replace(/\{name\}/g, lead.name || lead.first_name || 'there'));
+
+        // Send
+        const sendResult = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: 'Modern Village <hello@modernvillage.app>',
+            to: lead.email,
+            subject: subject.replace(/\{name\}/g, lead.name || lead.first_name || 'there'),
+            html: body,
+            tags: [{ name: 'campaign', value: seq.id }, { name: 'step', value: String(enr.current_step) }]
+          })
+        });
+        const sendData = await sendResult.json();
+
+        // Record the send
+        if (sendData.id) {
+          await fetch(supaUrl + '/rest/v1/campaign_sends', {
+            method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ campaign_id: seq.id, lead_id: enr.lead_id, resend_id: sendData.id, email: lead.email, variant: variant })
+          });
+
+          // Advance to next step
+          const nextStep = enr.current_step + 1;
+          const isComplete = nextStep >= steps.length;
+          await fetch(supaUrl + '/rest/v1/sequence_enrollments?id=eq.' + enr.id, {
+            method: 'PATCH', headers,
+            body: JSON.stringify({ current_step: nextStep, last_sent_at: new Date().toISOString(), completed: isComplete })
+          });
+        }
+
+        // Rate limit
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
+  } catch (e) { console.error('Sequence processing error:', e); }
 }
