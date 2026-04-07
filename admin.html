@@ -1778,47 +1778,39 @@ async function sendTestCampaign(sendAll){
   }catch(e){console.error(e);showToast('Error sending test')}
 }
 // ═══ SOCIAL MEDIA ═══
-var socialPosts=[
-  {id:1,title:'Quick Tip — Instead of / Try This',audience:'parent',day:1,caption:'Swap this one phrase and watch the shift.\n\n"Stop screaming!" puts the focus on what they\x27re doing wrong.\n"I can see you\x27re really upset. Let\x27s use our quiet voice." tells them what TO do.\n\nKids\x27 brains process positive instructions faster than negative ones.\n\n#ABA #BehaviorStrategies #ParentingTips #AutismMom #ModernVillage',
-    html:'<div style="width:540px;height:540px;background:#FDF8F0;border-radius:12px;position:relative;font-family:DM Sans,sans-serif;overflow:hidden"><div style="position:absolute;top:24px;left:24px;display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:8px;background:#7A9E7E;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 24C8 32 14 38 22 38C30 38 36 32 36 24C36 14 22 6 22 6Z" fill="white" opacity="0.9"/><circle cx="22" cy="24" r="4" fill="white"/></svg></div><div style="font-family:Fraunces,serif;font-size:15px;font-weight:800;color:#2D2D2D">Modern <span style="font-weight:400;font-style:italic;opacity:0.6">Village</span></div></div><div style="height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 48px"><div style="display:flex;align-items:center;gap:16px;margin-bottom:32px"><div style="width:4px;height:60px;background:#C4745A;border-radius:2px"></div><div><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#C4745A;margin-bottom:6px">Instead of</div><div style="font-family:Fraunces,serif;font-size:28px;font-weight:800;color:#2D2D2D;line-height:1.2">"Stop screaming!"</div></div></div><div style="display:flex;align-items:center;gap:16px"><div style="width:4px;height:80px;background:#7A9E7E;border-radius:2px"></div><div><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#5C7F60;margin-bottom:6px">Try this</div><div style="font-family:Fraunces,serif;font-size:28px;font-weight:800;color:#2D2D2D;line-height:1.2">"I can see you\x27re really upset. Let\x27s use our quiet voice."</div></div></div></div><div style="position:absolute;bottom:24px;right:24px;font-size:12px;font-weight:600;color:rgba(0,0,0,0.3)">@modernvillage.app</div></div>'},
-  {id:2,title:'Validation — You\x27re Not Alone',audience:'parent',day:2,caption:'Read this if you needed it today.\n\nThe meltdown doesn\x27t mean you failed. It means your child is still learning to regulate.\n\nYou\x27re not failing. You\x27re learning right alongside them.\n\n#AutismParenting #YoureNotAlone #ModernVillage',
-    html:'<div style="width:540px;height:540px;background:linear-gradient(160deg,#5C7F60 0%,#7A9E7E 50%,#8BB08E 100%);border-radius:12px;position:relative;font-family:DM Sans,sans-serif;overflow:hidden"><div style="position:absolute;top:24px;left:24px;display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 24C8 32 14 38 22 38C30 38 36 32 36 24C36 14 22 6 22 6Z" fill="white" opacity="0.9"/><circle cx="22" cy="24" r="4" fill="white"/></svg></div><div style="font-family:Fraunces,serif;font-size:15px;font-weight:800;color:white">Modern <span style="font-weight:400;font-style:italic;opacity:0.7">Village</span></div></div><div style="height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 48px;text-align:center"><div style="font-size:48px;margin-bottom:20px">&#128155;</div><div style="font-family:Fraunces,serif;font-size:36px;font-weight:800;color:white;line-height:1.2;margin-bottom:16px">The meltdown doesn\x27t mean you failed.</div><div style="font-size:16px;color:rgba(255,255,255,0.85);line-height:1.6;max-width:380px">It means your child is still learning to regulate. And the fact that you\x27re here? That\x27s what a great parent does.</div></div><div style="position:absolute;bottom:24px;right:24px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.4)">@modernvillage.app</div></div>'},
-  {id:4,title:'Problem Stat — ABA Waitlist',audience:'parent',day:4,caption:'6-12 months. That\x27s how long families wait for ABA services.\n\nMeltdowns don\x27t wait for a waitlist. That\x27s why we built Modern Village.\n\nInstant ABA strategies from an AI Coach, 24/7.\n\nTry it free at modernvillage.app\n\n#ABA #AutismWaitlist #ModernVillage #BehaviorSupport',
-    html:'<div style="width:540px;height:540px;background:#2D2D2D;border-radius:12px;position:relative;font-family:DM Sans,sans-serif;overflow:hidden"><div style="position:absolute;top:24px;left:24px;display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:8px;background:#7A9E7E;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 24C8 32 14 38 22 38C30 38 36 32 36 24C36 14 22 6 22 6Z" fill="white" opacity="0.9"/><circle cx="22" cy="24" r="4" fill="white"/></svg></div><div style="font-family:Fraunces,serif;font-size:15px;font-weight:800;color:white">Modern <span style="font-weight:400;font-style:italic;opacity:0.7">Village</span></div></div><div style="height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 48px;text-align:center"><div style="font-family:Fraunces,serif;font-size:72px;font-weight:900;color:#C4745A;margin-bottom:8px">6-12</div><div style="font-family:Fraunces,serif;font-size:28px;font-weight:800;color:white;margin-bottom:20px">months waiting for ABA services</div><div style="width:60px;height:3px;background:#7A9E7E;border-radius:2px;margin-bottom:20px"></div><div style="font-size:15px;color:rgba(255,255,255,0.6);line-height:1.6;max-width:360px">Meltdowns don\x27t wait for a waitlist. That\x27s why we built Modern Village.</div><div style="margin-top:24px;padding:10px 24px;background:#7A9E7E;border-radius:10px;font-size:14px;font-weight:700;color:white">Try it free &#8594; modernvillage.app</div></div><div style="position:absolute;bottom:24px;right:24px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.4)">@modernvillage.app</div></div>'},
-  {id:10,title:'CTA — Join the Village',audience:'parent',day:10,caption:'It takes a village. Let us be yours.\n\nFree AI behavioral coaching. Licensed BCBAs. A community of parents who get it.\n\nStart free at modernvillage.app — no credit card needed.\n\n#ModernVillage #AutismSupport #ParentCommunity #ABATherapy',
-    html:'<div style="width:540px;height:540px;background:linear-gradient(160deg,#5C7F60 0%,#7A9E7E 100%);border-radius:12px;position:relative;font-family:DM Sans,sans-serif;overflow:hidden"><div style="position:absolute;top:24px;left:24px;display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 24C8 32 14 38 22 38C30 38 36 32 36 24C36 14 22 6 22 6Z" fill="white" opacity="0.9"/><circle cx="22" cy="24" r="4" fill="white"/></svg></div><div style="font-family:Fraunces,serif;font-size:15px;font-weight:800;color:white">Modern <span style="font-weight:400;font-style:italic;opacity:0.7">Village</span></div></div><div style="height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 48px;text-align:center"><div style="font-family:Fraunces,serif;font-size:40px;font-weight:800;color:white;line-height:1.15;margin-bottom:16px">It takes a village.<br><span style="font-style:italic;font-weight:400;opacity:0.8">Let us be yours.</span></div><div style="font-size:15px;color:rgba(255,255,255,0.8);line-height:1.6;max-width:360px;margin-bottom:28px">Free AI behavioral coaching. Licensed BCBAs. A community of parents who get it.</div><div style="padding:14px 32px;background:white;border-radius:12px;font-size:15px;font-weight:700;color:#5C7F60">modernvillage.app</div></div><div style="position:absolute;bottom:24px;right:24px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.4)">@modernvillage.app</div></div>'}
-];
+var socialPostsCache=[];
 
-function loadSocialPosts(filter){
-  var posts=filter==='all'?socialPosts:socialPosts.filter(function(p){return p.audience===filter});
+async function loadSocialPosts(filter){
+  if(!socialPostsCache.length){
+    var r=await sb.from('social_posts').select('*').order('day_number',{ascending:true});
+    socialPostsCache=r.data||[];
+  }
+  var posts=filter==='all'?socialPostsCache:socialPostsCache.filter(function(p){return p.audience===filter});
   var el=document.getElementById('socialPostsGrid');
-  if(!posts.length){el.innerHTML='<div class="empty">No posts for this filter</div>';return}
+  if(!posts.length){el.innerHTML='<div class="empty">No posts found</div>';return}
   var h='';
-  posts.forEach(function(p,i){
+  posts.forEach(function(p){
     h+='<div style="background:white;border-radius:12px;border:1px solid var(--sand);overflow:hidden">';
-    h+='<div id="socialPost_'+p.id+'" style="transform:scale(0.518);transform-origin:top left;width:540px;height:540px;margin-bottom:-260px">'+p.html+'</div>';
+    h+='<div id="socialPost_'+p.id+'" style="transform:scale(0.518);transform-origin:top left;width:540px;height:540px;margin-bottom:-260px">'+p.post_html+'</div>';
     h+='<div style="padding:14px">';
     h+='<div style="font-weight:700;font-size:13px;margin-bottom:4px">'+esc(p.title)+'</div>';
-    h+='<div style="font-size:11px;color:var(--warm-gray-light);margin-bottom:8px">Day '+p.day+' \xb7 '+p.audience+'</div>';
-    h+='<div style="font-size:11px;color:var(--warm-gray);line-height:1.4;max-height:60px;overflow:hidden;margin-bottom:8px">'+esc(p.caption).substring(0,120)+'...</div>';
+    h+='<div style="font-size:11px;color:var(--warm-gray-light);margin-bottom:8px">Day '+p.day_number+' \u00b7 '+p.audience+'</div>';
+    h+='<div style="font-size:11px;color:var(--warm-gray);line-height:1.4;max-height:60px;overflow:hidden;margin-bottom:8px">'+esc((p.caption||'').substring(0,120))+'...</div>';
     h+='<div style="display:flex;gap:6px">';
     h+='<button style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--sage);background:white;color:var(--sage-dark);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" onclick="downloadSocialPost('+p.id+')">Download PNG</button>';
     h+='<button style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--sand);background:white;color:var(--warm-gray);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit" onclick="copySocialCaption('+p.id+')">Copy Caption</button>';
     h+='</div></div></div>';
   });
   el.innerHTML=h;
-
-  // Load content calendar
   loadContentCalendar();
 }
 
 async function downloadSocialPost(postId){
-  var post=socialPosts.find(function(p){return p.id===postId});
+  var post=socialPostsCache.find(function(p){return p.id===postId});
   if(!post)return;
-  // Create a temp container to render at full size
   var temp=document.createElement('div');
-  temp.style.position='fixed';temp.style.left='-9999px';temp.style.top='0';
-  temp.innerHTML=post.html;
+  temp.style.cssText='position:fixed;left:-9999px;top:0';
+  temp.innerHTML=post.post_html;
   document.body.appendChild(temp);
   var target=temp.firstChild;
   try{
@@ -1833,15 +1825,15 @@ async function downloadSocialPost(postId){
 }
 
 function copySocialCaption(postId){
-  var post=socialPosts.find(function(p){return p.id===postId});
-  if(!post)return;
-  navigator.clipboard.writeText(post.caption.replace(/\\x27/g,"'")).then(function(){showToast('Caption copied!')}).catch(function(){showToast('Copy failed')});
+  var post=socialPostsCache.find(function(p){return p.id===postId});
+  if(!post||!post.caption)return;
+  navigator.clipboard.writeText(post.caption).then(function(){showToast('Caption copied!')}).catch(function(){showToast('Copy failed')});
 }
 
 async function downloadAllSocialPosts(){
   showToast('Downloading all posts...');
-  for(var i=0;i<socialPosts.length;i++){
-    await downloadSocialPost(socialPosts[i].id);
+  for(var i=0;i<socialPostsCache.length;i++){
+    await downloadSocialPost(socialPostsCache[i].id);
     await new Promise(function(r){setTimeout(r,500)});
   }
   showToast('All posts downloaded!');
@@ -1849,8 +1841,9 @@ async function downloadAllSocialPosts(){
 
 function loadContentCalendar(){
   var h='<table class="tbl"><thead><tr><th>Day</th><th>Post</th><th>Audience</th><th>Status</th></tr></thead><tbody>';
-  socialPosts.forEach(function(p){
-    h+='<tr><td>Day '+p.day+'</td><td>'+esc(p.title)+'</td><td><span class="tag '+(p.audience==='parent'?'tag-sage':p.audience==='provider'?'tag-blue':'tag-free')+'">'+p.audience+'</span></td><td><span class="tag tag-free">Ready</span></td></tr>';
+  socialPostsCache.forEach(function(p){
+    var statusClass=p.status==='posted'?'tag-sage':p.status==='scheduled'?'tag-yellow':'tag-free';
+    h+='<tr><td>Day '+p.day_number+'</td><td>'+esc(p.title)+'</td><td><span class="tag '+(p.audience==='parent'?'tag-sage':p.audience==='provider'?'tag-blue':'tag-free')+'">'+p.audience+'</span></td><td><span class="tag '+statusClass+'">'+esc(p.status)+'</span></td></tr>';
   });
   h+='</tbody></table>';
   document.getElementById('contentCalendar').innerHTML=h;
