@@ -1895,7 +1895,7 @@ function updateSubSt(){
 }
 
 // ═══ TAB SWITCHING ═══
-function switchTab(t){S.tab=t;var tabs=document.querySelectorAll('.tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('on');var m={coach:'tCoach',pros:'tPros',community:'tComm',track:'tTrack',clients:'tClients'};document.getElementById(m[t]).classList.add('on');var btns=document.querySelectorAll('.nb');for(var i=0;i<btns.length;i++){var b=btns[i],a=b.getAttribute('data-t')===t;b.classList.toggle('on',a);var s=b.querySelector('svg'),d=b.querySelector('.ndot');if(a){if(!d){d=document.createElement('div');d.className='ndot';b.appendChild(d)}s.setAttribute('stroke',t==='coach'?'none':'#7A9E7E');if(t==='coach')s.setAttribute('fill','#7A9E7E')}else{if(d)d.remove();s.setAttribute('stroke','#9E9790');s.setAttribute('fill','none')}}document.getElementById('chatBar').style.display=t==='coach'?'block':'none';document.getElementById('mainScroll').scrollTop=0;if(t==='track')loadLogs();if(t==='community')renderCommunityPosts();if(t==='clients')loadClients()}
+function switchTab(t){S.tab=t;var tabs=document.querySelectorAll('.tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('on');var m={coach:'tCoach',pros:'tPros',community:'tComm',track:'tTrack',clients:'tClients'};document.getElementById(m[t]).classList.add('on');var btns=document.querySelectorAll('.nb');for(var i=0;i<btns.length;i++){var b=btns[i],a=b.getAttribute('data-t')===t;b.classList.toggle('on',a);var s=b.querySelector('svg'),d=b.querySelector('.ndot');if(a){if(!d){d=document.createElement('div');d.className='ndot';b.appendChild(d)}s.setAttribute('stroke',t==='coach'?'none':'#7A9E7E');if(t==='coach')s.setAttribute('fill','#7A9E7E')}else{if(d)d.remove();s.setAttribute('stroke','#9E9790');s.setAttribute('fill','none')}}document.getElementById('chatBar').style.display=t==='coach'?'block':'none';document.getElementById('mainScroll').scrollTop=0;if(t==='track')loadLogs();if(t==='community'){if(villTab==='feed')renderCommunityPosts();else if(villTab==='nearby')loadNearbyTab();else if(villTab==='events')loadEventsTab();}if(t==='clients')loadClients()}
 
 // ═══ AI COACH ═══
 function updateFreeCtr(){
@@ -2679,6 +2679,70 @@ async function postComment(postId, parentCommentId){
     console.error('Comment error:', e);
     showToast('Error posting comment. Please try again.');
   }
+}
+
+// ═══ MY VILLAGE ═══
+var villTab='feed';
+var villProfile=null;
+
+function switchVillTab(t){
+  villTab=t;
+  document.querySelectorAll('.vill-tab').forEach(function(el){el.classList.toggle('active',el.getAttribute('data-vt')===t)});
+  document.querySelectorAll('.vill-section').forEach(function(el){el.classList.remove('active')});
+  var ids={feed:'villFeed',nearby:'villNearby',events:'villEvents'};
+  document.getElementById(ids[t]).classList.add('active');
+  if(t==='feed')renderCommunityPosts();
+  if(t==='nearby')loadNearbyTab();
+  if(t==='events')loadEventsTab();
+}
+
+async function loadVillageProfile(){
+  if(!S.user||!sb)return null;
+  var r=await sb.from('village_profiles').select('*').eq('user_id',S.user.id).maybeSingle();
+  villProfile=r.data||null;
+  return villProfile;
+}
+
+// ═══ VILLAGE LOCATION ═══
+function approximateLocation(lat,lng){return{lat:Math.round(lat*100)/100,lng:Math.round(lng*100)/100}}
+
+function getDistance(lat1,lng1,lat2,lng2){
+  var R=3959;var dLat=(lat2-lat1)*Math.PI/180;var dLng=(lng2-lng1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function getEventTypeEmoji(t){return{playdate:'\uD83C\uDFAA',support_group:'\uD83D\uDCAC',workshop:'\uD83D\uDCDA',social_outing:'\uD83C\uDFB3',advocacy:'\u270A',custom:'\uD83D\uDCCC'}[t]||'\uD83D\uDCCC'}
+
+function formatEventDate(d,t){
+  var dt=new Date(d+'T'+(t||'12:00:00'));
+  var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var hr=dt.getHours();var mn=dt.getMinutes();var ampm=hr>=12?'PM':'AM';hr=hr%12||12;
+  return days[dt.getDay()]+' '+months[dt.getMonth()]+' '+dt.getDate()+' \u00b7 '+hr+':'+(mn<10?'0':'')+mn+' '+ampm;
+}
+
+async function getVillageLocation(callback){
+  if(!navigator.geolocation){callback(null);return}
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      var approx=approximateLocation(pos.coords.latitude,pos.coords.longitude);
+      callback(approx);
+    },
+    function(){callback(null)},
+    {timeout:10000,maximumAge:300000}
+  );
+}
+
+async function lookupZip(zip){
+  try{
+    var r=await fetch('https://api.zippopotam.us/us/'+encodeURIComponent(zip));
+    if(!r.ok)return null;
+    var d=await r.json();
+    if(!d.places||!d.places.length)return null;
+    var p=d.places[0];
+    return{lat:parseFloat(p.latitude),lng:parseFloat(p.longitude),city:p['place name'],state:d['state abbreviation']};
+  }catch(e){return null}
 }
 
 // ═══ OVERLAY PAGES ═══
