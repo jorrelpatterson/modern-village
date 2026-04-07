@@ -92,8 +92,8 @@
 | Google Calendar sync | Routines → calendar events, session reminders for Ariana | Medium |
 | Booking reminders | 24hr email cron job before scheduled sessions | Medium |
 | Video behavior clips | Parent uploads video, AI analyzes behavior in context. Use Claude vision or other video-capable AI if needed. BCBA can also review clips. | Medium |
-| Provider Marketplace v2 | Phase 2 (50+ subs): open marketplace, provider applications, 20-25% platform fee. Phase 3 (200+ subs): multi-provider (OTs, SLPs), shared dashboard, insurance auth support. See `docs/SUPPLEMENTARY.md` §11. | Medium |
-| District admin portal | Separate coordinator login — can see aggregate data across all schools/teachers in their district, manage teacher onboarding, view engagement metrics | Medium |
+| ~~Provider Marketplace v2~~ | **DONE** (2026-04-07). DB-backed providers, search/filter, multi-provider: open marketplace, provider applications, 20-25% platform fee. Phase 3 (200+ subs): multi-provider (OTs, SLPs), shared dashboard, insurance auth support. See `docs/SUPPLEMENTARY.md` §11. | Medium |
+| ~~District admin portal~~ | **DONE** (2026-04-07). Standalone district-admin.html — coordinator login, 5 pages — can see aggregate data across all schools/teachers in their district, manage teacher onboarding, view engagement metrics | Medium |
 | Caregiver mental health support (Pillar 10) | LPC-provided support for caregivers through the platform. Requires hiring an LPC. | Low (needs hire) |
 
 ### My Village — Local Community Layer (High Priority)
