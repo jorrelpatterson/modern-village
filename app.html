@@ -4232,6 +4232,11 @@ async function loadClients(){
     var drafts=sessions.filter(function(s){return s.billing_status==='draft'}).length;
     var submitted=sessions.filter(function(s){return s.billing_status==='submitted'}).length;
 
+    var claimR=await sb.from('claims').select('status,amount,paid_amount').eq('provider_id',S.user.id).eq('child_id',c.id);
+    var clientClaims=claimR.data||[];
+    var clientRevenue=clientClaims.filter(function(cl){return cl.status==='paid'}).reduce(function(a,cl){return a+(parseFloat(cl.paid_amount||cl.amount)||0)},0);
+    var clientPending=clientClaims.filter(function(cl){return cl.status==='pending'||cl.status==='submitted'}).reduce(function(a,cl){return a+(parseFloat(cl.amount)||0)},0);
+
     h+='<div class="client-card" onclick="openClientDetail(\x27'+c.id+'\x27)">';
     h+='<div style="display:flex;align-items:center;gap:12px"><div class="client-avatar">'+esc((c.name||'?')[0].toUpperCase())+'</div><div style="flex:1"><div style="font-weight:700;font-size:15px">'+esc(c.name)+'</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">'+(c.age||'')+(dx?(c.age?' \u00b7 ':'')+dx:'')+'</div></div>';
     if(trend!=='new_user')h+='<span class="client-trend '+trend+'">'+trendLabel+'</span>';
@@ -4239,8 +4244,8 @@ async function loadClients(){
     h+='<div style="display:flex;gap:16px;margin-top:10px">';
     h+='<div class="client-stat">Last: '+lastIncident+'</div>';
     h+='<div class="client-stat">'+sessions.length+' sessions</div>';
-    if(drafts)h+='<div class="client-stat"><span class="session-badge billing-draft">'+drafts+' draft</span></div>';
-    if(submitted)h+='<div class="client-stat"><span class="session-badge billing-submitted">'+submitted+' pending</span></div>';
+    if(clientRevenue)h+='<div class="client-stat"><span style="color:var(--sage-dark);font-weight:700">$'+clientRevenue.toFixed(0)+' paid</span></div>';
+    if(clientPending)h+='<div class="client-stat"><span style="color:#2a6496;font-weight:600">$'+clientPending.toFixed(0)+' pending</span></div>';
     h+='</div></div>';
   }
   el.innerHTML=h;
@@ -5399,7 +5404,7 @@ async function openBillingDashboard(){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on')});
   el.classList.add('on');
 
-  el.innerHTML='<div style="padding:4px 0"><h2 style="font-family:Fraunces,serif;font-size:24px;font-weight:800;margin-bottom:4px">Billing Dashboard</h2><div style="font-size:14px;color:var(--warm-gray);margin-bottom:20px">All claims across clients</div><div id="billingDashContent"><div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div></div></div>';
+  el.innerHTML='<div style="padding:4px 0"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div><h2 style="font-family:Fraunces,serif;font-size:24px;font-weight:800;margin-bottom:4px">Billing Dashboard</h2><div style="font-size:14px;color:var(--warm-gray)">All claims across clients</div></div><button class="btn btn-s" style="padding:8px 16px;font-size:12px" onclick="exportClaims()">Export CSV</button></div><div id="billingDashContent"><div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div></div></div>';
 
   var r=await sb.from('claims').select('*').eq('provider_id',S.user.id).order('created_at',{ascending:false});
   var claims=r.data||[];
@@ -5518,6 +5523,22 @@ async function deletePayer(payerId){
   await sb.from('payer_enrollments').delete().eq('id',payerId);
   showToast('Payer removed');
   loadPayers();
+}
+
+async function exportClaims(){
+  var r=await sb.from('claims').select('*').eq('provider_id',S.user.id).order('created_at',{ascending:false});
+  var claims=r.data||[];
+  if(!claims.length){showToast('No claims to export');return}
+  var csv='Payer,Payer ID,CPT Code,Units,Amount,Paid Amount,Status,Denied Reason,Created,Submitted,Paid\n';
+  claims.forEach(function(c){
+    csv+=[c.payer_name||'',c.payer_id||'',c.cpt_code||'',c.units||'',c.amount||'',c.paid_amount||'',c.status||'',c.denied_reason||'',c.created_at?new Date(c.created_at).toLocaleDateString():'',c.submitted_at?new Date(c.submitted_at).toLocaleDateString():'',c.paid_at?new Date(c.paid_at).toLocaleDateString():''].map(function(v){return '"'+String(v).replace(/"/g,'""')+'"'}).join(',')+='\n';
+  });
+  var blob=new Blob([csv],{type:'text/csv'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='claims-'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();
+  showToast('Claims exported');
 }
 
 async function openSuperbill(noteId){
