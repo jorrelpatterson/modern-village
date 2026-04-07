@@ -87,6 +87,7 @@
 | iOS/Android Capacitor wrap | Native app shell, Face ID, App Store distribution | High |
 | Push notifications | Daily check-in triggers, care team note alerts, session reminders, milestone celebrations | High (requires native app) |
 | **Medical billing module** | **DONE (Phase 1): Claims tracking, payer management, superbills, billing dashboard, aging reports. NEXT (Phase 2): Clearinghouse integration (EDI 837) for electronic claim submission via Availity/Office Ally. Phase 3: ERA/EOB auto-processing, denial management automation, batch claim submission.** | **Phase 1 Done** |
+| **Admin role-based access** | **Different VA roles for admin panel: Marketing VA (leads, campaigns, social), Billing VA (claims, payers), Content VA (blog, social, moderation). Add admin_role field to profiles.** | Medium |
 | **Instagram auto-posting** | **Connect Instagram Graph API via Meta Business Suite for scheduled auto-publishing from admin panel. Requires: FB Business account + IG Professional account + Meta App Review.** | Medium |
 | Google Calendar sync | Routines → calendar events, session reminders for Ariana | Medium |
 | Booking reminders | 24hr email cron job before scheduled sessions | Medium |
