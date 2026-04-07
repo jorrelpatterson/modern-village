@@ -230,7 +230,7 @@ export default {
       const role = body.role;
       const childId = body.child_id;
       if (!email || !email.includes('@')) return new Response('{"error":"Invalid email"}', { status: 400, headers: h });
-      if (!['caregiver','teacher','provider'].includes(role)) return new Response('{"error":"Invalid role"}', { status: 400, headers: h });
+      if (!['co-parent','caregiver','teacher','provider'].includes(role)) return new Response('{"error":"Invalid role"}', { status: 400, headers: h });
       if (!childId) return new Response('{"error":"Missing child_id"}', { status: 400, headers: h });
 
       const childCheck = await fetch(env.SUPABASE_URL + '/rest/v1/children?id=eq.' + childId + '&user_id=eq.' + user.id + '&select=id,name', {
@@ -255,7 +255,7 @@ export default {
       });
       if (!invRes.ok) return new Response('{"error":"Failed to create invite"}', { status: 500, headers: h });
 
-      const roleLabel = role === 'caregiver' ? 'caregiver' : 'teacher';
+      const roleLabel = role === 'co-parent' ? 'co-parent' : role === 'caregiver' ? 'caregiver' : role === 'provider' ? 'provider' : 'teacher';
       const inviteUrl = 'https://modernvillage.app/app.html?invite=' + token;
       const inviteBody = (
         '<h1 style="font-size:24px;font-weight:800;color:#2D2D2D;margin:0 0 8px">You\'re invited! &#127807;</h1>' +
@@ -302,11 +302,12 @@ export default {
 
       if (invite.email !== user.email.toLowerCase().trim()) return new Response('{"error":"This invite was sent to ' + invite.email + '"}', { status: 403, headers: h });
 
-      const accessLevel = invite.role === 'caregiver' ? 'daily' : invite.role === 'provider' ? 'clinical' : 'school';
+      const accessLevel = invite.role === 'co-parent' ? 'full' : invite.role === 'caregiver' ? 'daily' : invite.role === 'provider' ? 'clinical' : 'school';
+      const profileRole = invite.role === 'co-parent' ? 'parent' : invite.role;
       await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id, {
         method: 'PATCH',
         headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ role: invite.role })
+        body: JSON.stringify({ role: profileRole })
       });
 
       await fetch(env.SUPABASE_URL + '/rest/v1/child_access', {
