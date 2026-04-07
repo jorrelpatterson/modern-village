@@ -5390,6 +5390,136 @@ async function updateClaimPaidAmount(claimId,amount){
   await sb.from('claims').update({paid_amount:parseFloat(amount)||0,updated_at:new Date().toISOString()}).eq('id',claimId);
 }
 
+// ═══ BILLING DASHBOARD (all clients) ═══
+async function openBillingDashboard(){
+  if(!S.user){showAuth(true);return}
+  closeSb();
+  // Reuse coach tab area for dashboard
+  var el=document.getElementById('tClients');
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on')});
+  el.classList.add('on');
+
+  el.innerHTML='<div style="padding:4px 0"><h2 style="font-family:Fraunces,serif;font-size:24px;font-weight:800;margin-bottom:4px">Billing Dashboard</h2><div style="font-size:14px;color:var(--warm-gray);margin-bottom:20px">All claims across clients</div><div id="billingDashContent"><div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div></div></div>';
+
+  var r=await sb.from('claims').select('*').eq('provider_id',S.user.id).order('created_at',{ascending:false});
+  var claims=r.data||[];
+
+  var pending=claims.filter(function(c){return c.status==='pending'});
+  var submitted=claims.filter(function(c){return c.status==='submitted'});
+  var paid=claims.filter(function(c){return c.status==='paid'});
+  var denied=claims.filter(function(c){return c.status==='denied'});
+  var totalRevenue=paid.reduce(function(a,c){return a+(parseFloat(c.paid_amount||c.amount)||0)},0);
+  var totalPending=pending.concat(submitted).reduce(function(a,c){return a+(parseFloat(c.amount)||0)},0);
+
+  var h='<div class="billing-summary">';
+  h+='<div class="billing-stat" style="border-left:4px solid var(--sage)"><div class="billing-stat-value" style="color:var(--sage-dark)">$'+totalRevenue.toFixed(0)+'</div><div class="billing-stat-label">Revenue</div></div>';
+  h+='<div class="billing-stat" style="border-left:4px solid var(--sky-dark)"><div class="billing-stat-value" style="color:#2a6496">$'+totalPending.toFixed(0)+'</div><div class="billing-stat-label">Outstanding</div></div>';
+  h+='<div class="billing-stat"><div class="billing-stat-value">'+claims.length+'</div><div class="billing-stat-label">Total Claims</div></div>';
+  h+='<div class="billing-stat"><div class="billing-stat-value" style="color:var(--terracotta)">'+denied.length+'</div><div class="billing-stat-label">Denied</div></div>';
+  h+='</div>';
+
+  // Aging report (all clients)
+  var now=new Date();
+  var age30=0,age60=0,age90=0;
+  submitted.concat(pending).forEach(function(c){
+    var days=Math.floor((now-new Date(c.created_at))/86400000);
+    if(days<=30)age30++;else if(days<=60)age60++;else age90++;
+  });
+  var ageTotal=age30+age60+age90||1;
+  if(ageTotal>0){
+    h+='<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;color:var(--warm-gray);margin-bottom:4px">AGING REPORT</div>';
+    h+='<div class="aging-bar">';
+    if(age30)h+='<div class="aging-segment" style="width:'+Math.round(age30/ageTotal*100)+'%;background:var(--sage)">0-30d ('+age30+')</div>';
+    if(age60)h+='<div class="aging-segment" style="width:'+Math.round(age60/ageTotal*100)+'%;background:var(--sunflower)">31-60d ('+age60+')</div>';
+    if(age90)h+='<div class="aging-segment" style="width:'+Math.round(age90/ageTotal*100)+'%;background:var(--terracotta)">61-90d+ ('+age90+')</div>';
+    h+='</div></div>';
+  }
+
+  // Recent claims
+  h+='<div style="font-size:12px;font-weight:700;color:var(--warm-gray);margin-bottom:8px">RECENT CLAIMS ('+claims.length+')</div>';
+  if(!claims.length){
+    h+='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)"><div style="font-size:32px;margin-bottom:8px">\ud83d\udcb3</div><div style="font-size:14px;font-weight:600">No claims yet</div><div style="font-size:13px;margin-top:4px">Open a client, create a session note, then generate a claim.</div></div>';
+  }
+  claims.slice(0,20).forEach(function(c){
+    var d=new Date(c.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    h+='<div class="claim-card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:14px">'+esc(c.payer_name)+'</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">CPT '+esc(c.cpt_code)+' \u00b7 '+c.units+' units \u00b7 $'+(parseFloat(c.amount)||0).toFixed(2)+' \u00b7 '+d+'</div></div><span class="session-badge claim-status-'+c.status+'">'+c.status+'</span></div></div>';
+  });
+
+  h+='<button class="btn btn-s" style="margin-top:16px" onclick="switchTab(\x27clients\x27)">\u2190 Back to Clients</button>';
+
+  document.getElementById('billingDashContent').innerHTML=h;
+}
+
+// ═══ PAYER MANAGEMENT ═══
+async function openPayerManagement(){
+  if(!S.user){showAuth(true);return}
+  closeSb();
+  var el=document.getElementById('tClients');
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on')});
+  el.classList.add('on');
+
+  el.innerHTML='<div style="padding:4px 0"><h2 style="font-family:Fraunces,serif;font-size:24px;font-weight:800;margin-bottom:4px">My Payers</h2><div style="font-size:14px;color:var(--warm-gray);margin-bottom:20px">Insurance companies you are credentialed with</div><div id="payerContent"><div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div></div></div>';
+
+  await loadPayers();
+}
+
+async function loadPayers(){
+  var r=await sb.from('payer_enrollments').select('*').eq('provider_id',S.user.id).order('created_at',{ascending:false});
+  var payers=r.data||[];
+  var el=document.getElementById('payerContent');
+
+  var h='<button class="btn btn-p" style="margin-bottom:16px" onclick="showAddPayer()">+ Add Payer</button>';
+
+  // Add payer form (hidden)
+  h+='<div id="addPayerForm" style="display:none;padding:16px;background:var(--cream);border-radius:14px;margin-bottom:16px">';
+  h+='<div style="font-weight:700;font-size:14px;margin-bottom:10px">Add Insurance Payer</div>';
+  h+='<div style="margin-bottom:8px"><input id="newPayerName" class="fi" placeholder="Payer name (e.g. Blue Cross, Aetna, Tricare)"></div>';
+  h+='<div style="margin-bottom:8px"><input id="newPayerId" class="fi" placeholder="Payer ID (optional)"></div>';
+  h+='<div style="display:flex;gap:8px"><button class="btn btn-p" style="padding:8px 16px" onclick="savePayer()">Save</button><button class="btn btn-s" style="padding:8px 16px" onclick="hideAddPayer()">Cancel</button></div>';
+  h+='</div>';
+
+  if(!payers.length){
+    h+='<div style="text-align:center;padding:32px;color:var(--warm-gray-light)"><div style="font-size:32px;margin-bottom:8px">\ud83c\udfe5</div><div style="font-size:14px;font-weight:600">No payers added yet</div><div style="font-size:13px;margin-top:4px">Add insurance companies you are credentialed with to streamline claim generation.</div></div>';
+  }
+
+  payers.forEach(function(p){
+    var statusColor=p.enrollment_status==='active'?'var(--sage)':p.enrollment_status==='pending'?'var(--sunflower)':'var(--warm-gray)';
+    h+='<div class="payer-card"><div><div style="font-weight:700;font-size:15px">'+esc(p.payer_name)+'</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">'+(p.payer_id?'ID: '+esc(p.payer_id)+' \u00b7 ':'')+'<span style="color:'+statusColor+';font-weight:600">'+esc(p.enrollment_status)+'</span>'+(p.credentialed_at?' \u00b7 Since '+new Date(p.credentialed_at).toLocaleDateString('en-US',{month:'short',year:'numeric'}):'')+'</div></div>';
+    h+='<div style="display:flex;gap:6px"><select style="padding:4px 8px;border-radius:6px;border:1px solid var(--sand);font-size:11px;font-family:inherit" onchange="updatePayerStatus(\x27'+p.id+'\x27,this.value)"><option value="pending"'+(p.enrollment_status==='pending'?' selected':'')+'>Pending</option><option value="active"'+(p.enrollment_status==='active'?' selected':'')+'>Active</option><option value="inactive"'+(p.enrollment_status==='inactive'?' selected':'')+'>Inactive</option></select>';
+    h+='<button style="background:none;border:none;color:var(--terracotta);cursor:pointer;font-size:12px;font-weight:600" onclick="deletePayer(\x27'+p.id+'\x27)">Remove</button></div></div>';
+  });
+
+  h+='<button class="btn btn-s" style="margin-top:16px" onclick="switchTab(\x27clients\x27)">\u2190 Back to Clients</button>';
+
+  el.innerHTML=h;
+}
+
+function showAddPayer(){document.getElementById('addPayerForm').style.display='block'}
+function hideAddPayer(){document.getElementById('addPayerForm').style.display='none'}
+
+async function savePayer(){
+  var name=document.getElementById('newPayerName').value.trim();
+  if(!name){showToast('Enter payer name');return}
+  var payerId=document.getElementById('newPayerId').value.trim()||null;
+  var r=await sb.from('payer_enrollments').insert({provider_id:S.user.id,payer_name:name,payer_id:payerId,enrollment_status:'active',credentialed_at:new Date().toISOString()});
+  if(r.error){showToast('Error adding payer');return}
+  showToast('Payer added!');
+  hideAddPayer();
+  loadPayers();
+}
+
+async function updatePayerStatus(payerId,status){
+  await sb.from('payer_enrollments').update({enrollment_status:status}).eq('id',payerId);
+  showToast('Status updated');
+}
+
+async function deletePayer(payerId){
+  if(!confirm('Remove this payer?'))return;
+  await sb.from('payer_enrollments').delete().eq('id',payerId);
+  showToast('Payer removed');
+  loadPayers();
+}
+
 async function openSuperbill(noteId){
   var r=await sb.from('session_notes').select('*').eq('id',noteId).single();
   if(!r.data){showToast('Note not found');return}
