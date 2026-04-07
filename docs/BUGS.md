@@ -43,3 +43,7 @@ _(move resolved bugs here with date)_
 8. **Behavior log triggers should use ABA functions** — (Ariana feedback) Replace free-text trigger field with ABA function categories: Access to Tangible, Escape/Avoidance, Attention, Sensory/Automatic. Makes data less subjective, more clinically useful. Could be chip/button selection with optional free-text detail.
 
 9. **Community posts: file/photo uploads** — (Ariana feedback) Parents want to share visual aids, schedules, etc. in community posts. Needs Supabase Storage for image uploads + display in post cards.
+
+10. **Daily check-in prompt shows for all roles** — Only parents (and possibly children) should see the morning check-in modal. Providers, caregivers, and teachers should not be prompted. Fix: add `S.role === 'parent'` guard to `checkDailyCheckin()`.
+
+11. **Two-parent households need dual parent access** — Currently only one parent account owns the child. Need to support a second parent (co-parent) with full access. Could use the invite flow with a new `co-parent` role that has `access_level: 'full'`, or add a second `user_id` on the children table.
