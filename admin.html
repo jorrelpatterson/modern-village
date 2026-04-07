@@ -181,6 +181,7 @@
     <div class="sb-item" data-page="referrals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>Referrals</div>
     <div class="sb-item" data-page="verification"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Verify Providers</div>
     <div class="sb-item" data-page="invites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>Invites</div>
+    <div class="sb-item" data-page="billing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Billing Overview</div>
     <div class="sb-item" data-page="leads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Leads CRM<span class="sb-badge" id="leadCount">0</span></div>
     <div class="sb-item" data-page="marketing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>Marketing</div>
   </aside>
@@ -315,6 +316,16 @@
     <div id="pgInvites" class="page">
       <h2>Invite Monitor</h2>
       <div id="inviteSection"></div>
+    </div>
+
+    <div id="pgBilling" class="page">
+      <h2>Billing Overview</h2>
+      <div class="stats" id="billingStats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="panel"><div class="panel-hdr"><div class="panel-title">Claims by Status</div></div><div class="panel-body" id="claimsByStatus"></div></div>
+        <div class="panel"><div class="panel-hdr"><div class="panel-title">Revenue by Provider</div></div><div class="panel-body" id="revenueByProvider"></div></div>
+      </div>
+      <div class="panel" style="margin-top:16px"><div class="panel-hdr"><div class="panel-title">Recent Claims</div></div><div class="panel-body"><table class="tbl"><thead><tr><th>Provider</th><th>Payer</th><th>CPT</th><th>Units</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody id="adminClaimsBody"></tbody></table></div></div>
     </div>
 
     <div id="pgLeads" class="page">
@@ -528,6 +539,7 @@ async function loadPage(pg){
   else if(pg==='referrals') await loadReferrals();
   else if(pg==='verification') loadVerification();
   else if(pg==='invites') loadInvites();
+  if(pg==='billing') loadAdminBilling();
   if(pg==='leads'){loadLeads();loadCampaigns()}
   if(pg==='marketing') loadMarketing();
 }
@@ -1266,6 +1278,71 @@ async function resetUserPassword(email){
     else showToast('Error: '+(d.error||'Failed'));
   }catch(e){showToast('Error resetting password')}
 }
+// ═══ ADMIN BILLING OVERVIEW ═══
+async function loadAdminBilling(){
+  var r=await sb.from('claims').select('*');
+  var claims=r.data||[];
+
+  var pending=claims.filter(function(c){return c.status==='pending'});
+  var submitted=claims.filter(function(c){return c.status==='submitted'});
+  var paid=claims.filter(function(c){return c.status==='paid'});
+  var denied=claims.filter(function(c){return c.status==='denied'});
+  var totalRevenue=paid.reduce(function(a,c){return a+(parseFloat(c.paid_amount||c.amount)||0)},0);
+  var totalOutstanding=pending.concat(submitted).reduce(function(a,c){return a+(parseFloat(c.amount)||0)},0);
+
+  document.getElementById('billingStats').innerHTML=
+    statCard('Total Revenue','$'+totalRevenue.toFixed(0),'')+
+    statCard('Outstanding','$'+totalOutstanding.toFixed(0),'')+
+    statCard('Total Claims',claims.length,'')+
+    statCard('Denied',denied.length,claims.length?Math.round(denied.length/claims.length*100)+'%':'0%');
+
+  // Claims by status chart
+  var statusCounts={pending:pending.length,submitted:submitted.length,paid:paid.length,denied:denied.length};
+  var maxStatus=Math.max.apply(null,Object.values(statusCounts))||1;
+  var statusH='';
+  var statusColors={pending:'var(--warm-gray)',submitted:'var(--sky-dark)',paid:'var(--sage)',denied:'var(--terracotta)'};
+  Object.keys(statusCounts).forEach(function(s){
+    var pct=Math.round(statusCounts[s]/maxStatus*100);
+    statusH+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="width:80px;font-size:13px;font-weight:600;text-transform:capitalize">'+s+'</div><div style="flex:1;background:var(--sand);border-radius:4px;height:24px;overflow:hidden"><div style="height:100%;background:'+statusColors[s]+';width:'+pct+'%;border-radius:4px;display:flex;align-items:center;padding-left:8px"><span style="font-size:11px;color:white;font-weight:700">'+statusCounts[s]+'</span></div></div></div>';
+  });
+  document.getElementById('claimsByStatus').innerHTML=statusH||'<div class="empty">No claims yet</div>';
+
+  // Revenue by provider
+  var providerRevenue={};
+  paid.forEach(function(c){
+    var pid=c.provider_id;
+    if(!providerRevenue[pid])providerRevenue[pid]={total:0,count:0};
+    providerRevenue[pid].total+=(parseFloat(c.paid_amount||c.amount)||0);
+    providerRevenue[pid].count++;
+  });
+  var providerIds=Object.keys(providerRevenue);
+  if(providerIds.length){
+    var profR=await sb.from('profiles').select('id,name,email').in('id',providerIds);
+    var profiles={};
+    (profR.data||[]).forEach(function(p){profiles[p.id]=p});
+    var maxRev=Math.max.apply(null,providerIds.map(function(id){return providerRevenue[id].total}))||1;
+    var revH='';
+    providerIds.sort(function(a,b){return providerRevenue[b].total-providerRevenue[a].total}).forEach(function(id){
+      var p=profiles[id]||{};
+      var rev=providerRevenue[id];
+      var pct=Math.round(rev.total/maxRev*100);
+      revH+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="width:120px;font-size:13px;font-weight:600">'+esc(p.name||p.email||'Unknown')+'</div><div style="flex:1;background:var(--sand);border-radius:4px;height:24px;overflow:hidden"><div style="height:100%;background:var(--sage);width:'+pct+'%;border-radius:4px;display:flex;align-items:center;padding-left:8px"><span style="font-size:11px;color:white;font-weight:700">$'+rev.total.toFixed(0)+'</span></div></div><div style="width:50px;text-align:right;font-size:12px;color:var(--warm-gray)">'+rev.count+' claims</div></div>';
+    });
+    document.getElementById('revenueByProvider').innerHTML=revH;
+  } else {
+    document.getElementById('revenueByProvider').innerHTML='<div class="empty">No paid claims yet</div>';
+  }
+
+  // Recent claims table
+  var recentH='';
+  claims.slice(0,30).forEach(function(c){
+    var d=new Date(c.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    var statusClass=c.status==='paid'?'tag-sage':c.status==='denied'?'tag-red':c.status==='submitted'?'tag-blue':'tag-free';
+    recentH+='<tr><td style="font-size:12px">'+esc(c.provider_id.substring(0,8))+'...</td><td>'+esc(c.payer_name)+'</td><td>'+esc(c.cpt_code)+'</td><td>'+c.units+'</td><td>$'+(parseFloat(c.amount)||0).toFixed(2)+'</td><td><span class="tag '+statusClass+'">'+c.status+'</span></td><td style="font-size:12px">'+d+'</td></tr>';
+  });
+  document.getElementById('adminClaimsBody').innerHTML=recentH||'<tr><td colspan="7" class="empty">No claims yet</td></tr>';
+}
+
 // ═══ LEADS CRM ═══
 var leadsCache=[];
 async function loadLeads(){
