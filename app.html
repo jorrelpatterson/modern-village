@@ -182,6 +182,29 @@
 .bsum-count{font-size:13px;font-weight:700}
 .bsum-bar{height:6px;border-radius:3px;background:var(--sand);flex:2;position:relative;overflow:hidden}
 .bsum-fill{height:100%;border-radius:3px;background:var(--sage)}
+/* Child Dashboard */
+.child-dash{padding:20px;max-width:480px;margin:0 auto}
+.child-greeting{font-family:Fraunces,serif;font-size:28px;font-weight:800;margin-bottom:4px}
+.child-sub{font-size:14px;color:var(--warm-gray);margin-bottom:24px}
+.child-section{margin-bottom:24px}
+.child-section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--warm-gray);margin-bottom:12px}
+.child-mood-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.child-mood-btn{padding:16px 8px;border-radius:16px;border:2px solid var(--sand);background:white;cursor:pointer;text-align:center;transition:all 0.15s;font-size:28px}.child-mood-btn:hover{border-color:var(--sage);transform:scale(1.05)}.child-mood-btn.sel{border-color:var(--sage);background:var(--sage-light)}
+.child-mood-label{font-size:11px;font-weight:600;color:var(--warm-gray);margin-top:4px;display:block}
+.child-tool-card{background:white;border-radius:16px;padding:16px 20px;border:1px solid var(--sand);margin-bottom:10px;display:flex;align-items:center;gap:14px}
+.child-tool-icon{font-size:32px;flex-shrink:0}
+.child-tool-name{font-weight:700;font-size:15px}
+.child-tool-desc{font-size:13px;color:var(--warm-gray);margin-top:2px}
+.child-routine-step{display:flex;align-items:center;gap:12px;padding:14px 16px;background:white;border-radius:14px;border:1px solid var(--sand);margin-bottom:8px;cursor:pointer;transition:all 0.15s}
+.child-routine-step.done{background:var(--sage-light);border-color:var(--sage);text-decoration:line-through;opacity:0.7}
+.child-routine-icon{font-size:24px;flex-shrink:0}
+.child-routine-name{font-weight:600;font-size:15px}
+.child-login-modal{position:fixed;inset:0;background:var(--cream);z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.child-login-modal.open{display:flex}
+.child-pin-dots{display:flex;gap:12px;margin:20px 0}
+.child-pin-dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--sand);background:white}.child-pin-dot.filled{background:var(--sage);border-color:var(--sage)}
+.child-pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:240px}
+.child-pin-key{width:72px;height:56px;border-radius:14px;border:1.5px solid var(--sand);background:white;font-size:22px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.1s}.child-pin-key:active{background:var(--sage-light)}
 /* Voice Mode */
 .voice-btn{width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;background:var(--cream);color:var(--warm-gray)}
 .voice-btn.active{background:#C4745A;color:white;animation:voicePulse 1.5s ease-in-out infinite}
@@ -559,6 +582,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     <div class="auth-toggle" id="authToggle">Already have an account? <a onclick="toggleAuthMode()">Log in</a></div>
     <div id="authForgotLink" class="hidden" style="text-align:center;margin-top:8px"><a style="font-size:13px;color:var(--sage-dark);cursor:pointer" onclick="sendPasswordReset()">Forgot password?</a></div>
     <button class="auth-skip" id="authSkipBtn" onclick="closeAuth()">Continue without account</button>
+    <div style="text-align:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--sand)"><a style="font-size:13px;color:var(--sage-dark);cursor:pointer;font-weight:600" onclick="showChildLogin()">I'm a kid — log in here</a></div>
   </div>
 </div>
 
@@ -1065,6 +1089,35 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     <button class="nb" data-t="track" onclick="switchTab('track')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2" stroke-linecap="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><span class="nl">Track</span></button>
     <button class="nb" data-t="clients" onclick="switchTab('clients')" style="display:none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="nl">Clients</span></button>
   </div></nav>
+  <!-- CHILD LOGIN -->
+  <div id="childLoginModal" class="child-login-modal">
+    <div style="text-align:center;max-width:320px">
+      <div style="font-size:48px;margin-bottom:12px">🌈</div>
+      <div style="font-family:Fraunces,serif;font-size:24px;font-weight:800;margin-bottom:4px">Hey there!</div>
+      <div style="font-size:14px;color:var(--warm-gray);margin-bottom:8px" id="childLoginName"></div>
+      <div style="margin-bottom:12px"><input id="childLoginUsername" class="fi" placeholder="Your username" style="text-align:center;font-size:16px"></div>
+      <div style="font-size:13px;color:var(--warm-gray);margin-bottom:8px">Enter your PIN</div>
+      <div class="child-pin-dots" id="childPinDots"><div class="child-pin-dot"></div><div class="child-pin-dot"></div><div class="child-pin-dot"></div><div class="child-pin-dot"></div></div>
+      <div class="child-pin-pad" id="childPinPad"></div>
+      <div id="childLoginError" style="color:var(--terracotta);font-size:13px;margin-top:12px;display:none"></div>
+      <button style="margin-top:16px;background:none;border:none;color:var(--warm-gray-light);cursor:pointer;font-size:13px" onclick="closeChildLogin()">Back to parent login</button>
+    </div>
+  </div>
+
+  <!-- CREATE CHILD LOGIN (parent modal) -->
+  <div id="createChildLoginModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px">
+    <div style="background:white;border-radius:20px;padding:24px;max-width:380px;width:100%">
+      <div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:4px">Create Login for Child</div>
+      <div style="font-size:13px;color:var(--warm-gray);margin-bottom:16px" id="createChildLoginLabel"></div>
+      <div style="margin-bottom:12px"><label class="fl">Username</label><input id="createChildUsername" class="fi" placeholder="e.g. fae123" style="font-size:16px"></div>
+      <div style="margin-bottom:12px"><label class="fl">4-digit PIN</label><input id="createChildPin" class="fi" type="password" placeholder="e.g. 1234" maxlength="4" pattern="[0-9]*" inputmode="numeric" style="font-size:16px;text-align:center;letter-spacing:8px"></div>
+      <div style="margin-bottom:16px"><label class="fl">Confirm PIN</label><input id="createChildPinConfirm" class="fi" type="password" placeholder="Confirm PIN" maxlength="4" pattern="[0-9]*" inputmode="numeric" style="font-size:16px;text-align:center;letter-spacing:8px"></div>
+      <input type="hidden" id="createChildLoginId">
+      <div style="display:flex;gap:8px"><button class="btn btn-p" style="flex:1" onclick="saveChildLogin()">Create Login</button><button class="btn btn-s" onclick="closeCreateChildLogin()">Cancel</button></div>
+      <div id="createChildLoginError" style="display:none;margin-top:8px;font-size:12px;color:var(--terracotta)"></div>
+    </div>
+  </div>
+
   <!-- CRISIS MODE -->
   <div id="crisisOverlay" class="crisis-overlay">
     <div id="crisisContent"></div>
@@ -1555,12 +1608,21 @@ function applyRole(){
     return;
   }
 
+  if(S.role==='child'){
+    document.querySelectorAll('.nb').forEach(function(b){b.style.display='none'});
+    document.getElementById('chatBar').style.display='none';
+    renderChildDashboard();
+    renderChildSidebar();
+    return;
+  }
+
   // Tab visibility per role
   var tabMap={
     parent:['coach','pros','community','track'],
     provider:['clients','track'],
     caregiver:['track'],
-    teacher:['track']
+    teacher:['track'],
+    child:[]
   };
   var visibleTabs=tabMap[S.role]||tabMap.parent;
   document.querySelectorAll('.nb').forEach(function(b){
@@ -3961,6 +4023,10 @@ function renderProfileChildren(){
     h+='<button style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--warm-gray);font-size:12px" onclick="editChild(\''+c.id+'\')">Edit</button>';
     if(S.children.length>1) h+='<button style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--terracotta);font-size:12px" onclick="removeChild(\''+c.id+'\')">Remove</button>';
     h+='</div></div>';
+    // Child login button
+    if(S.role==='parent'){
+      h+='<div style="margin-top:8px"><button class="btn btn-s" style="font-size:11px;padding:4px 10px" onclick="showCreateChildLogin(\x27'+c.id+'\x27,\x27'+esc(c.name)+'\x27)">Create Kid Login</button></div>';
+    }
     if(S.role==='parent'){
       h+='<div id="careTeam_'+c.id+'" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--sand)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--warm-gray)">Care Team</div><button class="btn btn-s" style="padding:4px 10px;font-size:11px" onclick="showInviteModal(\''+c.id+'\',\''+esc(c.name)+'\')">+ Invite</button></div><div id="careTeamList_'+c.id+'"><div style="font-size:12px;color:var(--warm-gray-light)">Loading...</div></div></div>';
     }
@@ -4328,6 +4394,247 @@ function crisisTalkToCoach(){
 
 function closeCrisis(){
   document.getElementById('crisisOverlay').classList.remove('open');
+}
+
+// ═══ CHILD/TEEN LOGIN ═══
+var childPin='';
+var childRoutineChecked={};
+
+function showChildLogin(){
+  childPin='';
+  document.getElementById('childLoginModal').classList.add('open');
+  document.getElementById('childLoginUsername').value='';
+  document.getElementById('childLoginError').style.display='none';
+  renderPinDots();
+  renderPinPad();
+}
+
+function closeChildLogin(){
+  document.getElementById('childLoginModal').classList.remove('open');
+  childPin='';
+}
+
+function renderPinDots(){
+  var h='';
+  for(var i=0;i<4;i++)h+='<div class="child-pin-dot'+(i<childPin.length?' filled':'')+'"></div>';
+  document.getElementById('childPinDots').innerHTML=h;
+}
+
+function renderPinPad(){
+  var h='';
+  for(var i=1;i<=9;i++)h+='<button class="child-pin-key" onclick="childPinInput('+i+')">'+i+'</button>';
+  h+='<button class="child-pin-key" onclick="childPinClear()" style="font-size:14px">Clear</button>';
+  h+='<button class="child-pin-key" onclick="childPinInput(0)">0</button>';
+  h+='<button class="child-pin-key" onclick="childPinSubmit()" style="font-size:14px;background:var(--sage);color:white;border-color:var(--sage)">Go</button>';
+  document.getElementById('childPinPad').innerHTML=h;
+}
+
+function childPinInput(n){
+  if(childPin.length>=4)return;
+  childPin+=n;
+  renderPinDots();
+  if(childPin.length===4)childPinSubmit();
+}
+
+function childPinClear(){
+  childPin='';
+  renderPinDots();
+  document.getElementById('childLoginError').style.display='none';
+}
+
+async function childPinSubmit(){
+  var username=document.getElementById('childLoginUsername').value.trim().toLowerCase();
+  if(!username){document.getElementById('childLoginError').textContent='Enter your username';document.getElementById('childLoginError').style.display='block';childPin='';renderPinDots();return}
+  if(childPin.length!==4){return}
+
+  // Look up child by username
+  var r=await sb.from('children').select('*').eq('login_username',username).single();
+  if(!r.data||r.data.login_pin!==childPin){
+    document.getElementById('childLoginError').textContent='Wrong username or PIN';
+    document.getElementById('childLoginError').style.display='block';
+    childPin='';renderPinDots();
+    return;
+  }
+
+  // Found the child — set up child session
+  var child=r.data;
+  S.activeChild=child;
+  S.child=child.name;
+  S.age=child.age||'';
+  S.dx=child.diagnosis?child.diagnosis.join(', '):'';
+  S.role='child';
+  S.children=[child];
+
+  closeChildLogin();
+  document.getElementById('authModal').classList.add('hidden');
+  document.getElementById('onboarding').classList.add('hidden');
+  document.getElementById('splash').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+
+  // Hide all normal UI and show child dashboard
+  document.querySelectorAll('.nb').forEach(function(b){b.style.display='none'});
+  document.getElementById('chatBar').style.display='none';
+  renderChildDashboard();
+  renderChildSidebar();
+}
+
+function renderChildDashboard(){
+  var hour=new Date().getHours();
+  var greeting=hour<12?'Good morning':'Good afternoon';
+  var emoji=hour<12?'\u2600\ufe0f':hour<17?'\ud83c\udf1e':'\ud83c\udf19';
+
+  var el=document.getElementById('tCoach');
+  el.classList.add('on');
+  var tabs=document.querySelectorAll('.tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('on');
+  el.classList.add('on');
+
+  var h='<div class="child-dash">';
+  h+='<div class="child-greeting">'+emoji+' '+greeting+', '+esc(S.child||'friend')+'!</div>';
+  h+='<div class="child-sub">How are you doing today?</div>';
+
+  // Mood check-in
+  h+='<div class="child-section"><div class="child-section-title">How Are You Feeling?</div>';
+  var moods=[{emoji:'\ud83d\ude0a',label:'Happy'},{emoji:'\ud83d\ude0c',label:'Calm'},{emoji:'\ud83d\ude24',label:'Frustrated'},{emoji:'\ud83d\ude22',label:'Sad'},{emoji:'\ud83d\ude21',label:'Angry'},{emoji:'\ud83d\ude1f',label:'Worried'},{emoji:'\ud83d\ude34',label:'Tired'},{emoji:'\ud83e\udd2a',label:'Silly'}];
+  h+='<div class="child-mood-grid">';
+  moods.forEach(function(m){
+    h+='<button class="child-mood-btn" onclick="logChildMood(\x27'+m.label+'\x27,this)">'+m.emoji+'<span class="child-mood-label">'+m.label+'</span></button>';
+  });
+  h+='</div></div>';
+
+  // Coping tools
+  h+='<div class="child-section"><div class="child-section-title">My Coping Tools</div>';
+  var tools=[
+    {icon:'\ud83c\udf2c\ufe0f',name:'Deep Breaths',desc:'Breathe in for 4, out for 4'},
+    {icon:'\u270a',name:'Squeeze Something',desc:'A stress ball, pillow, or your hands'},
+    {icon:'\ud83d\udd22',name:'Count to 10',desc:'Slowly. Out loud or in your head.'},
+    {icon:'\ud83d\udeb6',name:'Walk Away',desc:'Find a quiet spot for a minute'},
+    {icon:'\ud83c\udfa7',name:'Listen to Music',desc:'Put on your favorite calm song'},
+    {icon:'\ud83d\udcac',name:'Tell Someone',desc:'Say how you feel to a grown-up'}
+  ];
+  tools.forEach(function(t){
+    h+='<div class="child-tool-card"><div class="child-tool-icon">'+t.icon+'</div><div><div class="child-tool-name">'+t.name+'</div><div class="child-tool-desc">'+t.desc+'</div></div></div>';
+  });
+  h+='</div>';
+
+  // Today's routine
+  h+='<div class="child-section"><div class="child-section-title">My Routine</div><div id="childRoutineSteps">';
+  h+='<div style="text-align:center;padding:16px;color:var(--warm-gray-light);font-size:13px">Loading...</div>';
+  h+='</div></div>';
+
+  h+='</div>';
+  el.innerHTML=h;
+
+  // Load routine
+  loadChildRoutine();
+}
+
+async function loadChildRoutine(){
+  var el=document.getElementById('childRoutineSteps');
+  if(!el||!S.activeChild)return;
+  var r=await sb.from('routines').select('*').eq('child_id',S.activeChild.id).limit(1);
+  if(!r.data||!r.data.length){
+    el.innerHTML='<div style="text-align:center;padding:16px;color:var(--warm-gray-light);font-size:13px">No routine set up yet</div>';
+    return;
+  }
+  var routine=r.data[0];
+  var steps=routine.steps||[];
+  if(!steps.length){el.innerHTML='<div style="text-align:center;padding:16px;color:var(--warm-gray-light)">No steps</div>';return}
+  var h='<div style="font-weight:700;font-size:15px;margin-bottom:8px">'+esc(routine.title)+'</div>';
+  steps.forEach(function(s,i){
+    var done=childRoutineChecked[i];
+    h+='<div class="child-routine-step'+(done?' done':'')+'" onclick="toggleChildRoutineStep('+i+',this)">';
+    h+='<div class="child-routine-icon">'+s.icon+'</div>';
+    h+='<div class="child-routine-name">'+esc(s.name)+(s.dur?' <span style="font-weight:400;color:var(--warm-gray);font-size:12px">'+s.dur+' min</span>':'')+'</div>';
+    h+='</div>';
+  });
+  el.innerHTML=h;
+}
+
+function toggleChildRoutineStep(i,el){
+  childRoutineChecked[i]=!childRoutineChecked[i];
+  el.classList.toggle('done');
+}
+
+async function logChildMood(mood,btn){
+  btn.classList.add('sel');
+  if(S.activeChild){
+    await sb.from('child_checkins').insert({child_id:S.activeChild.id,mood:mood});
+  }
+  showToast(mood+'! Got it \ud83d\udc9a');
+  setTimeout(function(){btn.classList.remove('sel')},1500);
+}
+
+function renderChildSidebar(){
+  var displayName=S.child||'Friend';
+  document.getElementById('hdrAv').textContent=displayName[0].toUpperCase();
+  document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Logged in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+esc(displayName)+'</div>';
+  var h='';
+  h+='<div class="sb-item" onclick="closeSb();renderChildDashboard()"><span>\ud83c\udfe0 Home</span></div>';
+  h+='<div class="sb-item" onclick="closeSb();showChildMoodHistory()"><span>\ud83d\ude0a My Feelings</span></div>';
+  h+='<div class="sb-item" onclick="closeSb();renderChildDashboard()"><span>\ud83e\uddf0 My Tools</span></div>';
+  h+='<div class="sb-item" onclick="closeSb();renderChildDashboard()"><span>\ud83d\udccb My Routine</span></div>';
+  h+='<div class="sb-logout" onclick="childLogout()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out</div>';
+  document.getElementById('sbMenu').innerHTML=h;
+  document.getElementById('sbSub').style.display='none';
+}
+
+async function showChildMoodHistory(){
+  if(!S.activeChild)return;
+  var el=document.getElementById('tCoach');
+  el.innerHTML='<div class="child-dash"><div class="child-greeting">\ud83d\ude0a My Feelings</div><div class="child-sub">Here\x27s how you\x27ve been feeling</div><div id="childMoodList"><div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div></div><button class="btn btn-s" style="margin-top:16px" onclick="renderChildDashboard()">Back Home</button></div>';
+  var r=await sb.from('child_checkins').select('*').eq('child_id',S.activeChild.id).order('created_at',{ascending:false}).limit(20);
+  var checkins=r.data||[];
+  if(!checkins.length){document.getElementById('childMoodList').innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">No check-ins yet. Go home and tap how you feel!</div>';return}
+  var moodEmojis={Happy:'\ud83d\ude0a',Calm:'\ud83d\ude0c',Frustrated:'\ud83d\ude24',Sad:'\ud83d\ude22',Angry:'\ud83d\ude21',Worried:'\ud83d\ude1f',Tired:'\ud83d\ude34',Silly:'\ud83e\udd2a'};
+  var h='';
+  checkins.forEach(function(c){
+    var d=new Date(c.created_at);
+    var timeStr=d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' at '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    h+='<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--sand)"><div style="font-size:28px">'+(moodEmojis[c.mood]||'\ud83d\ude10')+'</div><div><div style="font-weight:600;font-size:14px">'+esc(c.mood)+'</div><div style="font-size:12px;color:var(--warm-gray-light)">'+timeStr+'</div></div></div>';
+  });
+  document.getElementById('childMoodList').innerHTML=h;
+}
+
+function childLogout(){
+  S.role='parent';S.activeChild=null;S.child='';S.age='';S.dx='';
+  location.reload();
+}
+
+// Parent functions: create child login
+function showCreateChildLogin(childId,childName){
+  document.getElementById('createChildLoginId').value=childId;
+  document.getElementById('createChildLoginLabel').textContent='For '+childName;
+  document.getElementById('createChildUsername').value=childName.toLowerCase().replace(/[^a-z0-9]/g,'')+Math.floor(Math.random()*100);
+  document.getElementById('createChildPin').value='';
+  document.getElementById('createChildPinConfirm').value='';
+  document.getElementById('createChildLoginError').style.display='none';
+  document.getElementById('createChildLoginModal').style.display='flex';
+}
+
+function closeCreateChildLogin(){document.getElementById('createChildLoginModal').style.display='none'}
+
+async function saveChildLogin(){
+  var childId=document.getElementById('createChildLoginId').value;
+  var username=document.getElementById('createChildUsername').value.trim().toLowerCase();
+  var pin=document.getElementById('createChildPin').value;
+  var pinConfirm=document.getElementById('createChildPinConfirm').value;
+  var errEl=document.getElementById('createChildLoginError');
+  errEl.style.display='none';
+
+  if(!username||username.length<3){errEl.textContent='Username must be 3+ characters';errEl.style.display='block';return}
+  if(!/^[a-z0-9]+$/.test(username)){errEl.textContent='Username: letters and numbers only';errEl.style.display='block';return}
+  if(pin.length!==4||!/^\d{4}$/.test(pin)){errEl.textContent='PIN must be exactly 4 digits';errEl.style.display='block';return}
+  if(pin!==pinConfirm){errEl.textContent='PINs don\x27t match';errEl.style.display='block';return}
+
+  // Check username availability
+  var check=await sb.from('children').select('id').eq('login_username',username);
+  if(check.data&&check.data.length){errEl.textContent='Username already taken';errEl.style.display='block';return}
+
+  var r=await sb.from('children').update({login_username:username,login_pin:pin}).eq('id',childId);
+  if(r.error){errEl.textContent='Error saving login';errEl.style.display='block';return}
+  closeCreateChildLogin();
+  showToast('Login created! Username: '+username);
+  renderProfileChildren();
 }
 
 // ═══ VOICE MODE ═══
