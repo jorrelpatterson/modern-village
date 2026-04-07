@@ -1279,9 +1279,34 @@ var S = {
   role:'parent', authMode:'signup', conversationId:null
 };
 
-var PROVIDERS = [
-  {id:'ariana',name:"Ariana Roberts",initials:"AR",creds:["BCBA"],badge:"Board Certified Behavior Analyst",specialty:["Autism (ASD)","ADHD","Early Intervention","Social Skills","Parent Coaching"],bio:"Ariana brings deep expertise in behavior analysis to every family she works with. She specializes in helping parents of neurodivergent children build structure, reduce stress, and celebrate progress. Her approach blends ABA strategies with practical warmth \u2014 because parents need both evidence and encouragement.",rating:5.0,reviews:48,price30:55,price60:95,families:200,experience:"8 yrs",color:"var(--lavender)",active:true,videoUrl:"https://doxy.me/v2/check-in/arianaroberts/",email:"ArianaRPatterson@gmail.com"}
-];
+var PROVIDERS = [];
+
+async function loadMarketplaceProviders(){
+  var r = await sb.from('profiles').select('id,name,email,npi_number,license_type,license_state,cpt_codes,provider_bio,provider_specialties,provider_price_30,provider_price_60,provider_video_url,provider_experience,provider_families_served,provider_rating,provider_review_count,provider_listed,provider_color,provider_verified').eq('role','provider').eq('provider_verified',true).eq('provider_listed',true);
+  PROVIDERS = (r.data||[]).map(function(p){
+    var nameParts = (p.name||'').split(' ');
+    var initials = nameParts.map(function(n){return n[0]||''}).join('').toUpperCase().substring(0,2);
+    return {
+      id: p.id,
+      name: p.name||'Provider',
+      initials: initials||'??',
+      creds: [p.license_type||'BCBA'],
+      badge: p.license_type==='BCBA'?'Board Certified Behavior Analyst':p.license_type||'',
+      specialty: p.provider_specialties||[],
+      bio: p.provider_bio||'',
+      rating: parseFloat(p.provider_rating)||5.0,
+      reviews: p.provider_review_count||0,
+      price30: p.provider_price_30||55,
+      price60: p.provider_price_60||95,
+      families: p.provider_families_served||0,
+      experience: p.provider_experience||'',
+      color: p.provider_color||'var(--lavender)',
+      active: true,
+      videoUrl: p.provider_video_url||'',
+      email: p.email||''
+    };
+  });
+}
 var selectedProvider = null;
 var TIMES = ["9:00 AM","9:30 AM","10:00 AM","10:30 AM","11:00 AM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM","4:00 PM"];
 var POSTS_DATA = [{id:1,author:"MamaOf3",badge:"Village Elder",time:"2h",text:"Win today \ud83c\udf89 My 5yo used his words instead of hitting. We\u2019ve been working on this for MONTHS. I actually cried.",likes:47,comments:12,topic:"Wins"},{id:2,author:"DadOnDuty",badge:"New Member",time:"4h",text:"Struggling with morning routines. My 7yo takes 45+ min to get dressed. Anyone dealt with this?",likes:23,comments:31,topic:"Seeking Advice"},{id:3,author:"AutismMomJourney",badge:"Advocate",time:"6h",text:"Just had an incredible session with my BCBA through Modern Village. She helped build a visual schedule for our nonverbal 4yo. Game changer.",likes:89,comments:8,topic:"Professional Review"},{id:4,author:"TeacherTurnedMom",badge:"Contributor",time:"8h",text:"Tip: instead of \u2018stop running,\u2019 say \u2018walking feet please.\u2019 Tell kids what TO do. Simple but powerful.",likes:134,comments:22,topic:"Tips"},{id:5,author:"SingleDadWins",badge:"Village Elder",time:"12h",text:"Normalizing asking for help. Booked my first session on Modern Village. Best decision I\u2019ve made as a parent.",likes:201,comments:45,topic:"Encouragement"}];
@@ -2099,30 +2124,61 @@ function getNextDates(dayMap){
   return dates;
 }
 
-function renderProvider(){
+async function renderProvider(){
   selectedProvider=null;
   S.booking={session:null,date:null,time:null,provider:null};
-  var h='<div style="margin-bottom:16px"><h2 style="font-family:\'Fraunces\',serif;font-size:24px;font-weight:800">Our Professionals</h2><p style="color:var(--warm-gray);font-size:14px;margin-top:4px">Certified providers ready to support your family</p></div>';
-  var active=PROVIDERS.filter(function(p){return p.active});
-  if(!active.length){h+='<div style="text-align:center;padding:40px;color:var(--warm-gray-light)">No providers available yet.</div>';document.getElementById('providerView').innerHTML=h;return}
-  for(var i=0;i<active.length;i++){
-    var p=active[i];
-    var stars='';for(var s=0;s<5;s++)stars+=s<Math.floor(p.rating)?'\u2605':'\u2606';
-    var specTags='';p.specialty.forEach(function(sp){specTags+='<span style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;background:var(--sage-light);color:var(--sage-dark)">'+sp+'</span>'});
-    h+='<div class="provider-hero" style="cursor:pointer;transition:all 0.2s;margin-bottom:16px" onclick="selectProvider(\''+p.id+'\')">';
-    h+='<div style="display:flex;align-items:center;gap:16px;margin-bottom:14px"><div class="provider-av" style="width:64px;height:64px;border-radius:18px;margin:0;font-size:22px;background:linear-gradient(135deg,'+p.color+',rgba(212,200,232,0.4))">'+p.initials+'</div><div><div style="font-family:Fraunces,serif;font-size:20px;font-weight:800">'+p.name+'</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px"><span class="cred-badge">'+p.creds.join('</span><span class="cred-badge">')+'</span>'+(p.badge?'<span style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;background:var(--sunflower);color:#5A4A00">'+p.badge+'</span>':'')+'</div></div></div>';
-    h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="color:var(--sunflower);font-size:14px;letter-spacing:1px">'+stars+'</span><span style="font-weight:700;font-size:14px">'+p.rating+'</span><span style="font-size:12px;color:var(--warm-gray-light)">('+p.reviews+' reviews)</span></div>';
-    h+='<div style="font-size:14px;color:var(--warm-gray);line-height:1.6;margin-bottom:12px">'+p.bio+'</div>';
-    h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'+specTags+'</div>';
-    h+='<div style="display:flex;gap:8px;margin-bottom:14px"><div class="provider-stat"><div class="provider-stat-val">'+p.families+'+</div><div class="provider-stat-label">Families</div></div><div class="provider-stat"><div class="provider-stat-val">'+p.experience+'</div><div class="provider-stat-label">Experience</div></div><div class="provider-stat"><div class="provider-stat-val">$'+p.price30+'</div><div class="provider-stat-label">from/session</div></div></div>';
-    h+='<button class="book-btn" onclick="event.stopPropagation();selectProvider(\''+p.id+'\')">Book with '+p.name.split(' ')[0]+'</button>';
-    h+='</div>';
-  }
 
-  // Show user's upcoming bookings
+  if(!PROVIDERS.length) await loadMarketplaceProviders();
+
+  var h='<div style="margin-bottom:16px"><h2 style="font-family:\x27Fraunces\x27,serif;font-size:24px;font-weight:800">Our Professionals</h2><p style="color:var(--warm-gray);font-size:14px;margin-top:4px">Certified providers ready to support your family</p></div>';
+
+  // Search + filter bar
+  h+='<div style="margin-bottom:16px"><input id="provSearch" class="fi" placeholder="Search by name or specialty..." oninput="filterProviders()" style="margin-bottom:8px">';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  h+='<select id="provFilterSpec" class="fi" style="flex:1;min-width:120px" onchange="filterProviders()"><option value="">All Specialties</option><option value="Autism (ASD)">Autism (ASD)</option><option value="ADHD">ADHD</option><option value="Early Intervention">Early Intervention</option><option value="Social Skills">Social Skills</option><option value="Parent Coaching">Parent Coaching</option></select>';
+  h+='<select id="provFilterPrice" class="fi" style="flex:1;min-width:120px" onchange="filterProviders()"><option value="">Any Price</option><option value="50">Under $50</option><option value="75">Under $75</option><option value="100">Under $100</option></select>';
+  h+='</div></div>';
+
+  // Provider list
+  h+='<div id="providerList">';
+  h+=renderProviderCards(PROVIDERS);
+  h+='</div>';
+
   if(S.user) h+='<div id="myBookings"></div>';
   document.getElementById('providerView').innerHTML=h;
   if(S.user) loadMyBookings();
+}
+
+function renderProviderCards(list){
+  if(!list.length) return '<div style="text-align:center;padding:40px;color:var(--warm-gray-light)">No providers match your search.</div>';
+  var h='';
+  for(var i=0;i<list.length;i++){
+    var p=list[i];
+    var stars='';for(var s=0;s<5;s++)stars+=s<Math.floor(p.rating)?'\u2605':'\u2606';
+    var specTags='';p.specialty.forEach(function(sp){specTags+='<span style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;background:var(--sage-light);color:var(--sage-dark)">'+sp+'</span>'});
+    h+='<div class="provider-hero" style="cursor:pointer;transition:all 0.2s;margin-bottom:16px" onclick="selectProvider(\x27'+p.id+'\x27)">';
+    h+='<div style="display:flex;align-items:center;gap:16px;margin-bottom:14px"><div class="provider-av" style="width:64px;height:64px;border-radius:18px;margin:0;font-size:22px;background:linear-gradient(135deg,'+p.color+',rgba(212,200,232,0.4))">'+p.initials+'</div><div><div style="font-family:Fraunces,serif;font-size:20px;font-weight:800">'+p.name+'</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px"><span class="cred-badge">'+p.creds.join('</span><span class="cred-badge">')+'</span>'+(p.badge?'<span style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;background:var(--sunflower);color:#5A4A00">'+p.badge+'</span>':'')+'</div></div></div>';
+    h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="color:var(--sunflower);font-size:14px;letter-spacing:1px">'+stars+'</span><span style="font-weight:700;font-size:14px">'+p.rating+'</span><span style="font-size:12px;color:var(--warm-gray-light)">('+p.reviews+' reviews)</span></div>';
+    h+='<div style="font-size:14px;color:var(--warm-gray);line-height:1.6;margin-bottom:12px">'+esc(p.bio.substring(0,200))+(p.bio.length>200?'...':'')+'</div>';
+    h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'+specTags+'</div>';
+    h+='<div style="display:flex;gap:8px;margin-bottom:14px"><div class="provider-stat"><div class="provider-stat-val">'+(p.families||0)+'+</div><div class="provider-stat-label">Families</div></div><div class="provider-stat"><div class="provider-stat-val">'+p.experience+'</div><div class="provider-stat-label">Experience</div></div><div class="provider-stat"><div class="provider-stat-val">$'+p.price30+'</div><div class="provider-stat-label">from/session</div></div></div>';
+    h+='<button class="book-btn" onclick="event.stopPropagation();selectProvider(\x27'+p.id+'\x27)">Book with '+esc(p.name.split(' ')[0])+'</button>';
+    h+='</div>';
+  }
+  return h;
+}
+
+function filterProviders(){
+  var search=(document.getElementById('provSearch').value||'').toLowerCase().trim();
+  var spec=document.getElementById('provFilterSpec').value;
+  var price=document.getElementById('provFilterPrice').value;
+  var filtered=PROVIDERS.filter(function(p){
+    if(search&&p.name.toLowerCase().indexOf(search)<0&&!p.specialty.some(function(s){return s.toLowerCase().indexOf(search)>=0})&&p.bio.toLowerCase().indexOf(search)<0)return false;
+    if(spec&&(!p.specialty||p.specialty.indexOf(spec)<0))return false;
+    if(price&&p.price30>parseInt(price))return false;
+    return true;
+  });
+  document.getElementById('providerList').innerHTML=renderProviderCards(filtered);
 }
 
 var providerAvailability = {};
