@@ -2999,6 +2999,264 @@ function openParentProfile(profileId){
   document.getElementById('villNearby').innerHTML=h;
 }
 
+// ═══ VILLAGE EVENTS ═══
+async function loadEventsTab(){
+  var el=document.getElementById('villEvents');
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div>';
+  await loadVillageProfile();
+  if(!villProfile){showVillageOptIn();return}
+  loadVillageEvents();
+}
+
+async function loadVillageEvents(){
+  var el=document.getElementById('villEvents');
+  var today=new Date().toISOString().split('T')[0];
+  var r=await sb.from('village_events').select('*').gte('event_date',today).eq('status','active').order('event_date',{ascending:true});
+  var events=r.data||[];
+
+  var eventIds=events.map(function(e){return e.id});
+  var rsvpMap={};var myRsvps={};
+  if(eventIds.length){
+    var rr=await sb.from('village_rsvps').select('event_id,user_id,status').in('event_id',eventIds);
+    (rr.data||[]).forEach(function(rv){
+      if(rv.status==='approved'||rv.status==='pending'){
+        rsvpMap[rv.event_id]=(rsvpMap[rv.event_id]||0)+(rv.status==='approved'?1:0);
+      }
+      if(rv.user_id===S.user.id)myRsvps[rv.event_id]=rv.status;
+    });
+  }
+
+  var creatorIds=[...new Set(events.map(function(e){return e.creator_id}))];
+  var creatorNames={};
+  if(creatorIds.length){
+    var cr=await sb.from('village_profiles').select('user_id,display_name').in('user_id',creatorIds);
+    (cr.data||[]).forEach(function(c){creatorNames[c.user_id]=c.display_name});
+  }
+
+  events.forEach(function(e){
+    if(villProfile&&villProfile.lat&&e.location_lat){
+      e._dist=getDistance(villProfile.lat,villProfile.lng,e.location_lat,e.location_lng);
+    }
+  });
+
+  var h='<button class="btn btn-p" style="width:100%;margin-bottom:16px" onclick="openCreateEvent()">+ Create Event</button>';
+
+  if(!events.length){
+    h+='<div style="text-align:center;padding:32px 20px"><div style="font-size:40px;margin-bottom:12px">\uD83D\uDCC5</div><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:8px">No events yet</div><div style="font-size:14px;color:var(--warm-gray);max-width:280px;margin:0 auto">Be the first to organize a playdate or meetup!</div></div>';
+  } else {
+    events.forEach(function(e){
+      var emoji=getEventTypeEmoji(e.event_type);
+      var typeLabel=e.event_type.replace('_',' ').replace(/\b\w/g,function(c){return c.toUpperCase()});
+      var dateStr=formatEventDate(e.event_date,e.start_time);
+      var creator=creatorNames[e.creator_id]||'Someone';
+      var rsvpCount=rsvpMap[e.id]||0;
+      var myStatus=myRsvps[e.id]||null;
+      var isHost=e.creator_id===S.user.id;
+      var dist=e._dist!==undefined?e._dist.toFixed(1)+' mi':'';
+
+      h+='<div class="vill-event-card" onclick="openEventDetail(\\x27'+e.id+'\\x27)">';
+      h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:18px">'+emoji+'</span><span class="vill-type-badge">'+esc(typeLabel)+'</span></div>';
+      h+='<div style="font-weight:700;font-size:15px;margin-bottom:4px">'+esc(e.title)+'</div>';
+      h+='<div style="font-size:13px;color:var(--warm-gray);margin-bottom:2px">'+dateStr+'</div>';
+      h+='<div style="font-size:13px;color:var(--warm-gray);margin-bottom:6px">'+esc(e.location_name)+' \u00b7 '+esc(e.location_city)+'</div>';
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">';
+      h+='<span style="color:var(--warm-gray)">Hosted by '+esc(creator)+'</span>';
+      h+='<span style="color:var(--warm-gray-light)">'+(e.max_attendees?rsvpCount+'/'+e.max_attendees+' spots':rsvpCount+' going')+(dist?' \u00b7 '+dist:'')+'</span>';
+      h+='</div>';
+      if(myStatus==='approved')h+='<div style="margin-top:8px;font-size:12px;font-weight:600;color:var(--sage-dark)">\u2705 You\\x27re going!</div>';
+      else if(myStatus==='pending')h+='<div style="margin-top:8px;font-size:12px;font-weight:600;color:var(--sunflower-dark)">\u23F3 Waiting for approval</div>';
+      else if(isHost)h+='<div style="margin-top:8px;font-size:12px;font-weight:600;color:var(--sage-dark)">Your event</div>';
+      h+='</div>';
+    });
+  }
+  el.innerHTML=h;
+  el.dataset.events=JSON.stringify(events);
+  el.dataset.rsvpMap=JSON.stringify(rsvpMap);
+  el.dataset.myRsvps=JSON.stringify(myRsvps);
+  el.dataset.creatorNames=JSON.stringify(creatorNames);
+}
+
+function openCreateEvent(){
+  var el=document.getElementById('villEvents');
+  var h='<div style="padding:4px 0"><div style="display:flex;align-items:center;gap:12px;margin-bottom:20px"><button class="btn btn-s" onclick="loadVillageEvents()">\u2190 Back</button><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800">Create Event</div></div>';
+  h+='<label class="vill-form-label">Event Type</label>';
+  h+='<select id="evType" class="fi" style="margin-bottom:12px"><option value="playdate">\uD83C\uDFAA Playdate</option><option value="support_group">\uD83D\uDCAC Support Group</option><option value="workshop">\uD83D\uDCDA Workshop</option><option value="social_outing">\uD83C\uDFB3 Social Outing</option><option value="advocacy">\u270A Advocacy</option><option value="custom">\uD83D\uDCCC Custom</option></select>';
+  h+='<label class="vill-form-label">Title</label>';
+  h+='<input id="evTitle" class="fi" placeholder="e.g. Saturday Park Playdate" maxlength="100" style="margin-bottom:12px">';
+  h+='<label class="vill-form-label">Description <span style="font-weight:400;color:var(--warm-gray-light)">(optional)</span></label>';
+  h+='<textarea id="evDesc" class="fi" rows="3" maxlength="1000" placeholder="What should people know about this event?" style="margin-bottom:12px;resize:none"></textarea>';
+  h+='<div style="display:flex;gap:8px;margin-bottom:12px"><div style="flex:1"><label class="vill-form-label">Date</label><input id="evDate" class="fi" type="date"></div><div style="flex:1"><label class="vill-form-label">Start Time</label><input id="evStart" class="fi" type="time"></div><div style="flex:1"><label class="vill-form-label">End Time</label><input id="evEnd" class="fi" type="time"></div></div>';
+  h+='<label class="vill-form-label">Location Name</label>';
+  h+='<input id="evLocName" class="fi" placeholder="e.g. Ganesha Park" maxlength="100" style="margin-bottom:12px">';
+  h+='<label class="vill-form-label">City</label>';
+  h+='<input id="evLocCity" class="fi" placeholder="e.g. Pomona" maxlength="100" style="margin-bottom:12px">';
+  h+='<label class="vill-form-label">Address <span style="font-weight:400;color:var(--warm-gray-light)">(optional \u2014 only shared with approved attendees)</span></label>';
+  h+='<input id="evLocAddr" class="fi" placeholder="Full address" maxlength="200" style="margin-bottom:12px">';
+  h+='<div style="display:flex;gap:8px;margin-bottom:12px"><div style="flex:1"><label class="vill-form-label">Max Attendees</label><select id="evMax" class="fi"><option value="">No limit</option><option value="5">5</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="30">30</option></select></div><div style="flex:1"><label class="vill-form-label">Age Range</label><select id="evAgeRange" class="fi"><option value="All Ages">All Ages</option><option value="0-2">0-2</option><option value="3-5">3-5</option><option value="6-9">6-9</option><option value="10-13">10-13</option><option value="14-17">14-17</option></select></div></div>';
+  h+='<div style="margin-bottom:12px"><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="evChildFriendly" checked> Child-friendly event</label></div>';
+  h+='<div style="margin-bottom:16px"><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="evApproval"> Require RSVP approval</label></div>';
+  h+='<button class="btn btn-p" style="width:100%" onclick="submitEvent()">Create Event</button>';
+  h+='</div>';
+  el.innerHTML=h;
+  var d=new Date();d.setDate(d.getDate()+(6-d.getDay()+7)%7||7);
+  document.getElementById('evDate').value=d.toISOString().split('T')[0];
+  document.getElementById('evStart').value='10:00';
+  document.getElementById('evEnd').value='12:00';
+}
+
+async function submitEvent(){
+  var title=document.getElementById('evTitle').value.trim();
+  var locName=document.getElementById('evLocName').value.trim();
+  var locCity=document.getElementById('evLocCity').value.trim();
+  var evDate=document.getElementById('evDate').value;
+  var evStart=document.getElementById('evStart').value;
+  if(!title){showToast('Title is required');return}
+  if(!locName||!locCity){showToast('Location name and city are required');return}
+  if(!evDate||!evStart){showToast('Date and start time are required');return}
+
+  var evMaxVal=document.getElementById('evMax').value;
+  var event={
+    creator_id:S.user.id,
+    title:title,
+    description:document.getElementById('evDesc').value.trim()||null,
+    event_type:document.getElementById('evType').value,
+    event_date:evDate,
+    start_time:evStart,
+    end_time:document.getElementById('evEnd').value||null,
+    location_name:locName,
+    location_address:document.getElementById('evLocAddr').value.trim()||null,
+    location_city:locCity,
+    location_lat:villProfile?villProfile.lat:null,
+    location_lng:villProfile?villProfile.lng:null,
+    max_attendees:evMaxVal?parseInt(evMaxVal):null,
+    age_range:document.getElementById('evAgeRange').value||null,
+    child_friendly:document.getElementById('evChildFriendly').checked,
+    requires_approval:document.getElementById('evApproval').checked
+  };
+
+  try{
+    await sb.from('village_events').insert(event);
+    showToast('Event created!');
+    loadVillageEvents();
+  }catch(e){console.error('Event create:',e);showToast('Could not create event')}
+}
+
+async function openEventDetail(eventId){
+  var el=document.getElementById('villEvents');
+  var events=JSON.parse(el.dataset.events||'[]');
+  var rsvpMap=JSON.parse(el.dataset.rsvpMap||'{}');
+  var myRsvps=JSON.parse(el.dataset.myRsvps||'{}');
+  var creatorNames=JSON.parse(el.dataset.creatorNames||'{}');
+  var ev=events.find(function(e){return e.id===eventId});
+  if(!ev){showToast('Event not found');return}
+
+  var isHost=ev.creator_id===S.user.id;
+  var myStatus=myRsvps[eventId]||null;
+  var creator=creatorNames[ev.creator_id]||'Someone';
+  var emoji=getEventTypeEmoji(ev.event_type);
+  var typeLabel=ev.event_type.replace('_',' ').replace(/\b\w/g,function(c){return c.toUpperCase()});
+  var dateStr=formatEventDate(ev.event_date,ev.start_time);
+  var showAddress=(myStatus==='approved'||isHost)&&ev.location_address;
+
+  var rr=await sb.from('village_rsvps').select('user_id,status').eq('event_id',eventId);
+  var rsvps=rr.data||[];
+  var approved=rsvps.filter(function(r){return r.status==='approved'});
+  var pending=rsvps.filter(function(r){return r.status==='pending'});
+
+  var attendeeIds=rsvps.map(function(r){return r.user_id});
+  var attendeeNames={};
+  if(attendeeIds.length){
+    var nr=await sb.from('village_profiles').select('user_id,display_name').in('user_id',attendeeIds);
+    (nr.data||[]).forEach(function(n){attendeeNames[n.user_id]=n.display_name});
+  }
+
+  var h='<div style="padding:4px 0"><button class="btn btn-s" style="margin-bottom:16px" onclick="loadVillageEvents()">\u2190 Back</button>';
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:24px">'+emoji+'</span><span class="vill-type-badge" style="font-size:12px">'+esc(typeLabel)+'</span></div>';
+  h+='<div style="font-family:Fraunces,serif;font-size:20px;font-weight:800;margin-bottom:12px">'+esc(ev.title)+'</div>';
+  h+='<div style="background:white;border-radius:14px;padding:14px;border:1px solid var(--sand);margin-bottom:12px">';
+  h+='<div style="font-size:14px;margin-bottom:6px">\uD83D\uDCC5 '+dateStr+'</div>';
+  h+='<div style="font-size:14px;margin-bottom:6px">\uD83D\uDCCD '+esc(ev.location_name)+' \u00b7 '+esc(ev.location_city)+'</div>';
+  if(showAddress)h+='<div style="font-size:13px;color:var(--sage-dark);margin-bottom:6px">\uD83C\uDFE0 '+esc(ev.location_address)+'</div>';
+  else if(ev.location_address&&!isHost)h+='<div style="font-size:12px;color:var(--warm-gray-light);font-style:italic">Address shared after RSVP approval</div>';
+  h+='<div style="font-size:13px;color:var(--warm-gray)">Hosted by '+esc(creator)+'</div>';
+  h+='</div>';
+  if(ev.description)h+='<div style="font-size:14px;line-height:1.6;color:var(--charcoal);margin-bottom:12px">'+esc(ev.description)+'</div>';
+
+  if(!isHost){
+    if(!myStatus){
+      h+='<button class="btn btn-p" style="width:100%;margin-bottom:16px" onclick="rsvpEvent(\\x27'+eventId+'\\x27)">RSVP</button>';
+    } else if(myStatus==='approved'){
+      h+='<div style="display:flex;gap:8px;margin-bottom:16px"><div style="flex:1;padding:12px;background:var(--sage-light);border-radius:12px;text-align:center;font-size:14px;font-weight:700;color:var(--sage-dark)">\u2705 You\\x27re going!</div><button class="btn btn-s" style="font-size:12px" onclick="cancelRsvp(\\x27'+eventId+'\\x27)">Cancel RSVP</button></div>';
+    } else if(myStatus==='pending'){
+      h+='<div style="display:flex;gap:8px;margin-bottom:16px"><div style="flex:1;padding:12px;background:var(--cream);border-radius:12px;text-align:center;font-size:14px;font-weight:600;color:var(--warm-gray)">\u23F3 Waiting for host approval</div><button class="btn btn-s" style="font-size:12px" onclick="cancelRsvp(\\x27'+eventId+'\\x27)">Cancel</button></div>';
+    }
+  }
+
+  if(approved.length){
+    h+='<div style="font-size:13px;font-weight:700;color:var(--warm-gray);margin-bottom:8px">Going ('+approved.length+')</div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">';
+    approved.forEach(function(r){
+      var name=attendeeNames[r.user_id]||'Someone';
+      h+='<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:white;border-radius:10px;border:1px solid var(--sand);font-size:12px"><div style="width:20px;height:20px;border-radius:6px;background:var(--sage-light);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--sage-dark)">'+esc(name[0].toUpperCase())+'</div>'+esc(name)+'</div>';
+    });
+    h+='</div>';
+  }
+
+  if(isHost){
+    if(pending.length){
+      h+='<div style="font-size:13px;font-weight:700;color:var(--warm-gray);margin-bottom:8px">Pending Approval ('+pending.length+')</div>';
+      pending.forEach(function(r){
+        var name=attendeeNames[r.user_id]||'Someone';
+        h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:white;border-radius:12px;border:1px solid var(--sand);margin-bottom:6px">';
+        h+='<div style="display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:8px;background:var(--cream);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800">'+esc(name[0].toUpperCase())+'</div><span style="font-size:13px;font-weight:600">'+esc(name)+'</span></div>';
+        h+='<div style="display:flex;gap:6px"><button class="btn btn-p" style="font-size:11px;padding:6px 12px" onclick="approveRsvp(\\x27'+r.user_id+'\\x27,\\x27'+eventId+'\\x27)">Approve</button><button class="btn btn-s" style="font-size:11px;padding:6px 12px" onclick="declineRsvp(\\x27'+r.user_id+'\\x27,\\x27'+eventId+'\\x27)">Decline</button></div>';
+        h+='</div>';
+      });
+    }
+    h+='<div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-s" style="flex:1;color:var(--terracotta);border-color:var(--terracotta)" onclick="cancelEvent(\\x27'+eventId+'\\x27)">Cancel Event</button></div>';
+  }
+  h+='</div>';
+  el.innerHTML=h;
+}
+
+async function rsvpEvent(eventId){
+  var events=JSON.parse(document.getElementById('villEvents').dataset.events||'[]');
+  var ev=events.find(function(e){return e.id===eventId});
+  var status=ev&&ev.requires_approval?'pending':'approved';
+  try{
+    await sb.from('village_rsvps').upsert({event_id:eventId,user_id:S.user.id,status:status},{onConflict:'event_id,user_id'});
+    showToast(status==='approved'?'You\\x27re in!':'RSVP sent \u2014 waiting for approval');
+    openEventDetail(eventId);
+  }catch(e){console.error('RSVP:',e);showToast('Could not RSVP')}
+}
+
+async function cancelRsvp(eventId){
+  try{
+    await sb.from('village_rsvps').update({status:'cancelled'}).eq('event_id',eventId).eq('user_id',S.user.id);
+    showToast('RSVP cancelled');
+    openEventDetail(eventId);
+  }catch(e){console.error('Cancel RSVP:',e);showToast('Could not cancel')}
+}
+
+async function approveRsvp(userId,eventId){
+  await sb.from('village_rsvps').update({status:'approved'}).eq('event_id',eventId).eq('user_id',userId);
+  showToast('Approved!');
+  openEventDetail(eventId);
+}
+
+async function declineRsvp(userId,eventId){
+  await sb.from('village_rsvps').update({status:'declined'}).eq('event_id',eventId).eq('user_id',userId);
+  showToast('Declined');
+  openEventDetail(eventId);
+}
+
+async function cancelEvent(eventId){
+  if(!confirm('Cancel this event? All attendees will see it as cancelled.'))return;
+  await sb.from('village_events').update({status:'cancelled'}).eq('id',eventId);
+  showToast('Event cancelled');
+  loadVillageEvents();
+}
+
 // ═══ OVERLAY PAGES ═══
 function closeOverlay(id){document.getElementById(id).classList.remove('open')}
 
