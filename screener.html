@@ -228,6 +228,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--charco
   <div class="gate-form">
     <input type="text" id="gateParent" class="gate-input" placeholder="Your name (optional)">
     <input type="email" id="gateEmail" class="gate-input" placeholder="Email address">
+    <label style="display:flex;align-items:flex-start;gap:8px;margin:12px 0;cursor:pointer;font-size:13px;color:#6B6560;line-height:1.5"><input type="checkbox" id="gateConsent" checked style="margin-top:3px"> Send me free parenting strategies and resources. You can unsubscribe anytime.</label>
     <button class="gate-btn" onclick="submitGate()">See My Results</button>
     <div class="gate-skip" onclick="skipGate()">Skip — show results without email</div>
   </div>
@@ -393,7 +394,7 @@ function submitGate(){
   fetch(SUPA_URL+'/rest/v1/screener_leads',{
     method:'POST',
     headers:{'apikey':SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-    body:JSON.stringify({email:email,parent_name:parentName||null,child_age_months:childMonths,score:score,risk_level:risk,answers:answers})
+    body:JSON.stringify({email:email,parent_name:parentName||null,child_age_months:childMonths,score:score,risk_level:risk,answers:answers,marketing_consent:document.getElementById('gateConsent').checked})
   }).catch(function(){});
 
   showResults();
