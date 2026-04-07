@@ -642,7 +642,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
         <div class="tracker-form">
           <h3>Log a Behavior</h3>
           <div class="tf-row"><label>What happened?</label><input id="tfBehavior" type="text" placeholder="e.g. Meltdown at dinner, hitting sibling"></div>
-          <div class="tf-row"><label>What triggered it?</label><input id="tfTrigger" type="text" placeholder="e.g. Told no to screen time, transition"></div>
+          <div class="tf-row"><label>Function of behavior</label><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"><button class="chip" onclick="pickTriggerFunc(this,'Tangible')" title="Wants access to an item or activity">Tangible</button><button class="chip" onclick="pickTriggerFunc(this,'Escape')" title="Wants to avoid or get away from something">Escape</button><button class="chip" onclick="pickTriggerFunc(this,'Attention')" title="Wants attention from someone">Attention</button><button class="chip" onclick="pickTriggerFunc(this,'Sensory')" title="Sensory stimulation or regulation">Sensory</button></div><input id="tfTrigger" type="text" placeholder="Details (optional): e.g. Told no to screen time"></div>
           <div class="tf-row"><label>How long did it last? (minutes)</label><input id="tfDuration" type="number" placeholder="e.g. 15" min="1"></div>
           <div class="tf-row"><label>Intensity</label>
             <div class="tf-intensity">
@@ -1047,6 +1047,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><div class="hdr-av" id="composeAv" style="width:36px;height:36px;font-size:14px">?</div><div style="font-weight:700;font-size:14px" id="composeName">You</div></div>
         <textarea id="composeText" style="width:100%;padding:12px;border:2px solid var(--sand);border-radius:12px;font-size:15px;font-family:'DM Sans',sans-serif;resize:none;min-height:80px;color:var(--charcoal)" placeholder="What's on your mind?"></textarea>
         <div style="margin-top:10px;margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--warm-gray);margin-bottom:6px">Topic</div><div style="display:flex;gap:6px;flex-wrap:wrap" id="composeTopics"></div></div>
+        <div style="margin-bottom:12px"><input type="file" id="composeImage" accept="image/*" style="display:none" onchange="previewComposeImage(this)"><button type="button" style="background:none;border:1.5px dashed var(--sand);border-radius:12px;padding:10px 16px;cursor:pointer;color:var(--warm-gray);font-size:13px;font-weight:600;width:100%;transition:all 0.15s" onclick="document.getElementById('composeImage').click()">&#x1F4F7; Add Photo</button><div id="composeImagePreview" style="margin-top:8px;display:none"><img id="composeImageThumb" style="max-width:100%;border-radius:12px;max-height:200px"><button type="button" style="display:block;margin-top:4px;background:none;border:none;color:var(--terracotta);font-size:12px;cursor:pointer" onclick="removeComposeImage()">Remove photo</button></div></div>
         <div style="display:flex;gap:8px"><button class="btn btn-p" style="flex:1" onclick="submitPost()">Post to Village</button><button class="btn btn-s" onclick="closeCompose()">Cancel</button></div>
       </div>
       <div id="communityPosts" style="display:flex;flex-direction:column;gap:12px"></div></div>
@@ -1068,7 +1069,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
       <div id="trackForm" style="background:white;border-radius:20px;padding:24px;border:1px solid var(--sand);margin-bottom:20px">
         <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:16px">Log a Behavior</div>
         <div style="margin-bottom:14px"><label class="fl">What happened?</label><input id="trBehavior" class="fi" placeholder="e.g. Meltdown, hitting, screaming"></div>
-        <div style="margin-bottom:14px"><label class="fl">What triggered it?</label><input id="trTrigger" class="fi" placeholder="e.g. Told to turn off iPad, transition to bath"></div>
+        <div style="margin-bottom:14px"><label class="fl">Function of behavior</label><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"><button class="chip" onclick="pickTriggerFunc(this,'Tangible')" title="Wants access to an item or activity">Tangible</button><button class="chip" onclick="pickTriggerFunc(this,'Escape')" title="Wants to avoid or get away from something">Escape</button><button class="chip" onclick="pickTriggerFunc(this,'Attention')" title="Wants attention from someone">Attention</button><button class="chip" onclick="pickTriggerFunc(this,'Sensory')" title="Sensory stimulation or regulation">Sensory</button></div><input id="trTrigger" class="fi" placeholder="Details (optional): e.g. Told to turn off iPad" style="font-size:13px"></div>
         <div style="display:flex;gap:12px;margin-bottom:14px">
           <div style="flex:1"><label class="fl">Duration (min)</label><input id="trDuration" class="fi" type="number" placeholder="e.g. 10"></div>
           <div style="flex:1"><label class="fl">Intensity</label><select id="trIntensity" class="fi"><option value="">Select</option><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option></select></div>
@@ -2261,6 +2262,11 @@ function closeCompose(){
   document.getElementById('composeBar').classList.remove('hidden');
   document.getElementById('composeForm').classList.add('hidden');
   document.getElementById('composeText').value='';
+  composeImageFile=null;
+  var imgInput=document.getElementById('composeImage');
+  if(imgInput)imgInput.value='';
+  var imgPrev=document.getElementById('composeImagePreview');
+  if(imgPrev)imgPrev.style.display='none';
 }
 function pickComposeTopic(t,el){
   composeTopic=t;
@@ -2312,6 +2318,26 @@ async function submitReport(contentType, contentId, reason){
   showToast('Reported. Our team will review this.');
 }
 
+var composeImageFile=null;
+function previewComposeImage(input){
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  if(file.size>5*1024*1024){showToast('Image too large (max 5MB)');input.value='';return}
+  composeImageFile=file;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    document.getElementById('composeImageThumb').src=e.target.result;
+    document.getElementById('composeImagePreview').style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeComposeImage(){
+  composeImageFile=null;
+  document.getElementById('composeImage').value='';
+  document.getElementById('composeImagePreview').style.display='none';
+}
+
 async function submitPost(){
   var text=document.getElementById('composeText').value.trim();
   if(!text){showToast('Write something first');return}
@@ -2333,6 +2359,17 @@ async function submitPost(){
     flagged_words: check.flagged.length ? check.flagged : null
   };
 
+  // Upload image if present
+  if(composeImageFile){
+    var ext=composeImageFile.name.split('.').pop();
+    var fileName='post_'+Date.now()+'_'+Math.random().toString(36).substring(7)+'.'+ext;
+    var uploadR=await sb.storage.from('community-images').upload(fileName,composeImageFile,{contentType:composeImageFile.type});
+    if(!uploadR.error){
+      var urlR=sb.storage.from('community-images').getPublicUrl(fileName);
+      postData.image_url=urlR.data.publicUrl;
+    }
+    composeImageFile=null;
+  }
   var r=await sb.from('community_posts').insert(postData).select().single();
   if(!r.error){
     closeCompose();
@@ -2394,7 +2431,7 @@ async function renderCommunityPosts(){
     allPosts.push({
       id:p.id,author:p.author_name||'Anonymous',badge:p.status==='flagged'?'Under Review':'Member',time:timeStr,
       text:p.content,likes:likeCounts[p.id]||0,comments:0,topic:p.topic||'General',
-      isSeed:false,userLiked:userLikes[p.id]||false,status:p.status
+      isSeed:false,userLiked:userLikes[p.id]||false,status:p.status,image_url:p.image_url||null
     });
   });
 
@@ -2417,6 +2454,7 @@ async function renderCommunityPosts(){
     if(!p.isSeed) h+='<button style="background:none;border:none;cursor:pointer;padding:4px;color:var(--warm-gray-light);font-size:18px;line-height:1" onclick="showReportModal(\'post\',\''+p.id+'\')" title="Report">&middot;&middot;&middot;</button>';
     h+='</div>';
     h+='<p style="font-size:14.5px;line-height:1.6;margin-bottom:14px">'+esc(p.text)+'</p>';
+    if(p.image_url)h+='<div style="margin-top:8px"><img src="'+esc(p.image_url)+'" style="max-width:100%;border-radius:12px;max-height:300px;object-fit:cover" loading="lazy"></div>';
     h+='<div style="display:flex;gap:20px"><button class="postbtn '+(lk?'liked':'')+'" onclick="toggleLike(\''+(p.isSeed?p.id:p.id)+'\','+p.isSeed+')"><svg width="18" height="18" viewBox="0 0 24 24" fill="'+(lk?'#C4745A':'none')+'" stroke="'+(lk?'#C4745A':'#9E9790')+'" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'+p.likes+'</button>';
     if(!p.isSeed){
       h+='<button class="postbtn" onclick="toggleComments(\''+p.id+'\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span id="cc_'+p.id+'">...</span></button>';
@@ -2589,6 +2627,18 @@ function pickOutcome(el, val){
   el.classList.add('on');
 }
 
+var selectedTriggerFunc='';
+function pickTriggerFunc(btn,func){
+  if(btn.classList.contains('on')){
+    btn.classList.remove('on');
+    selectedTriggerFunc='';
+  } else {
+    btn.parentElement.querySelectorAll('.chip').forEach(function(c){c.classList.remove('on')});
+    btn.classList.add('on');
+    selectedTriggerFunc=func;
+  }
+}
+
 async function logBehavior(){
   if(!S.user){showAuth(true);return}
   var behavior = document.getElementById('trBehavior').value.trim();
@@ -2599,7 +2649,7 @@ async function logBehavior(){
   var log = {
     user_id: S.user.id,
     behavior: behavior,
-    trigger_desc: document.getElementById('trTrigger').value.trim()||null,
+    trigger_desc: (selectedTriggerFunc?(selectedTriggerFunc+(document.getElementById('trTrigger').value.trim()?' — '+document.getElementById('trTrigger').value.trim():'')):document.getElementById('trTrigger').value.trim())||null,
     duration_minutes: parseInt(document.getElementById('trDuration').value)||null,
     intensity: document.getElementById('trIntensity').value||null,
     location: document.getElementById('trLocation').value.trim()||null,
@@ -2614,6 +2664,8 @@ async function logBehavior(){
     auditLog('create_behavior_log','behavior_logs',null,{behavior:log.behavior});
     document.getElementById('trBehavior').value='';
     document.getElementById('trTrigger').value='';
+    selectedTriggerFunc='';
+    document.querySelectorAll('[onclick*="pickTriggerFunc"]').forEach(function(c){c.classList.remove('on')});
     document.getElementById('trDuration').value='';
     document.getElementById('trIntensity').value='';
     document.getElementById('trLocation').value='';
@@ -2641,7 +2693,17 @@ async function loadLogs(){
     var d=new Date(l.logged_at);
     var timeStr=d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' at '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     h+='<div class="log-card"><div class="log-card-top"><div class="log-card-behavior">'+esc(l.behavior)+'</div><div class="log-card-time">'+timeStr+'</div></div>';
-    if(l.trigger_desc)h+='<div class="log-card-detail"><strong>Trigger:</strong> '+esc(l.trigger_desc)+'</div>';
+    if(l.trigger_desc){
+      var parts=l.trigger_desc.split(' — ');
+      var func=parts[0];
+      var detail=parts.length>1?parts.slice(1).join(' — '):'';
+      var isFuncTag=['Tangible','Escape','Attention','Sensory'].indexOf(func)>=0;
+      if(isFuncTag){
+        h+='<div class="log-card-detail"><span class="log-tag" style="background:var(--sky);color:#2a6496;margin-right:4px">'+func+'</span>'+(detail?esc(detail):'')+'</div>';
+      } else {
+        h+='<div class="log-card-detail"><strong>Trigger:</strong> '+esc(l.trigger_desc)+'</div>';
+      }
+    }
     if(l.duration_minutes)h+='<div class="log-card-detail"><strong>Duration:</strong> '+l.duration_minutes+' min</div>';
     if(l.strategy_used)h+='<div class="log-card-detail"><strong>Strategy:</strong> '+esc(l.strategy_used)+'</div>';
     if(l.notes)h+='<div class="log-card-detail" style="margin-top:4px;font-style:italic">'+esc(l.notes)+'</div>';
