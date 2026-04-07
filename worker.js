@@ -387,7 +387,7 @@ export default {
     if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
 
     body.model = 'claude-sonnet-4-20250514';
-    if (body.max_tokens > 2000) body.max_tokens = 2000;
+    if (body.max_tokens > 8000) body.max_tokens = 8000;
 
     try {
       const r = await fetch('https://api.anthropic.com/v1/messages', {
