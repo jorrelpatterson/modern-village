@@ -202,3 +202,76 @@
 5. **Business tasks:** Form LLC, get EIN, activate Stripe real payments, OAR grant application (open now, $50K)
 6. **Regional Centers:** 21 imported into CRM. Craft RC-specific email sequence. Find Family Support Services director contacts at RCOC and RCSD. Ask Ariana for RC contacts.
 7. **Dear Mom Co:** Research partnership opportunity — they got RCs to pay $495/ticket. Modern Village could be the digital companion.
+
+---
+
+## Testing Checklist (Full Platform Test)
+
+### Parent (testparent@modernvillage.app / TestParent123!)
+- [ ] See Maya and Elijah in child switcher
+- [ ] AI Coach works (send a message, get response)
+- [ ] Behavior Tracker — log a behavior with ABA function chips (Tangible/Escape/Attention/Sensory)
+- [ ] Community — post with photo, comment on a post
+- [ ] Routine Builder — create, save, AI suggest, print
+- [ ] IEP Toolkit — upload a PDF, analyze
+- [ ] Care Team Notes — post a note, reply
+- [ ] Care Team — invite a caregiver/teacher/provider
+- [ ] Session Notes — see shared provider notes (read-only)
+- [ ] Crisis Mode — walk through de-escalation steps
+- [ ] Voice Mode — mic button on chat bar
+- [ ] Daily Check-in — should prompt
+- [ ] Progress Milestones — check sidebar
+- [ ] Child login — create kid login for Maya (username + PIN)
+- [ ] Forgot password flow — test from login screen
+- [ ] Profile — edit, add child, set active
+
+### Provider (testprovider@modernvillage.app / TestProvider123!)
+- [ ] See 5 clients with trend stats and billing amounts
+- [ ] Click client → Behavior Logs tab (read-only)
+- [ ] Session Notes tab — see notes, create new note
+- [ ] Generate AI clinical narrative in session note
+- [ ] Billing tab — see claims summary, aging report
+- [ ] Generate Claim from session note
+- [ ] Update claim status (pending → submitted → paid)
+- [ ] Superbill — generate and print
+- [ ] Insights tab — see behavioral patterns
+- [ ] Care Notes tab — post and read notes
+- [ ] Sidebar: Billing Dashboard (all clients)
+- [ ] Sidebar: My Payers — add/remove payers
+- [ ] Sidebar: Care Team Notes
+- [ ] Provider pending screen (test with unverified account)
+
+### Caregiver (testcaregiver@modernvillage.app / TestCaregiver123!)
+- [ ] See Maya only
+- [ ] Log a behavior — should show "Logged by Test Caregiver"
+- [ ] Routines — read-only (no edit/save/AI)
+- [ ] Saved Strategies — read-only (no delete)
+- [ ] Care Team Notes — post and read
+- [ ] No AI Coach, no Community, no IEP Toolkit
+
+### Teacher (testteacher@modernvillage.app / TestTeacher123!)
+- [ ] See Elijah only
+- [ ] Behavior Summary — weekly comparison, trends, expandable logs
+- [ ] Log a behavior — attributed to teacher
+- [ ] IEP Toolkit access
+- [ ] Routines — read-only
+- [ ] Care Team Notes
+- [ ] No AI Coach, no Community
+
+### Child (create via parent → Profile → "Create Kid Login")
+- [ ] Login with username + PIN from "I'm a kid" link
+- [ ] Mood check-in (emoji grid)
+- [ ] Coping tools display
+- [ ] Routine viewer
+- [ ] Feelings history
+- [ ] No access to parent data
+
+### Admin (admin@modernvillage.app / IttakesaVill@ge!)
+- [ ] Users tab — all users with roles, children, multi-child display
+- [ ] Reset PW button works
+- [ ] Verify Providers tab
+- [ ] Invites tab
+- [ ] Billing Overview — claims by status, revenue by provider
+- [ ] Leads CRM — 16,000+ leads, filter, search, status update
+- [ ] Marketing tab — signup chart, role breakdown, conversion funnel
+- [ ] Email Campaigns — create blast, create 9-email sequence, AI generate, send test
