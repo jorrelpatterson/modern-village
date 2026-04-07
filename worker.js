@@ -84,6 +84,38 @@ export default {
 
     const url = new URL(request.url);
 
+    // ═══ RESEND WEBHOOK (email tracking — no auth required) ═══
+    if (url.pathname === '/webhook/resend') {
+      const event = body;
+      if (!event || !event.type) return new Response('{"ok":true}', { headers: h });
+      const emailId = event.data && event.data.email_id;
+      if (!emailId) return new Response('{"ok":true}', { headers: h });
+      const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+      const now = new Date().toISOString();
+      if (event.type === 'email.opened') {
+        await fetch(env.SUPABASE_URL + '/rest/v1/campaign_sends?resend_id=eq.' + emailId, { method: 'PATCH', headers: supaH, body: JSON.stringify({ status: 'opened', opened_at: now }) });
+      } else if (event.type === 'email.clicked') {
+        await fetch(env.SUPABASE_URL + '/rest/v1/campaign_sends?resend_id=eq.' + emailId, { method: 'PATCH', headers: supaH, body: JSON.stringify({ status: 'clicked', clicked_at: now }) });
+      } else if (event.type === 'email.bounced') {
+        await fetch(env.SUPABASE_URL + '/rest/v1/campaign_sends?resend_id=eq.' + emailId, { method: 'PATCH', headers: supaH, body: JSON.stringify({ status: 'bounced', bounced_at: now }) });
+      }
+      // Update campaign aggregate counts
+      if (emailId) {
+        const sendR = await fetch(env.SUPABASE_URL + '/rest/v1/campaign_sends?resend_id=eq.' + emailId + '&select=campaign_id', { headers: supaH });
+        const sends = await sendR.json();
+        if (sends && sends.length) {
+          const cid = sends[0].campaign_id;
+          const statsR = await fetch(env.SUPABASE_URL + '/rest/v1/campaign_sends?campaign_id=eq.' + cid + '&select=status', { headers: supaH });
+          const allSends = await statsR.json();
+          const opened = allSends.filter(s => s.status === 'opened' || s.status === 'clicked').length;
+          const clicked = allSends.filter(s => s.status === 'clicked').length;
+          const bounced = allSends.filter(s => s.status === 'bounced').length;
+          await fetch(env.SUPABASE_URL + '/rest/v1/campaigns?id=eq.' + cid, { method: 'PATCH', headers: supaH, body: JSON.stringify({ total_opened: opened, total_clicked: clicked, total_bounced: bounced }) });
+        }
+      }
+      return new Response('{"ok":true}', { headers: h });
+    }
+
     const authToken = request.headers.get('Authorization')?.replace('Bearer ', '');
 
     // === ADMIN: RESET USER PASSWORD (requires admin session) ===
@@ -280,6 +312,63 @@ export default {
       });
 
       return new Response(JSON.stringify({ success: true, child_id: invite.child_id, role: invite.role }), { headers: h });
+    }
+
+    // ═══ SEND CAMPAIGN (admin only) ═══
+    if (url.pathname === '/send-campaign') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      const adminCheck = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=is_admin', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const adminData = await adminCheck.json();
+      if (!adminData.length || !adminData[0].is_admin) return new Response('{"error":"Admin only"}', { status: 403, headers: h });
+
+      const { campaign_id, emails } = body;
+      if (!campaign_id || !emails || !emails.length) return new Response('{"error":"Missing data"}', { status: 400, headers: h });
+
+      // Get campaign
+      const campR = await fetch(env.SUPABASE_URL + '/rest/v1/campaigns?id=eq.' + campaign_id + '&select=*', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const camps = await campR.json();
+      if (!camps.length) return new Response('{"error":"Campaign not found"}', { status: 404, headers: h });
+      const camp = camps[0];
+
+      let sent = 0;
+      const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' };
+
+      for (const e of emails) {
+        const variant = Math.random() < 0.5 ? 'a' : 'b';
+        const subject = variant === 'b' && camp.subject_b ? camp.subject_b : camp.subject_a;
+        const html = variant === 'b' && camp.body_html_b ? camp.body_html_b : camp.body_html;
+
+        try {
+          const sendR = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from: 'Modern Village <hello@modernvillage.app>', to: e.email, subject: subject, html: html, tags: [{ name: 'campaign', value: campaign_id }] })
+          });
+          const result = await sendR.json();
+          if (result.id) {
+            await fetch(env.SUPABASE_URL + '/rest/v1/campaign_sends', {
+              method: 'POST', headers: { ...supaH, 'Prefer': 'return=minimal' },
+              body: JSON.stringify({ campaign_id: campaign_id, lead_id: e.lead_id || null, resend_id: result.id, email: e.email, variant: variant })
+            });
+            sent++;
+          }
+        } catch (err) { console.error('Send error:', err); }
+        // Rate limit: 2 per second
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      // Update campaign
+      await fetch(env.SUPABASE_URL + '/rest/v1/campaigns?id=eq.' + campaign_id, {
+        method: 'PATCH', headers: supaH,
+        body: JSON.stringify({ status: 'sent', total_sent: sent, sent_at: new Date().toISOString() })
+      });
+
+      return new Response(JSON.stringify({ success: true, sent: sent }), { headers: h });
     }
 
     // === AI CHAT ===

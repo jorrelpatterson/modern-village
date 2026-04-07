@@ -327,6 +327,28 @@
         <button onclick="exportLeads()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--sage);background:white;color:var(--sage-dark);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600">Export CSV</button>
       </div>
       <div class="panel"><div class="panel-hdr"><div class="panel-title">Leads</div><span id="leadResultCount" style="font-size:12px;color:var(--warm-gray-light)"></span></div><div class="panel-body"><table class="tbl"><thead><tr><th>Name</th><th>Organization</th><th>Type</th><th>City</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody id="leadBody"></tbody></table></div></div>
+
+      <div style="margin-top:24px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h3 style="margin:0">Email Campaigns</h3>
+          <button class="btn btn-sm btn-sage" onclick="showCampaignComposer()">+ New Campaign</button>
+        </div>
+        <div id="campaignList"></div>
+      </div>
+
+      <div id="campaignComposer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px">
+        <div style="background:white;border-radius:16px;padding:24px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto">
+          <h3 style="margin:0 0 16px">New Email Campaign</h3>
+          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Campaign Name</label><input id="campName" class="form-input" placeholder="e.g. BCBA Outreach Wave 1"></div>
+          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Subject Line A</label><input id="campSubjectA" class="form-input" placeholder="Subject line"></div>
+          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Subject Line B (A/B test — optional)</label><input id="campSubjectB" class="form-input" placeholder="Alternative subject line"></div>
+          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Email Body</label><textarea id="campBody" class="form-input" rows="8" placeholder="Write your email content... HTML supported"></textarea></div>
+          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Target</label><select id="campTarget" class="form-input"><option value="all">All Leads</option><option value="district">Districts Only</option><option value="provider">Providers Only</option><option value="selpa">SELPAs Only</option><option value="not_contacted">Not Yet Contacted</option></select></div>
+          <button class="btn btn-sm btn-outline" onclick="aiGenerateVariants()" id="aiGenBtn" style="margin-bottom:12px;width:100%">✨ AI Generate Subject Lines &amp; Body</button>
+          <div id="campPreview" style="display:none;margin-bottom:12px;padding:16px;background:#f9f9f9;border-radius:12px"></div>
+          <div style="display:flex;gap:8px"><button class="btn btn-sm btn-sage" onclick="saveCampaign()">Save Draft</button><button class="btn btn-sm btn-sage" onclick="saveCampaign(true)">Save &amp; Send</button><button class="btn btn-sm btn-outline" onclick="closeCampaignComposer()">Cancel</button></div>
+        </div>
+      </div>
     </div>
 
     <div id="pgMarketing" class="page">
@@ -377,6 +399,10 @@ var SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 var sb;
 try { sb = supabase.createClient(SUPA_URL, SUPA_KEY); } catch(e) {}
 var adminUser = null;
+
+function emailWrapper(bodyContent){
+  return '<div style="background:#FDF8F0;padding:20px 0;font-family:sans-serif"><div style="max-width:520px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #E8DDD0"><div style="background:#7A9E7E;padding:24px 32px;text-align:center"><div style="font-size:22px;font-weight:800;color:white;letter-spacing:0.5px">Modern Village</div><div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:4px">It takes a village. Let us be yours.</div></div><div style="padding:32px">'+bodyContent+'</div><div style="padding:20px 32px;border-top:1px solid #E8DDD0;text-align:center"><div style="font-size:11px;color:#9E9790;line-height:1.6">Modern Village &mdash; ABA-powered support for neurodivergent families<br><a href="https://modernvillage.app" style="color:#7A9E7E;text-decoration:none">modernvillage.app</a></div></div></div></div>';
+}
 
 var providers = [
   {name:"Ariana Roberts",creds:"BCBA",specialty:"Autism spectrum support, early intervention, social skills",rate30:55,rate60:95,npi:"1023648599",active:true}
@@ -483,7 +509,7 @@ async function loadPage(pg){
   else if(pg==='referrals') await loadReferrals();
   else if(pg==='verification') loadVerification();
   else if(pg==='invites') loadInvites();
-  if(pg==='leads') loadLeads();
+  if(pg==='leads'){loadLeads();loadCampaigns()}
   if(pg==='marketing') loadMarketing();
 }
 
@@ -1335,6 +1361,138 @@ async function loadMarketing(){
   document.getElementById('conversionFunnel').innerHTML=fh;
 }
 
+
+// ═══ EMAIL CAMPAIGNS ═══
+async function loadCampaigns(){
+  var r=await sb.from('campaigns').select('*').order('created_at',{ascending:false});
+  var camps=r.data||[];
+  var el=document.getElementById('campaignList');
+  if(!camps.length){el.innerHTML='<div class="empty">No campaigns yet. Create one to start outreach.</div>';return}
+  var h='';
+  camps.forEach(function(c){
+    var openRate=c.total_sent?Math.round(c.total_opened/c.total_sent*100):0;
+    var clickRate=c.total_sent?Math.round(c.total_clicked/c.total_sent*100):0;
+    var statusColor=c.status==='sent'?'tag-sage':c.status==='sending'?'tag-yellow':'tag-free';
+    h+='<div style="padding:16px;background:#f9f9f9;border-radius:12px;margin-bottom:10px">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:start"><div><strong>'+esc(c.name)+'</strong><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">'+esc(c.subject_a)+'</div></div><span class="tag '+statusColor+'">'+c.status+'</span></div>';
+    if(c.total_sent){
+      h+='<div style="display:flex;gap:16px;margin-top:10px;font-size:12px">';
+      h+='<div><strong>'+c.total_sent+'</strong> sent</div>';
+      h+='<div><strong>'+openRate+'%</strong> opened</div>';
+      h+='<div><strong>'+clickRate+'%</strong> clicked</div>';
+      h+='<div><strong>'+c.total_bounced+'</strong> bounced</div>';
+      h+='</div>';
+      if(c.subject_b){
+        h+='<div style="margin-top:8px;font-size:11px;color:var(--warm-gray)">A/B test: "'+esc(c.subject_a)+'" vs "'+esc(c.subject_b)+'"</div>';
+      }
+    }
+    h+='</div>';
+  });
+  el.innerHTML=h;
+}
+
+function showCampaignComposer(){
+  document.getElementById('campName').value='';
+  document.getElementById('campSubjectA').value='';
+  document.getElementById('campSubjectB').value='';
+  document.getElementById('campBody').value='';
+  document.getElementById('campPreview').style.display='none';
+  document.getElementById('campaignComposer').style.display='flex';
+}
+function closeCampaignComposer(){document.getElementById('campaignComposer').style.display='none'}
+
+async function aiGenerateVariants(){
+  var btn=document.getElementById('aiGenBtn');
+  btn.disabled=true;btn.textContent='Generating...';
+  var target=document.getElementById('campTarget').value;
+  var targetDesc=target==='district'?'school district special education coordinators':target==='provider'?'BCBAs and ABA therapy providers':target==='selpa'?'SELPA directors':'potential partners';
+
+  try{
+    var session=await sb.auth.getSession();
+    var token=session.data.session?.access_token;
+    var r=await fetch('https://village-api.jorrelpatterson.workers.dev/',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1500,
+        system:'You are a marketing copywriter for Modern Village, an ABA-powered platform for neurodivergent families. Write compelling, warm, professional outreach emails. Never be salesy or pushy. Focus on the value proposition: AI behavior coaching, behavior tracking, IEP tools, care team collaboration. Return valid JSON only.',
+        messages:[{role:'user',content:'Generate an outreach email for '+targetDesc+'. Return JSON: {"subject_a":"subject line 1","subject_b":"alternative subject line","body":"email body HTML with Modern Village branding (sage green #7A9E7E, warm tone). Include a clear CTA button linking to https://modernvillage.app. Keep it under 200 words."}'}]
+      })
+    });
+    var d=await r.json();
+    var text='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)text+=d.content[i].text;
+    text=text.replace(/```json\s*/,'').replace(/```\s*/,'').trim();
+    var parsed=JSON.parse(text);
+    if(parsed.subject_a)document.getElementById('campSubjectA').value=parsed.subject_a;
+    if(parsed.subject_b)document.getElementById('campSubjectB').value=parsed.subject_b;
+    if(parsed.body)document.getElementById('campBody').value=parsed.body;
+    showToast('AI generated content!');
+  }catch(e){console.error(e);showToast('Error generating content')}
+  btn.disabled=false;btn.textContent='\u2728 AI Generate Subject Lines & Body';
+}
+
+async function saveCampaign(sendNow){
+  var name=document.getElementById('campName').value.trim();
+  var subA=document.getElementById('campSubjectA').value.trim();
+  var body=document.getElementById('campBody').value.trim();
+  if(!name||!subA||!body){showToast('Fill in name, subject, and body');return}
+
+  var subB=document.getElementById('campSubjectB').value.trim()||null;
+  var target=document.getElementById('campTarget').value;
+
+  // Wrap body in branded template
+  var brandedBody=emailWrapper?emailWrapper(body):body;
+
+  var campData={name:name,subject_a:subA,subject_b:subB,body_html:brandedBody,body_html_b:subB?brandedBody:null,lead_filter:{type:target},status:'draft'};
+
+  var r=await sb.from('campaigns').insert(campData).select().single();
+  if(r.error){showToast('Error saving campaign');return}
+
+  closeCampaignComposer();
+  showToast('Campaign saved!');
+
+  if(sendNow&&r.data){
+    await sendCampaign(r.data.id,target);
+  }
+  loadCampaigns();
+}
+
+async function sendCampaign(campaignId,target){
+  showToast('Preparing to send...');
+  // Get leads based on target filter
+  var q=sb.from('leads').select('id,email').not('email','is',null);
+  if(target&&target!=='all'&&target!=='not_contacted')q=q.eq('lead_type',target);
+  if(target==='not_contacted')q=q.eq('outreach_status','not_contacted');
+  q=q.limit(500);
+
+  var r=await q;
+  var leads=(r.data||[]).filter(function(l){return l.email});
+  if(!leads.length){showToast('No leads with email addresses found');return}
+
+  showToast('Sending to '+leads.length+' leads...');
+
+  var session=await sb.auth.getSession();
+  var token=session.data.session?.access_token;
+
+  var sendR=await fetch('https://village-api.jorrelpatterson.workers.dev/send-campaign',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body:JSON.stringify({campaign_id:campaignId,emails:leads.map(function(l){return{email:l.email,lead_id:l.id}})})
+  });
+  var result=await sendR.json();
+  if(result.success){
+    showToast('Sent to '+result.sent+' leads!');
+    // Update lead statuses
+    for(var l of leads){
+      await sb.from('leads').update({outreach_status:'emailed',last_contacted_at:new Date().toISOString()}).eq('id',l.id);
+    }
+  } else {
+    showToast('Error: '+(result.error||'Send failed'));
+  }
+  loadCampaigns();
+  loadLeads();
+}
 </script>
 </body>
 </html>
