@@ -1059,6 +1059,19 @@ var API_URL = "https://village-api.jorrelpatterson.workers.dev/";
 var sb;
 try { sb = supabase.createClient(SUPA_URL, SUPA_KEY); } catch(e) { console.error('Supabase init failed:', e); }
 
+// Listen for password recovery event (PKCE flow)
+if(sb){sb.auth.onAuthStateChange(function(event,session){
+  if(event==='PASSWORD_RECOVERY'){
+    var newPass=prompt('Enter your new password (8+ characters):');
+    if(newPass&&newPass.length>=8){
+      sb.auth.updateUser({password:newPass}).then(function(r){
+        if(r.error)alert('Error: '+r.error.message);
+        else{alert('Password updated successfully!');sb.auth.signOut().then(function(){window.location.href=window.location.pathname})}
+      });
+    }
+  }
+})}
+
 // ═══ SECURITY: Auth token helper ═══
 async function getAuthToken(){
   if(!sb) return null;
@@ -1393,9 +1406,13 @@ async function init(){
   setTimeout(function(){document.getElementById('splash').classList.add('out')},1800);
   setTimeout(async function(){
     document.getElementById('splash').classList.add('hidden');
-    // Handle password recovery from email link
-    if(window.location.hash.includes('type=recovery')){
+    // Handle password recovery — check URL params and hash
+    var urlParams=new URLSearchParams(window.location.search);
+    var hashParams=new URLSearchParams(window.location.hash.substring(1));
+    if(urlParams.get('type')==='recovery'||hashParams.get('type')==='recovery'||window.location.hash.includes('type=recovery')){
       document.getElementById('splash').classList.add('hidden');
+      // Wait for Supabase to process the recovery token
+      await new Promise(function(resolve){setTimeout(resolve,1000)});
       var newPass=prompt('Enter your new password (8+ characters):');
       if(newPass&&newPass.length>=8){
         try{
@@ -1404,7 +1421,7 @@ async function init(){
           else{alert('Password updated! You can now log in.');await sb.auth.signOut()}
         }catch(e){alert('Error resetting password')}
       }
-      window.location.hash='';
+      window.history.replaceState({},'',window.location.pathname);
       window.location.reload();
       return;
     }
