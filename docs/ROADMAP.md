@@ -95,7 +95,34 @@
 | Provider Marketplace v2 | Public-facing marketplace browsing, application → review → onboarding flow, multi-provider booking UI | Medium |
 | District admin portal | Separate coordinator login — can see aggregate data across all schools/teachers in their district, manage teacher onboarding, view engagement metrics | Medium |
 | Caregiver mental health support (Pillar 10) | LPC-provided support for caregivers through the platform. Requires hiring an LPC. | Low (needs hire) |
-| Parent Support Groups | Live group coaching sessions via platform | Low |
+
+### My Village — Local Community Layer (High Priority)
+
+**Full spec: [docs/MY-VILLAGE-SPEC.md](docs/MY-VILLAGE-SPEC.md)**
+
+Turns the app from a solo parenting tool into a real-world support network. Strongest retention mechanism possible — parents who form real friendships through the app never cancel.
+
+**Phase 1 (MVP):**
+- [ ] `village_profiles` table + opt-in flow (hidden/city/neighborhood visibility)
+- [ ] Nearby parents list view (distance-sorted, filtered by age/diagnosis/interests)
+- [ ] Events creation + RSVP + list view (6 event types, approval flow)
+- [ ] Replace Community tab with hybrid Feed/Nearby/Events sub-tabs
+
+**Phase 2 (Enhancement):**
+- [ ] Map view (Mapbox or Google Maps) with parent/event/resource pins
+- [ ] Local resource directory + ratings/reviews (crowdsourced, moderated)
+- [ ] In-app messaging + mutual connections (text-only, report/block)
+- [ ] Event comment threads
+
+**Phase 3 (Growth):**
+- [ ] Push notifications for events
+- [ ] Recurring events
+- [ ] BCBA-facilitated support groups ($10/session revenue)
+- [ ] "Invite to My Village" viral share link
+
+**New tables (8):** village_profiles, village_events, village_rsvps, village_event_comments, village_resources, village_reviews, village_messages, village_connections
+
+**Privacy:** Default hidden, approximate location only (~0.5mi), no children's names/photos in profiles, event address hidden until RSVP approved, messaging requires mutual connection, HIPAA disclaimer (non-clinical, no PHI).
 
 ### Phase 4
 | Feature | Description |
@@ -104,7 +131,6 @@
 | School-home bridge | Teacher ↔ parent notifications, school behavior sync |
 | Standardized assessment tracking | VB-MAPP, ABLLS-R, Vineland |
 | Parent story library | Shared experiences, searchable by diagnosis/age/challenge |
-| "My Village" resource map | GPS-based local resources (therapy, schools, support groups) |
 | Annual Village Report PDF | Behavioral summary for IEP meetings |
 
 ### Phase 5 — Scale
@@ -197,13 +223,14 @@
 
 ## Reminders (Next Session)
 
-1. **Deploy worker.js to Cloudflare** — latest version has email sequences, token cap raise (8000), campaign send endpoint, webhook receiver. Paste code from repo into Cloudflare dashboard.
+1. ~~**Deploy worker.js to Cloudflare**~~ — DONE 2026-04-07. Co-parent support, email sequences, all endpoints live.
 2. **Have Ariana test:** Crisis mode, voice mode, care team invites, ABA trigger buttons (Tangible/Escape/Attention/Sensory), community photo uploads, provider signup flow
 3. **Ready to launch campaigns:** 9-email drip sequences for BCBAs (15,000 leads), Districts (994 leads), Regional Centers (21 leads) — all in admin CRM
-4. **Next to build:** Medical billing module — automated claim submission, ERA/EOB processing, billing dashboard. This is the BCBA hook that makes them stay.
+4. **Next to build:** My Village — local community layer (nearby parents, events/meetups, resource directory). Full spec in `docs/MY-VILLAGE-SPEC.md`. This is the #1 retention feature.
 5. **Business tasks:** Form LLC, get EIN, activate Stripe real payments, OAR grant application (open now, $50K)
 6. **Regional Centers:** 21 imported into CRM. Craft RC-specific email sequence. Find Family Support Services director contacts at RCOC and RCSD. Ask Ariana for RC contacts.
 7. **Dear Mom Co:** Research partnership opportunity — they got RCs to pay $495/ticket. Modern Village could be the digital companion.
+8. **Bugs cleared:** All 12 tracked bugs resolved as of 2026-04-07. Admin sidebar reorganized into 8 grouped sections.
 
 ---
 
