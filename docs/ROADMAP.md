@@ -84,15 +84,15 @@
 ### Platform (Phase 2)
 | Feature | Description | Priority |
 |---------|-------------|----------|
-| iOS/Android Capacitor wrap | Native app shell, Face ID, App Store distribution | High |
-| Push notifications | Daily check-in triggers, care team note alerts, session reminders, milestone celebrations | High (requires native app) |
+| iOS/Android Capacitor wrap | Native app shell wrapping existing HTML. Web-only Stripe payments (no in-app purchases — saves $3-6K/mo). Native plugins: push, biometrics, camera, geolocation, share, haptics, offline cache, badge count. See `docs/SUPPLEMENTARY.md` §8 for full strategy. | High |
+| Push notifications | HIPAA-safe generic text only. Daily check-in (8pm), morning routine (7am), booking reminder (24hr), streak at risk, milestone celebration, weekly digest, community reply, new strategy card. | High (requires native app) |
 | **Medical billing module** | **DONE (Phase 1): Claims tracking, payer management, superbills, billing dashboard, aging reports. NEXT (Phase 2): Clearinghouse integration (EDI 837) for electronic claim submission via Availity/Office Ally. Phase 3: ERA/EOB auto-processing, denial management automation, batch claim submission.** | **Phase 1 Done** |
 | **Admin role-based access** | **Different VA roles for admin panel: Marketing VA (leads, campaigns, social), Billing VA (claims, payers), Content VA (blog, social, moderation). Add admin_role field to profiles.** | Medium |
 | **Instagram auto-posting** | **Connect Instagram Graph API via Meta Business Suite for scheduled auto-publishing from admin panel. Requires: FB Business account + IG Professional account + Meta App Review.** | Medium |
 | Google Calendar sync | Routines → calendar events, session reminders for Ariana | Medium |
 | Booking reminders | 24hr email cron job before scheduled sessions | Medium |
 | Video behavior clips | Parent uploads video, AI analyzes behavior in context. Use Claude vision or other video-capable AI if needed. BCBA can also review clips. | Medium |
-| Provider Marketplace v2 | Public-facing marketplace browsing, application → review → onboarding flow, multi-provider booking UI | Medium |
+| Provider Marketplace v2 | Phase 2 (50+ subs): open marketplace, provider applications, 20-25% platform fee. Phase 3 (200+ subs): multi-provider (OTs, SLPs), shared dashboard, insurance auth support. See `docs/SUPPLEMENTARY.md` §11. | Medium |
 | District admin portal | Separate coordinator login — can see aggregate data across all schools/teachers in their district, manage teacher onboarding, view engagement metrics | Medium |
 | Caregiver mental health support (Pillar 10) | LPC-provided support for caregivers through the platform. Requires hiring an LPC. | Low (needs hire) |
 
@@ -156,16 +156,31 @@ Turns the app from a solo parenting tool into a real-world support network. Stro
 - [ ] Post screener on Reddit (r/Autism, r/AutismParenting, r/beyondthebump)
 - [ ] Email autism bloggers to link to screener (backlink building)
 - [ ] Implement email drip sequences in code (re-engagement, weekly digest) — sequences already written in docs
+- [ ] **Pediatrician QR flyers** — print screener QR flyers, drop at 40 SoCal city pediatrician offices. 300 offices x conversion = ~390 subs/yr ($93K). See `docs/SUPPLEMENTARY.md` §4.
+- [ ] **Podcast outreach** — pitch Ariana as guest on 10 autism/ADHD parenting podcasts (scraper found 50-100)
+- [ ] **Influencer partnerships** — $5/subscriber affiliate deal with 5-20 Instagram/TikTok creators (5K-50K followers)
 - [x] Create Instagram @modernvillage.app
 - [x] Referral program built
 
+### 🟡 BCBA Recruitment
+- [ ] Ask Ariana to personally refer 5 BCBA colleagues (warm intros convert 10x)
+- [ ] Launch email campaign to 15,000 NPI-scraped BCBA leads
+- [ ] Post in BCBA Facebook groups ("ABA Therapists," "BCBA Study Group")
+- [ ] Explore corporate ABA company partnership (Autism Learning Partners, LEARN Behavioral, etc. — one deal = 20-100 BCBAs)
+- [ ] LinkedIn Sales Navigator trial — DM California BCBAs
+- [ ] CalABA conference attendance/networking
+
 ### 🟡 Grants (time-sensitive)
 - [ ] Register at researchautism.org (OAR — $50K, OPEN NOW)
-- [ ] NEXT for AUTISM signup ($10K — check cycle)
+- [ ] Doug Flutie Jr. Foundation ($5K-25K)
+- [ ] Autism Speaks Community Grants ($5K-15K)
+- [ ] Caplan Foundation ($25K-50K, early childhood 0-5)
+- [ ] NEXT for AUTISM signup ($10K-50K — check cycle)
 - [ ] Inclusive App Accelerator — apply Dec 2026 for 2027 cycle ($10K, inclusiveapps.com)
 - [ ] Send Ariana grant docs to review
 - [ ] NIH SBIR — $314K (paused, apply when reopens)
 - [ ] NSF SBIR — $275K (paused)
+- [ ] Full grant target list in `docs/SUPPLEMENTARY.md` §6
 
 ### 🟡 Legal (before taking real payments)
 - [ ] Healthcare attorney reviews Terms, Privacy Policy, BAA ($500-1,500)
@@ -180,15 +195,19 @@ Turns the app from a solo parenting tool into a real-world support network. Stro
 - [ ] Google Play Data Safety form
 
 ### 🟠 District Sales
-- [ ] Convert pilot districts to paid contracts ($3-8/student/year)
-- [ ] District admin portal (separate coordinator login)
+- [ ] Start with **Pomona USD** — local, SpEd Director: Claudia Ruiz
+- [ ] Target districts hiring new SpEd directors (EdJoin scraper)
+- [ ] Target districts whose LCAP mentions PBIS/parent engagement
+- [ ] Cold email → follow-up (5 days) → one-pager + demo → 90-day pilot → school board contract
+- [ ] Pricing: $3-8/student/year, free 90-day pilot for 1-3 schools
+- [ ] Full playbook in `docs/SUPPLEMENTARY.md` §2
 
 ### 🔵 Conferences & Outreach
 - [ ] Conference presentations (CASE, CEC)
-- [ ] Annual conference planning
-- [ ] CalABA conference
-- [ ] Post in BCBA Facebook groups (Ariana)
-- [ ] LinkedIn Sales Navigator trial
+- [ ] CalABA conference (Riverside Convention Center)
+- [ ] Local news pitch — "Local BCBA builds AI to help autism families" (LA NBC/ABC/FOX)
+- [ ] Nextdoor posts in SoCal neighborhoods
+- [ ] Flyers at Regional Center offices (21 in CA)
 
 ---
 
@@ -218,6 +237,10 @@ Turns the app from a solo parenting tool into a real-world support network. Stro
 - **HIPAA compliance:** Parent invite = authorization, RLS enforces minimum necessary access, audit trail via child_access/invites tables, COPPA-safe child login (no email collected)
 - **Design system:** Fraunces + DM Sans fonts, cream/sage/terracotta palette, warm editorial feel
 - **Roles:** Parent, Provider (BCBA), Caregiver, Teacher, Child — each with distinct UI and data access
+- **Lead gen:** 30 scrapers across 4 files, 16K+ leads in CRM. NPI registry = highest-value single source (5K+ CA providers).
+- **Key decisions:** Web-only Stripe (no in-app purchases), parents-first flywheel, California-first, neurodivergent (not autism-only = 7x market). Full rationale in `docs/SUPPLEMENTARY.md` §12.
+- **Competitive edge vs Frontera Health ($32M funded):** Consumer-first vs B2B-only, $19.99 vs $200+/mo, community layer (My Village), parent-generated daily data. See `docs/SUPPLEMENTARY.md` §10.
+- **Reference docs:** Full business/marketing/grant strategy in `docs/SUPPLEMENTARY.md`. Feature specs in `docs/MY-VILLAGE-SPEC.md`. Business docs inventory in `_reference/` folder.
 
 ---
 
