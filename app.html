@@ -199,6 +199,19 @@
 .confetti{position:fixed;top:-10px;z-index:999;pointer-events:none}
 .confetti-piece{position:absolute;width:10px;height:10px;border-radius:2px;animation:confettiFall 3s ease-out forwards}
 @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
+/* Medical Billing */
+.billing-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.billing-stat{background:white;border-radius:14px;padding:14px;border:1px solid var(--sand);text-align:center}
+.billing-stat-value{font-family:Fraunces,serif;font-size:22px;font-weight:800}
+.billing-stat-label{font-size:11px;color:var(--warm-gray-light);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+.claim-card{background:white;border-radius:14px;padding:14px 16px;border:1px solid var(--sand);margin-bottom:8px}
+.claim-status-pending{color:var(--warm-gray);background:var(--cream)}
+.claim-status-submitted{color:#2a6496;background:var(--sky)}
+.claim-status-paid{color:var(--sage-dark);background:#E8F0E8}
+.claim-status-denied{color:var(--terracotta);background:var(--terracotta-light)}
+.aging-bar{display:flex;height:24px;border-radius:8px;overflow:hidden;margin-top:8px}
+.aging-segment{display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white}
+.payer-card{background:white;border-radius:14px;padding:14px 16px;border:1px solid var(--sand);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
 /* Child Dashboard */
 .child-dash{padding:20px;max-width:480px;margin:0 auto}
 .child-greeting{font-family:Fraunces,serif;font-size:28px;font-weight:800;margin-bottom:4px}
@@ -1810,7 +1823,7 @@ function renderSb(){
   var displayName=S.name||( S.user?S.user.email:'Guest');
   document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Signed in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+displayName+'</div>'+(S.child?'<div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Parent of '+S.child+(S.age?', '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'')+'</div>':'');
   updateSubSt();
-  var allItems=[{label:"\u26a0\ufe0f Crisis Support",action:"openCrisis()",roles:['parent','caregiver','provider','teacher'],highlight:true},{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"Behavior Summary",action:"openBehaviorSummary()",roles:['teacher']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"My Milestones",action:"openMilestones()",roles:['parent']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver','teacher']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver','teacher']},{label:"Session Notes",action:"openParentSessionNotes()",roles:['parent']},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
+  var allItems=[{label:"\u26a0\ufe0f Crisis Support",action:"openCrisis()",roles:['parent','caregiver','provider','teacher'],highlight:true},{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"Behavior Summary",action:"openBehaviorSummary()",roles:['teacher']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"My Milestones",action:"openMilestones()",roles:['parent']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver','teacher']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver','teacher']},{label:"Session Notes",action:"openParentSessionNotes()",roles:['parent']},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Billing Dashboard",action:"openBillingDashboard()",roles:['provider']},{label:"My Payers",action:"openPayerManagement()",roles:['provider']},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
   var items=allItems.filter(function(item){return !item.roles||item.roles.indexOf(S.role)>=0});
   var h='';for(var i=0;i<items.length;i++){var item=items[i];if(item.soon){h+='<div class="sb-item" onclick="showToast(\'Coming soon!\')"><span>'+item.label+'</span><span class="sb-soon">Soon</span></div>'}else{h+='<div class="sb-item'+(item.highlight?' sb-highlight':'')+'" onclick="closeSb();'+item.action+'"><span>'+item.label+'</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray-light)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>'}}
   if(S.user)h+='<div class="sb-logout" onclick="logout()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out</div>';
@@ -4247,7 +4260,7 @@ async function openClientDetail(childId){
   var dx=providerActiveChild.diagnosis&&providerActiveChild.diagnosis.length?providerActiveChild.diagnosis.join(', '):'';
   document.getElementById('clientDetailProfile').innerHTML='<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--sage-light);border-radius:14px"><div class="client-avatar" style="width:48px;height:48px;font-size:20px">'+esc((providerActiveChild.name||'?')[0].toUpperCase())+'</div><div><div style="font-weight:700;font-size:16px">'+esc(providerActiveChild.name)+'</div><div style="font-size:13px;color:var(--warm-gray);margin-top:2px">'+(providerActiveChild.age||'')+(dx?(providerActiveChild.age?' \u00b7 ':'')+dx:'')+'</div></div></div>';
 
-  document.getElementById('clientDetailTabs').innerHTML='<button class="cdtab active" onclick="switchClientTab(\x27logs\x27,this)">Behavior Logs</button><button class="cdtab" onclick="switchClientTab(\x27sessions\x27,this)">Session Notes</button><button class="cdtab" onclick="switchClientTab(\x27notes\x27,this)">Care Notes</button><button class="cdtab" onclick="switchClientTab(\x27insights\x27,this)">Insights</button>';
+  document.getElementById('clientDetailTabs').innerHTML='<button class="cdtab active" onclick="switchClientTab(\x27logs\x27,this)">Behavior Logs</button><button class="cdtab" onclick="switchClientTab(\x27sessions\x27,this)">Session Notes</button><button class="cdtab" onclick="switchClientTab(\x27billing\x27,this)">Billing</button><button class="cdtab" onclick="switchClientTab(\x27notes\x27,this)">Care Notes</button><button class="cdtab" onclick="switchClientTab(\x27insights\x27,this)">Insights</button>';
   providerActiveTab='logs';
 
   document.getElementById('clientDetailPage').classList.add('open');
@@ -4290,6 +4303,9 @@ async function loadClientTab(){
 
   } else if(providerActiveTab==='sessions'){
     loadSessionNotes();
+
+  } else if(providerActiveTab==='billing'){
+    loadBillingTab();
 
   } else if(providerActiveTab==='notes'){
     el.innerHTML='<div style="margin-bottom:16px"><textarea id="careNoteInputInline" class="note-input" placeholder="Write a note..." rows="2"></textarea><button class="btn btn-p" style="width:100%;margin-top:8px" onclick="postCareNoteInline()">Post Note</button></div><div id="careNotesInline"><div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div></div>';
@@ -4345,6 +4361,7 @@ async function loadSessionNotes(){
     if(n.ai_narrative)h+='<div style="font-size:13px;line-height:1.6;margin-top:10px;color:var(--warm-gray)">'+esc(n.ai_narrative.substring(0,200))+(n.ai_narrative.length>200?'...':'')+'</div>';
     h+='<div style="display:flex;gap:8px;margin-top:10px">';
     h+='<button class="btn btn-s" style="padding:4px 12px;font-size:11px" onclick="event.stopPropagation();openSuperbill(\x27'+n.id+'\x27)">Superbill</button>';
+    h+='<button class="btn btn-s" style="padding:4px 12px;font-size:11px;background:var(--sage-light);color:var(--sage-dark)" onclick="event.stopPropagation();generateClaim(\x27'+n.id+'\x27)">Generate Claim</button>';
     h+='<select style="padding:4px 8px;border-radius:8px;border:1px solid var(--sand);font-size:11px;font-family:inherit" onchange="updateBillingStatus(\x27'+n.id+'\x27,this.value)"><option value="draft"'+(n.billing_status==='draft'?' selected':'')+'>Draft</option><option value="submitted"'+(n.billing_status==='submitted'?' selected':'')+'>Submitted</option><option value="paid"'+(n.billing_status==='paid'?' selected':'')+'>Paid</option><option value="denied"'+(n.billing_status==='denied'?' selected':'')+'>Denied</option></select>';
     h+='</div></div>';
   }
@@ -5242,6 +5259,135 @@ async function saveSessionNote(){
 async function updateBillingStatus(noteId,status){
   await sb.from('session_notes').update({billing_status:status,updated_at:new Date().toISOString()}).eq('id',noteId);
   showToast('Status updated');
+}
+
+// ═══ MEDICAL BILLING ═══
+async function loadBillingTab(){
+  var el=document.getElementById('clientDetailContent');
+  if(!providerActiveChild)return;
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading billing...</div>';
+
+  // Get claims for this child
+  var r=await sb.from('claims').select('*').eq('provider_id',S.user.id).eq('child_id',providerActiveChild.id).order('created_at',{ascending:false});
+  var claims=r.data||[];
+
+  // Summary stats
+  var pending=claims.filter(function(c){return c.status==='pending'});
+  var submitted=claims.filter(function(c){return c.status==='submitted'});
+  var paid=claims.filter(function(c){return c.status==='paid'});
+  var denied=claims.filter(function(c){return c.status==='denied'});
+  var pendingAmt=pending.reduce(function(a,c){return a+(parseFloat(c.amount)||0)},0);
+  var submittedAmt=submitted.reduce(function(a,c){return a+(parseFloat(c.amount)||0)},0);
+  var paidAmt=paid.reduce(function(a,c){return a+(parseFloat(c.paid_amount||c.amount)||0)},0);
+  var deniedAmt=denied.reduce(function(a,c){return a+(parseFloat(c.amount)||0)},0);
+
+  var h='<div class="billing-summary">';
+  h+='<div class="billing-stat"><div class="billing-stat-value" style="color:var(--warm-gray)">'+pending.length+'</div><div class="billing-stat-label">Pending</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">$'+pendingAmt.toFixed(2)+'</div></div>';
+  h+='<div class="billing-stat"><div class="billing-stat-value" style="color:#2a6496">'+submitted.length+'</div><div class="billing-stat-label">Submitted</div><div style="font-size:12px;color:#2a6496;margin-top:2px">$'+submittedAmt.toFixed(2)+'</div></div>';
+  h+='<div class="billing-stat"><div class="billing-stat-value" style="color:var(--sage-dark)">'+paid.length+'</div><div class="billing-stat-label">Paid</div><div style="font-size:12px;color:var(--sage-dark);margin-top:2px">$'+paidAmt.toFixed(2)+'</div></div>';
+  h+='<div class="billing-stat"><div class="billing-stat-value" style="color:var(--terracotta)">'+denied.length+'</div><div class="billing-stat-label">Denied</div><div style="font-size:12px;color:var(--terracotta);margin-top:2px">$'+deniedAmt.toFixed(2)+'</div></div>';
+  h+='</div>';
+
+  // Aging report
+  if(submitted.length||pending.length){
+    var now=new Date();
+    var age30=0,age60=0,age90=0;
+    submitted.concat(pending).forEach(function(c){
+      var days=Math.floor((now-new Date(c.created_at))/86400000);
+      if(days<=30)age30++;else if(days<=60)age60++;else age90++;
+    });
+    var ageTotal=age30+age60+age90||1;
+    h+='<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;color:var(--warm-gray);margin-bottom:4px">AGING REPORT</div>';
+    h+='<div class="aging-bar">';
+    if(age30)h+='<div class="aging-segment" style="width:'+Math.round(age30/ageTotal*100)+'%;background:var(--sage)">0-30d ('+age30+')</div>';
+    if(age60)h+='<div class="aging-segment" style="width:'+Math.round(age60/ageTotal*100)+'%;background:var(--sunflower)">31-60d ('+age60+')</div>';
+    if(age90)h+='<div class="aging-segment" style="width:'+Math.round(age90/ageTotal*100)+'%;background:var(--terracotta)">61-90d+ ('+age90+')</div>';
+    h+='</div></div>';
+  }
+
+  // Claims list
+  h+='<div style="font-size:12px;font-weight:700;color:var(--warm-gray);margin-bottom:8px">CLAIMS ('+claims.length+')</div>';
+  if(!claims.length){
+    h+='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">No claims yet. Generate claims from Session Notes.</div>';
+  }
+  claims.forEach(function(c){
+    var d=new Date(c.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    h+='<div class="claim-card">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:start"><div><div style="font-weight:700;font-size:14px">'+esc(c.payer_name)+'</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">CPT '+esc(c.cpt_code)+' \u00b7 '+c.units+' units \u00b7 $'+(parseFloat(c.amount)||0).toFixed(2)+'</div></div><div style="display:flex;gap:6px;align-items:center"><span class="session-badge claim-status-'+c.status+'">'+c.status+'</span><span style="font-size:11px;color:var(--warm-gray-light)">'+d+'</span></div></div>';
+    if(c.status==='denied'&&c.denied_reason)h+='<div style="font-size:12px;color:var(--terracotta);margin-top:6px">Denied: '+esc(c.denied_reason)+'</div>';
+    if(c.status==='paid'&&c.paid_amount)h+='<div style="font-size:12px;color:var(--sage-dark);margin-top:6px">Paid: $'+parseFloat(c.paid_amount).toFixed(2)+'</div>';
+    h+='<div style="margin-top:8px;display:flex;gap:6px">';
+    h+='<select style="padding:2px 6px;border-radius:6px;border:1px solid var(--sand);font-size:11px;font-family:inherit" onchange="updateClaimStatus(\x27'+c.id+'\x27,this.value)">';
+    ['pending','submitted','paid','denied'].forEach(function(s){h+='<option value="'+s+'"'+(c.status===s?' selected':'')+'>'+s+'</option>'});
+    h+='</select>';
+    if(c.status==='denied')h+='<input style="flex:1;padding:2px 6px;border-radius:6px;border:1px solid var(--sand);font-size:11px;font-family:inherit" placeholder="Denial reason..." value="'+esc(c.denied_reason||'')+'" onchange="updateClaimDenial(\x27'+c.id+'\x27,this.value)">';
+    if(c.status==='paid')h+='<input style="width:80px;padding:2px 6px;border-radius:6px;border:1px solid var(--sand);font-size:11px;font-family:inherit" placeholder="Paid $" type="number" value="'+(c.paid_amount||'')+'" onchange="updateClaimPaidAmount(\x27'+c.id+'\x27,this.value)">';
+    h+='</div></div>';
+  });
+
+  el.innerHTML=h;
+}
+
+async function generateClaim(sessionNoteId){
+  if(!S.user)return;
+  // Get session note details
+  var r=await sb.from('session_notes').select('*').eq('id',sessionNoteId).single();
+  if(!r.data){showToast('Session note not found');return}
+  var note=r.data;
+
+  // Check if claim already exists
+  var existing=await sb.from('claims').select('id').eq('session_note_id',sessionNoteId);
+  if(existing.data&&existing.data.length){showToast('Claim already exists for this session');return}
+
+  // Get provider payers to suggest a default
+  var payerR=await sb.from('payer_enrollments').select('payer_name,payer_id').eq('provider_id',S.user.id).eq('enrollment_status','active');
+  var payers=payerR.data||[];
+  var defaultPayer=payers.length?payers[0].payer_name:'Unknown Payer';
+  var defaultPayerId=payers.length?payers[0].payer_id:'';
+
+  // Calculate units (duration / 15, rounded up)
+  var units=Math.ceil((note.duration_minutes||60)/15);
+
+  // Default rate estimate (can be overridden)
+  var amount=units*30; // $30/unit default — provider can edit
+
+  var claim={
+    session_note_id:sessionNoteId,
+    provider_id:S.user.id,
+    child_id:note.child_id,
+    payer_name:defaultPayer,
+    payer_id:defaultPayerId,
+    cpt_code:note.cpt_code||'97153',
+    units:units,
+    amount:amount,
+    status:'pending'
+  };
+
+  var ir=await sb.from('claims').insert(claim);
+  if(ir.error){showToast('Error creating claim');console.error(ir.error);return}
+  showToast('Claim generated — $'+amount.toFixed(2)+' ('+units+' units)');
+
+  // If we are on billing tab, refresh it
+  if(providerActiveTab==='billing')loadBillingTab();
+  // Also refresh session notes to show the claim was generated
+  if(providerActiveTab==='sessions')loadSessionNotes();
+}
+
+async function updateClaimStatus(claimId,status){
+  var update={status:status,updated_at:new Date().toISOString()};
+  if(status==='submitted')update.submitted_at=new Date().toISOString();
+  if(status==='paid')update.paid_at=new Date().toISOString();
+  await sb.from('claims').update(update).eq('id',claimId);
+  showToast('Claim status updated');
+  loadBillingTab();
+}
+
+async function updateClaimDenial(claimId,reason){
+  await sb.from('claims').update({denied_reason:reason,updated_at:new Date().toISOString()}).eq('id',claimId);
+}
+
+async function updateClaimPaidAmount(claimId,amount){
+  await sb.from('claims').update({paid_amount:parseFloat(amount)||0,updated_at:new Date().toISOString()}).eq('id',claimId);
 }
 
 async function openSuperbill(noteId){
