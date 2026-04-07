@@ -469,6 +469,13 @@ var SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 var sb;
 try { sb = supabase.createClient(SUPA_URL, SUPA_KEY); } catch(e) {}
 var adminUser = null;
+var adminRole = 'super';
+var ROLE_PAGES = {
+  super: null,
+  marketing: ['dashboard','leads','screener','marketing','districts','social','blog'],
+  billing: ['dashboard','billing','sessions','providers'],
+  content: ['dashboard','blog','social','community','behavior']
+};
 
 function emailWrapper(bodyContent){
   return '<div style="background:#FDF8F0;padding:20px 0;font-family:sans-serif"><div style="max-width:520px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #E8DDD0"><div style="background:#7A9E7E;padding:28px 32px;text-align:center"><div style="display:inline-block;width:44px;height:44px;background:rgba(255,255,255,0.2);border-radius:12px;margin-bottom:10px;line-height:44px;font-size:24px">&#127807;</div><div style="font-size:24px;font-weight:800;color:white;letter-spacing:0.5px">Modern Village</div><div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:6px;letter-spacing:0.3px">It takes a village. Let us be yours.</div></div><div style="padding:32px">'+bodyContent+'</div><div style="padding:20px 32px;border-top:1px solid #E8DDD0;text-align:center"><div style="font-size:11px;color:#9E9790;line-height:1.6">Modern Village &mdash; ABA-powered support for neurodivergent families<br><a href="https://modernvillage.app" style="color:#7A9E7E;text-decoration:none">modernvillage.app</a></div></div></div></div>';
@@ -499,7 +506,7 @@ async function doLogin(){
   if(result.error){errEl.textContent='Invalid credentials';errEl.style.display='block';return}
 
   // Check admin role
-  var profile = await sb.from('profiles').select('is_admin').eq('id',result.data.user.id).single();
+  var profile = await sb.from('profiles').select('is_admin,admin_role').eq('id',result.data.user.id).single();
   if(!profile.data || !profile.data.is_admin){
     errEl.textContent='Access denied. Admin privileges required.';
     errEl.style.display='block';
@@ -508,8 +515,10 @@ async function doLogin(){
   }
 
   adminUser = result.data.user;
+  adminRole = profile.data.admin_role || 'super';
   document.getElementById('loginWrap').classList.add('hidden');
   document.getElementById('adminLayout').classList.remove('hidden');
+  applyAdminRole();
   refreshAll();
 }
 
@@ -518,11 +527,13 @@ async function checkSession(){
   if(!sb) return;
   var session = await sb.auth.getSession();
   if(session.data.session){
-    var profile = await sb.from('profiles').select('is_admin').eq('id',session.data.session.user.id).single();
+    var profile = await sb.from('profiles').select('is_admin,admin_role').eq('id',session.data.session.user.id).single();
     if(profile.data && profile.data.is_admin){
       adminUser = session.data.session.user;
+      adminRole = profile.data.admin_role || 'super';
       document.getElementById('loginWrap').classList.add('hidden');
       document.getElementById('adminLayout').classList.remove('hidden');
+      applyAdminRole();
       refreshAll();
     }
   }
@@ -542,6 +553,23 @@ setInterval(function(){
     showToast('Session expired');
   }
 },60000);
+
+function applyAdminRole(){
+  var allowed = ROLE_PAGES[adminRole];
+  document.querySelectorAll('.sb-item[data-page]').forEach(function(el){
+    if(!allowed){el.style.display='';return}
+    el.style.display = allowed.indexOf(el.dataset.page) >= 0 ? '' : 'none';
+  });
+  document.querySelectorAll('.sb-label').forEach(function(el){
+    var next = el.nextElementSibling;
+    var hasVisible = false;
+    while(next && !next.classList.contains('sb-label')){
+      if(next.classList.contains('sb-item') && next.style.display !== 'none') hasVisible = true;
+      next = next.nextElementSibling;
+    }
+    el.style.display = hasVisible ? '' : 'none';
+  });
+}
 
 // Nav
 document.querySelectorAll('.sb-item').forEach(function(el){
@@ -564,6 +592,8 @@ async function refreshAll(){
 
 async function loadPage(pg){
   if(!sb) return;
+  var allowed = ROLE_PAGES[adminRole];
+  if(allowed && allowed.indexOf(pg) < 0){showToast('Access denied');return}
   if(pg==='dashboard') await loadDashboard();
   else if(pg==='users') await loadUsers();
   else if(pg==='reviews') await loadReviews();
