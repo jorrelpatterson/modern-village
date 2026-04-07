@@ -124,6 +124,31 @@ export default {
       return new Response('{"ok":true}', { headers: h });
     }
 
+    // === FEEDBACK NOTIFICATION ===
+    if (url.pathname === '/feedback-notify') {
+      try {
+        const feedbackBody = (
+          '<h1 style="font-size:20px;font-weight:800;color:#2D2D2D;margin:0 0 12px">New Feedback ' + (body.type === 'bug' ? '&#128027;' : body.type === 'improvement' ? '&#128161;' : body.type === 'question' ? '&#10067;' : '&#128172;') + '</h1>' +
+          '<div style="background:#FDF8F0;border-radius:12px;padding:16px;margin:12px 0;border-left:4px solid ' + (body.type === 'bug' ? '#C4745A' : '#7A9E7E') + '">' +
+          '<div style="font-size:11px;font-weight:600;color:#9E9790;text-transform:uppercase;margin-bottom:8px">' + (body.type || 'feedback').toUpperCase() + ' &mdash; ' + (body.page || 'unknown page') + '</div>' +
+          '<p style="margin:0;font-size:15px;color:#2D2D2D;line-height:1.6">' + (body.content || '').substring(0, 500) + '</p>' +
+          '</div>' +
+          '<div style="font-size:13px;color:#9E9790;margin-top:12px">From: ' + (body.user || 'anonymous') + ' (' + (body.role || 'unknown') + ')</div>'
+        );
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: 'Modern Village <hello@modernvillage.app>',
+            to: 'jorrelpatterson@gmail.com',
+            subject: '[MV Feedback] ' + (body.type || 'feedback') + ': ' + (body.content || '').substring(0, 60),
+            html: emailWrapper(feedbackBody)
+          })
+        });
+      } catch (e) { console.error('Feedback notify:', e); }
+      return new Response('{"ok":true}', { headers: h });
+    }
+
     // === UNSUBSCRIBE (public, GET or POST) ===
     if (url.pathname === '/unsubscribe') {
       const token = url.searchParams.get('token');

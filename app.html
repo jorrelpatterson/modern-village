@@ -7111,6 +7111,10 @@ function selectFbType(type,btn){
 async function submitFeedback(){
   var content=document.getElementById('fbContent').value.trim();
   if(!content){showToast('Please write something');return}
+  var pageName=S.tab||'unknown';
+  if(S.tab==='community'&&villTab)pageName='community/'+villTab;
+  var openOverlay=document.querySelector('.overlay-page.open');
+  if(openOverlay)pageName+=' (overlay: '+openOverlay.id+')';
   try{
     await sb.from('user_feedback').insert({
       user_id:S.user?S.user.id:null,
@@ -7118,11 +7122,12 @@ async function submitFeedback(){
       user_name:S.name||null,
       user_role:S.role||null,
       feedback_type:fbType,
-      page:S.tab||'unknown',
+      page:pageName,
       content:content
     });
     closeFeedback();
     showToast('Thanks for your feedback!');
+    try{authFetch('https://village-api.jorrelpatterson.workers.dev/feedback-notify',{method:'POST',body:JSON.stringify({type:fbType,page:pageName,content:content,user:S.name||S.user.email||'anonymous',role:S.role||'unknown'})})}catch(e){}
   }catch(e){console.error('Feedback:',e);showToast('Could not send feedback')}
 }
 
