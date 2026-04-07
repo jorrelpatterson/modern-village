@@ -190,3 +190,15 @@
 - **HIPAA compliance:** Parent invite = authorization, RLS enforces minimum necessary access, audit trail via child_access/invites tables, COPPA-safe child login (no email collected)
 - **Design system:** Fraunces + DM Sans fonts, cream/sage/terracotta palette, warm editorial feel
 - **Roles:** Parent, Provider (BCBA), Caregiver, Teacher, Child — each with distinct UI and data access
+
+---
+
+## Reminders (Next Session)
+
+1. **Deploy worker.js to Cloudflare** — latest version has email sequences, token cap raise (8000), campaign send endpoint, webhook receiver. Paste code from repo into Cloudflare dashboard.
+2. **Have Ariana test:** Crisis mode, voice mode, care team invites, ABA trigger buttons (Tangible/Escape/Attention/Sensory), community photo uploads, provider signup flow
+3. **Ready to launch campaigns:** 9-email drip sequences for BCBAs (15,000 leads), Districts (994 leads), Regional Centers (21 leads) — all in admin CRM
+4. **Next to build:** Medical billing module — automated claim submission, ERA/EOB processing, billing dashboard. This is the BCBA hook that makes them stay.
+5. **Business tasks:** Form LLC, get EIN, activate Stripe real payments, OAR grant application (open now, $50K)
+6. **Regional Centers:** 21 imported into CRM. Craft RC-specific email sequence. Find Family Support Services director contacts at RCOC and RCSD. Ask Ariana for RC contacts.
+7. **Dear Mom Co:** Research partnership opportunity — they got RCs to pay $495/ticket. Modern Village could be the digital companion.
