@@ -39,3 +39,7 @@ _(move resolved bugs here with date)_
 ## Roadmap — Future Features
 
 7. **Child/Teen login** — Simplified self-regulation view: coping strategies, mood check-ins, routine viewer. No access to parent logs or clinical data. `access_level: 'self'` already defined in `child_access`. Parent creates the child's account from their settings. (Phase 4)
+
+8. **Behavior log triggers should use ABA functions** — (Ariana feedback) Replace free-text trigger field with ABA function categories: Access to Tangible, Escape/Avoidance, Attention, Sensory/Automatic. Makes data less subjective, more clinically useful. Could be chip/button selection with optional free-text detail.
+
+9. **Community posts: file/photo uploads** — (Ariana feedback) Parents want to share visual aids, schedules, etc. in community posts. Needs Supabase Storage for image uploads + display in post cards.
