@@ -48,6 +48,29 @@ async function verifyToken(token, env) {
   } catch { return null; }
 }
 
+function emailWrapper(bodyContent) {
+  return (
+    '<div style="background:#FDF8F0;padding:20px 0;font-family:sans-serif">' +
+    '<div style="max-width:520px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #E8DDD0">' +
+    '<div style="background:#7A9E7E;padding:24px 32px;text-align:center">' +
+    '<div style="font-size:22px;font-weight:800;color:white;letter-spacing:0.5px">Modern Village</div>' +
+    '<div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:4px">It takes a village. Let us be yours.</div>' +
+    '</div>' +
+    '<div style="padding:32px">' +
+    bodyContent +
+    '</div>' +
+    '<div style="padding:20px 32px;border-top:1px solid #E8DDD0;text-align:center">' +
+    '<div style="font-size:11px;color:#9E9790;line-height:1.6">' +
+    'Modern Village &mdash; ABA-powered support for neurodivergent families<br>' +
+    '<a href="https://modernvillage.app" style="color:#7A9E7E;text-decoration:none">modernvillage.app</a><br>' +
+    '<a href="https://modernvillage.app/app.html" style="color:#9E9790;text-decoration:none;font-size:10px">Manage email preferences</a>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '</div>'
+  );
+}
+
 export default {
   async fetch(request, env) {
     const h = getCors(request);
@@ -63,11 +86,10 @@ export default {
 
     const authToken = request.headers.get('Authorization')?.replace('Bearer ', '');
 
-    // ═══ ADMIN: RESET USER PASSWORD (requires admin session) ═══
+    // === ADMIN: RESET USER PASSWORD (requires admin session) ===
     if (url.pathname === '/admin/reset-password') {
       const user = await verifyToken(authToken, env);
       if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
-      // Verify caller is admin
       const adminCheck = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=is_admin', {
         headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
       });
@@ -77,7 +99,6 @@ export default {
       const targetEmail = body.email;
       const newPassword = body.password;
       if (!targetEmail || !newPassword) return new Response('{"error":"Missing email or password"}', { status: 400, headers: h });
-      // Find target user
       const findRes = await fetch(env.SUPABASE_URL + '/auth/v1/admin/users?page=1&per_page=1000', {
         headers: { 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'apikey': env.SUPABASE_SERVICE_KEY }
       });
@@ -85,7 +106,6 @@ export default {
       const users = usersData.users || usersData || [];
       const targetUser = users.find(u => u.email === targetEmail);
       if (!targetUser) return new Response('{"error":"User not found"}', { status: 404, headers: h });
-      // Reset password
       const updateRes = await fetch(env.SUPABASE_URL + '/auth/v1/admin/users/' + targetUser.id, {
         method: 'PUT',
         headers: { 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'apikey': env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' },
@@ -95,7 +115,7 @@ export default {
       return new Response('{"success":true}', { headers: h });
     }
 
-    // ═══ SELF-SERVICE PASSWORD RESET (sends reset email) ═══
+    // === SELF-SERVICE PASSWORD RESET (sends reset email) ===
     if (url.pathname === '/reset-password') {
       if (!checkRate(ip, 'email')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
       const email = (body.email || '').toLowerCase().trim();
@@ -108,7 +128,7 @@ export default {
       return new Response('{"success":true}', { headers: h });
     }
 
-    // ═══ EMAIL ═══
+    // === EMAIL ===
     if (url.pathname === '/email') {
       if (!checkRate(ip, 'email')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
       const user = await verifyToken(authToken, env);
@@ -130,7 +150,7 @@ export default {
       } catch { return new Response('{"error":"Email failed"}', { status: 500, headers: h }); }
     }
 
-    // ═══ PROMO CODE VALIDATION ═══
+    // === PROMO CODE VALIDATION ===
     if (url.pathname === '/validate-code') {
       const user = await verifyToken(authToken, env);
       if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
@@ -158,7 +178,7 @@ export default {
       } catch { return new Response('{"valid":false}', { status: 500, headers: h }); }
     }
 
-    // ═══ INVITE ═══
+    // === INVITE ===
     if (url.pathname === '/invite') {
       if (!checkRate(ip, 'email')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
       const user = await verifyToken(authToken, env);
@@ -171,7 +191,6 @@ export default {
       if (!['caregiver','teacher','provider'].includes(role)) return new Response('{"error":"Invalid role"}', { status: 400, headers: h });
       if (!childId) return new Response('{"error":"Missing child_id"}', { status: 400, headers: h });
 
-      // Verify child belongs to user
       const childCheck = await fetch(env.SUPABASE_URL + '/rest/v1/children?id=eq.' + childId + '&user_id=eq.' + user.id + '&select=id,name', {
         headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
       });
@@ -179,17 +198,14 @@ export default {
       if (!children.length) return new Response('{"error":"Child not found"}', { status: 403, headers: h });
       const childName = children[0].name;
 
-      // Get inviter name
       const profCheck = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=name', {
         headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
       });
       const profs = await profCheck.json();
       const inviterName = (profs[0] && profs[0].name) || 'A parent';
 
-      // Create invite token
       const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
 
-      // Insert invite
       const invRes = await fetch(env.SUPABASE_URL + '/rest/v1/invites', {
         method: 'POST',
         headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
@@ -197,9 +213,20 @@ export default {
       });
       if (!invRes.ok) return new Response('{"error":"Failed to create invite"}', { status: 500, headers: h });
 
-      // Send email
       const roleLabel = role === 'caregiver' ? 'caregiver' : 'teacher';
       const inviteUrl = 'https://modernvillage.app/app.html?invite=' + token;
+      const inviteBody = (
+        '<h1 style="font-size:24px;font-weight:800;color:#2D2D2D;margin:0 0 8px">You\'re invited! &#127807;</h1>' +
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">' +
+        inviterName + ' has invited you to join <strong style="color:#2D2D2D">' + childName + '\'s</strong> care team on Modern Village as a <strong style="color:#2D2D2D">' + roleLabel + '</strong>.</p>' +
+        '<div style="background:#FDF8F0;border-radius:12px;padding:16px;margin:16px 0;border-left:4px solid #7A9E7E">' +
+        '<p style="margin:0;color:#2D2D2D;font-size:14px;line-height:1.6">Modern Village is an ABA-powered platform helping families with neurodivergent children navigate daily life with confidence. Your role as a <strong>' + roleLabel + '</strong> means you\'ll be part of a coordinated, compassionate care team.</p>' +
+        '</div>' +
+        '<div style="text-align:center;margin:24px 0">' +
+        '<a href="' + inviteUrl + '" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px;margin:16px 0">Accept Invite</a>' +
+        '</div>' +
+        '<p style="font-size:13px;color:#9E9790;text-align:center;margin:0">This invite expires in 7 days.</p>'
+      );
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
@@ -207,14 +234,14 @@ export default {
           from: 'Modern Village <hello@modernvillage.app>',
           to: email,
           subject: inviterName + ' invited you to ' + childName + '\'s care team',
-          html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px"><h2 style="color:#2D2D2D">You\'re invited!</h2><p>' + inviterName + ' has invited you to join <strong>' + childName + '\'s</strong> care team on Modern Village as a <strong>' + roleLabel + '</strong>.</p><p>Modern Village is an ABA-powered platform for families with neurodivergent children.</p><a href="' + inviteUrl + '" style="display:inline-block;padding:14px 28px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;margin:16px 0">Accept Invite</a><p style="font-size:13px;color:#9E9790">This invite expires in 7 days.</p></div>'
+          html: emailWrapper(inviteBody)
         })
       });
 
       return new Response('{"success":true}', { headers: h });
     }
 
-    // ═══ ACCEPT INVITE ═══
+    // === ACCEPT INVITE ===
     if (url.pathname === '/accept-invite') {
       const user = await verifyToken(authToken, env);
       if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
@@ -222,7 +249,6 @@ export default {
       const token = body.token;
       if (!token) return new Response('{"error":"Missing token"}', { status: 400, headers: h });
 
-      // Fetch invite
       const invRes = await fetch(env.SUPABASE_URL + '/rest/v1/invites?token=eq.' + encodeURIComponent(token) + '&status=eq.pending&select=*', {
         headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
       });
@@ -230,13 +256,10 @@ export default {
       if (!invites.length) return new Response('{"error":"Invite not found or already used"}', { status: 404, headers: h });
       const invite = invites[0];
 
-      // Check expiry
       if (new Date(invite.expires_at) < new Date()) return new Response('{"error":"Invite expired"}', { status: 410, headers: h });
 
-      // Check email matches
       if (invite.email !== user.email.toLowerCase().trim()) return new Response('{"error":"This invite was sent to ' + invite.email + '"}', { status: 403, headers: h });
 
-      // Set user role
       const accessLevel = invite.role === 'caregiver' ? 'daily' : invite.role === 'provider' ? 'clinical' : 'school';
       await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id, {
         method: 'PATCH',
@@ -244,14 +267,12 @@ export default {
         body: JSON.stringify({ role: invite.role })
       });
 
-      // Create child_access
       await fetch(env.SUPABASE_URL + '/rest/v1/child_access', {
         method: 'POST',
         headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({ child_id: invite.child_id, user_id: user.id, role: invite.role, access_level: accessLevel, granted_by: invite.invited_by })
       });
 
-      // Update invite
       await fetch(env.SUPABASE_URL + '/rest/v1/invites?id=eq.' + invite.id, {
         method: 'PATCH',
         headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -261,7 +282,7 @@ export default {
       return new Response(JSON.stringify({ success: true, child_id: invite.child_id, role: invite.role }), { headers: h });
     }
 
-    // ═══ AI CHAT ═══
+    // === AI CHAT ===
     if (!checkRate(ip, 'ai')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
     const user = await verifyToken(authToken, env);
     if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
@@ -279,7 +300,7 @@ export default {
     } catch { return new Response('{"error":"AI failed"}', { status: 500, headers: h }); }
   },
 
-  // ═══ CRON: Runs daily for booking reminders + email drips ═══
+  // === CRON: Runs daily for booking reminders + email drips ===
   async scheduled(event, env, ctx) {
     ctx.waitUntil(runDailyTasks(env));
   }
@@ -291,7 +312,7 @@ async function runDailyTasks(env) {
   const resendKey = env.RESEND_API_KEY;
   const headers = { 'apikey': supaKey, 'Authorization': 'Bearer ' + supaKey, 'Content-Type': 'application/json' };
 
-  // ── BOOKING REMINDERS (24hr before) ──
+  // -- BOOKING REMINDERS (24hr before) --
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowIso = tomorrow.toISOString().split('T')[0];
@@ -301,7 +322,6 @@ async function runDailyTasks(env) {
     const bookings = await bookRes.json();
 
     for (const b of (bookings || [])) {
-      // Get user email
       const userRes = await fetch(supaUrl + '/rest/v1/profiles?id=eq.' + b.user_id + '&select=email,name', { headers });
       const users = await userRes.json();
       if (!users.length || !users[0].email) continue;
@@ -310,6 +330,20 @@ async function runDailyTasks(env) {
       const sessionDate = new Date(b.session_date + 'T12:00:00');
       const dateStr = sessionDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
+      const reminderBody = (
+        '<h1 style="font-size:24px;font-weight:800;color:#2D2D2D;margin:0 0 8px">Session Reminder &#128197;</h1>' +
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">Hi ' + (user.name || 'there') + ', just a heads-up that your session is tomorrow.</p>' +
+        '<div style="background:#FDF8F0;border-radius:12px;padding:20px;margin:16px 0;border-left:4px solid #7A9E7E">' +
+        '<div style="font-size:13px;font-weight:600;color:#7A9E7E;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Upcoming Session</div>' +
+        '<div style="font-size:18px;font-weight:700;color:#2D2D2D">' + (b.session_type || 'Session') + ' with ' + b.provider_name + '</div>' +
+        '<div style="font-size:15px;color:#6B6560;margin-top:6px">&#128337; ' + dateStr + (b.session_time ? ' &nbsp;&bull;&nbsp; ' + b.session_time : '') + '</div>' +
+        '</div>' +
+        '<div style="text-align:center;margin:24px 0">' +
+        '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px;margin:16px 0">View Booking Details</a>' +
+        '</div>' +
+        '<p style="font-size:13px;color:#9E9790;text-align:center;margin:0">See you tomorrow &#127807;</p>'
+      );
+
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
@@ -317,22 +351,13 @@ async function runDailyTasks(env) {
           from: 'Modern Village <hello@modernvillage.app>',
           to: user.email,
           subject: 'Reminder: Session with ' + b.provider_name + ' tomorrow',
-          html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px">' +
-            '<h2 style="color:#2D2D2D">Session Reminder</h2>' +
-            '<p>Hi ' + (user.name || 'there') + ',</p>' +
-            '<p>Just a reminder that you have a <strong>' + (b.session_type || 'session') + '</strong> with <strong>' + b.provider_name + '</strong> tomorrow.</p>' +
-            '<div style="background:#F5F5F0;border-radius:12px;padding:16px;margin:16px 0">' +
-            '<div style="font-weight:700">' + dateStr + '</div>' +
-            '<div style="color:#6B6560;margin-top:4px">' + (b.session_time || '') + '</div>' +
-            '</div>' +
-            '<p style="font-size:13px;color:#9E9790">Open Modern Village to view your booking details.</p>' +
-            '</div>'
+          html: emailWrapper(reminderBody)
         })
       });
     }
   } catch (e) { console.error('Booking reminders error:', e); }
 
-  // ── EMAIL DRIP: Welcome sequence for new users ──
+  // -- EMAIL DRIP: Welcome sequence for new users --
   try {
     // Day 1: Welcome (users created yesterday)
     const yesterday = new Date();
@@ -345,6 +370,28 @@ async function runDailyTasks(env) {
 
     for (const u of (newUsers || [])) {
       if (!u.email) continue;
+      const welcomeBody = (
+        '<h1 style="font-size:24px;font-weight:800;color:#2D2D2D;margin:0 0 8px">Welcome to the Village &#127807;</h1>' +
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">Hi ' + (u.name || 'there') + ', you just joined thousands of families navigating neurodiversity together. We\'re so glad you\'re here.</p>' +
+        '<div style="background:#FDF8F0;border-radius:12px;padding:20px;margin:16px 0;border-left:4px solid #7A9E7E">' +
+        '<div style="font-size:13px;font-weight:600;color:#7A9E7E;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">3 Things to Try Today</div>' +
+        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">' +
+        '<div style="font-size:20px;flex-shrink:0">&#129302;</div>' +
+        '<div style="font-size:14px;color:#2D2D2D;line-height:1.5"><strong>Ask the AI Coach</strong> &mdash; describe what happened and get a step-by-step strategy card</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">' +
+        '<div style="font-size:20px;flex-shrink:0">&#128203;</div>' +
+        '<div style="font-size:14px;color:#2D2D2D;line-height:1.5"><strong>Log a behavior</strong> &mdash; the more you log, the smarter your coach gets</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:flex-start;gap:10px">' +
+        '<div style="font-size:20px;flex-shrink:0">&#128101;</div>' +
+        '<div style="font-size:14px;color:#2D2D2D;line-height:1.5"><strong>Check the community</strong> &mdash; real parents sharing what works</div>' +
+        '</div>' +
+        '</div>' +
+        '<div style="text-align:center;margin:24px 0">' +
+        '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px;margin:16px 0">Open Modern Village</a>' +
+        '</div>'
+      );
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
@@ -352,19 +399,7 @@ async function runDailyTasks(env) {
           from: 'Modern Village <hello@modernvillage.app>',
           to: u.email,
           subject: 'Welcome to Modern Village \u2014 your first strategy card awaits',
-          html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px">' +
-            '<h2 style="color:#2D2D2D">Welcome to the Village &#127807;</h2>' +
-            '<p>Hi ' + (u.name || 'there') + ',</p>' +
-            '<p>You just joined thousands of families navigating neurodiversity together.</p>' +
-            '<p>Here are 3 things to try today:</p>' +
-            '<ol style="line-height:2">' +
-            '<li><strong>Ask the AI Coach</strong> \u2014 describe what happened and get a step-by-step strategy card</li>' +
-            '<li><strong>Log a behavior</strong> \u2014 the more you log, the smarter your coach gets</li>' +
-            '<li><strong>Check the community</strong> \u2014 real parents sharing what works</li>' +
-            '</ol>' +
-            '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 28px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;margin:16px 0">Open Modern Village</a>' +
-            '<p style="font-size:13px;color:#9E9790">You received this because you signed up for Modern Village. <a href="https://modernvillage.app/app.html" style="color:#9E9790">Manage preferences</a></p>' +
-            '</div>'
+          html: emailWrapper(welcomeBody)
         })
       });
     }
@@ -380,6 +415,18 @@ async function runDailyTasks(env) {
 
     for (const u of (day3Users || [])) {
       if (!u.email) continue;
+      const tipBody = (
+        '<h1 style="font-size:24px;font-weight:800;color:#2D2D2D;margin:0 0 8px">Your coach is learning &#129504;</h1>' +
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">Hi ' + (u.name || 'there') + ', a quick pro tip for you.</p>' +
+        '<div style="background:#FDF8F0;border-radius:12px;padding:20px;margin:16px 0;border-left:4px solid #C4745A">' +
+        '<div style="font-size:13px;font-weight:600;color:#C4745A;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Did You Know?</div>' +
+        '<p style="margin:0;color:#2D2D2D;font-size:15px;line-height:1.6">After you log just <strong>3 behaviors</strong>, the AI Coach starts detecting patterns &mdash; peak times, common triggers, and which strategies work best for your child.</p>' +
+        '</div>' +
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6">The more you log, the more personalized your strategies become. It only takes a few seconds per entry.</p>' +
+        '<div style="text-align:center;margin:24px 0">' +
+        '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px;margin:16px 0">Log a Behavior</a>' +
+        '</div>'
+      );
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
@@ -387,14 +434,7 @@ async function runDailyTasks(env) {
           from: 'Modern Village <hello@modernvillage.app>',
           to: u.email,
           subject: 'Pro tip: Log 3 behaviors to unlock pattern detection',
-          html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px">' +
-            '<h2 style="color:#2D2D2D">Your coach is learning &#129504;</h2>' +
-            '<p>Hi ' + (u.name || 'there') + ',</p>' +
-            '<p>Did you know? After you log just <strong>3 behaviors</strong>, the AI Coach starts detecting patterns \u2014 peak times, common triggers, which strategies work best.</p>' +
-            '<p>The more you log, the more personalized your strategies become.</p>' +
-            '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 28px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;margin:16px 0">Log a Behavior</a>' +
-            '<p style="font-size:13px;color:#9E9790">You received this because you signed up for Modern Village.</p>' +
-            '</div>'
+          html: emailWrapper(tipBody)
         })
       });
     }
@@ -411,6 +451,34 @@ async function runDailyTasks(env) {
     for (const u of (day7Users || [])) {
       if (!u.email) continue;
       const isPro = u.subscription_status === 'pro';
+      const checkInBody = (
+        '<h1 style="font-size:24px;font-weight:800;color:#2D2D2D;margin:0 0 8px">One week together &#128154;</h1>' +
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">Hi ' + (u.name || 'there') + ', it\'s been a week since you joined Modern Village. How are things going?</p>' +
+        '<div style="background:#FDF8F0;border-radius:12px;padding:20px;margin:16px 0;border-left:4px solid #7A9E7E">' +
+        '<div style="font-size:13px;font-weight:600;color:#7A9E7E;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Have You Tried These Yet?</div>' +
+        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">' +
+        '<div style="font-size:20px;flex-shrink:0">&#128203;</div>' +
+        '<div style="font-size:14px;color:#2D2D2D;line-height:1.5"><strong>Build a routine</strong> &mdash; morning, bedtime, or after-school</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">' +
+        '<div style="font-size:20px;flex-shrink:0">&#128196;</div>' +
+        '<div style="font-size:14px;color:#2D2D2D;line-height:1.5"><strong>Upload your IEP</strong> &mdash; get a plain-English breakdown</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:flex-start;gap:10px">' +
+        '<div style="font-size:20px;flex-shrink:0">&#129309;</div>' +
+        '<div style="font-size:14px;color:#2D2D2D;line-height:1.5"><strong>Invite your care team</strong> &mdash; grandparents, aides, teachers</div>' +
+        '</div>' +
+        '</div>' +
+        (!isPro ?
+          '<div style="background:#FDF8F0;border-radius:12px;padding:16px;margin:16px 0;text-align:center;border:1px solid #E8DDD0">' +
+          '<p style="margin:0 0 8px;font-size:14px;color:#6B6560">Ready for unlimited coaching?</p>' +
+          '<a href="https://modernvillage.app/app.html" style="color:#C4745A;font-weight:700;font-size:15px;text-decoration:none">Upgrade to Pro &mdash; $19.99/mo &#8594;</a>' +
+          '</div>'
+          : '') +
+        '<div style="text-align:center;margin:24px 0">' +
+        '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px;margin:16px 0">Open Modern Village</a>' +
+        '</div>'
+      );
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
@@ -418,27 +486,14 @@ async function runDailyTasks(env) {
           from: 'Modern Village <hello@modernvillage.app>',
           to: u.email,
           subject: "One week in \u2014 how's it going?",
-          html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px">' +
-            '<h2 style="color:#2D2D2D">One week together &#128154;</h2>' +
-            '<p>Hi ' + (u.name || 'there') + ',</p>' +
-            "<p>It's been a week since you joined Modern Village. How are things going?</p>" +
-            "<p>Here's what you might not have tried yet:</p>" +
-            '<ul style="line-height:2">' +
-            '<li>&#128203; <strong>Build a routine</strong> \u2014 morning, bedtime, or after-school</li>' +
-            '<li>&#128196; <strong>Upload your IEP</strong> \u2014 get a plain-English breakdown</li>' +
-            '<li>&#129309; <strong>Invite your care team</strong> \u2014 grandparents, aides, teachers</li>' +
-            '</ul>' +
-            (!isPro ? '<p>Ready for unlimited coaching? <a href="https://modernvillage.app/app.html" style="color:#7A9E7E;font-weight:700">Upgrade to Pro \u2014 $19.99/mo</a></p>' : '') +
-            '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 28px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;margin:16px 0">Open Modern Village</a>' +
-            '<p style="font-size:13px;color:#9E9790">You received this because you signed up for Modern Village.</p>' +
-            '</div>'
+          html: emailWrapper(checkInBody)
         })
       });
     }
 
   } catch (e) { console.error('Email drip error:', e); }
 
-  // ── RE-ENGAGEMENT: Users inactive 7+ days ──
+  // -- RE-ENGAGEMENT: Users inactive 7+ days --
   try {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
@@ -454,14 +509,37 @@ async function runDailyTasks(env) {
 
     for (const u of (potentialInactive || [])) {
       if (!u.email) continue;
-      // Check if they have any recent behavior logs
       const logRes = await fetch(supaUrl + '/rest/v1/behavior_logs?user_id=eq.' + u.id + '&logged_at=gte.' + weekAgoIso + '&select=id&limit=1', { headers });
       const logs = await logRes.json();
       if (logs && logs.length > 0) continue; // Active user, skip
 
-      // Only send once per 14 days \u2014 stagger by days since creation
+      // Only send once per 14 days -- stagger by days since creation
       const daysSinceCreation = Math.floor((Date.now() - new Date(u.created_at || 0).getTime()) / 86400000);
       if (daysSinceCreation % 14 !== 0) continue;
+
+      const reEngageBody = (
+        '<h1 style="font-size:24px;font-weight:800;color:#2D2D2D;margin:0 0 8px">Your village is here &#127807;</h1>' +
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">Hi ' + (u.name || 'there') + ', it\'s been a little while. No pressure &mdash; we know parenting is overwhelming.</p>' +
+        '<div style="background:#FDF8F0;border-radius:12px;padding:20px;margin:16px 0;border-left:4px solid #7A9E7E">' +
+        '<p style="margin:0;font-size:15px;color:#2D2D2D;line-height:1.6">Whenever you\'re ready, your AI Coach remembers everything about your child and is ready to help with whatever you\'re facing.</p>' +
+        '</div>' +
+        '<p style="color:#6B6560;font-size:15px;font-weight:600;margin:20px 0 12px">Quick wins you can do in 60 seconds:</p>' +
+        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">' +
+        '<div style="font-size:20px;flex-shrink:0">&#128221;</div>' +
+        '<div style="font-size:14px;color:#2D2D2D;line-height:1.5">Log today\'s biggest challenge</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">' +
+        '<div style="font-size:20px;flex-shrink:0">&#129302;</div>' +
+        '<div style="font-size:14px;color:#2D2D2D;line-height:1.5">Ask the coach for one new strategy</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:20px">' +
+        '<div style="font-size:20px;flex-shrink:0">&#9749;</div>' +
+        '<div style="font-size:14px;color:#2D2D2D;line-height:1.5">Do a daily check-in &mdash; how was today?</div>' +
+        '</div>' +
+        '<div style="text-align:center;margin:24px 0">' +
+        '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px;margin:16px 0">Come Back to the Village</a>' +
+        '</div>'
+      );
 
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -470,20 +548,7 @@ async function runDailyTasks(env) {
           from: 'Modern Village <hello@modernvillage.app>',
           to: u.email,
           subject: 'We miss you \u2014 your coach is ready when you are',
-          html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px">' +
-            '<h2 style="color:#2D2D2D">Your village is here &#127807;</h2>' +
-            '<p>Hi ' + (u.name || 'there') + ',</p>' +
-            "<p>It's been a little while. No pressure \u2014 we know parenting is overwhelming.</p>" +
-            "<p>But whenever you're ready, your AI Coach remembers everything about your child and is ready to help with whatever you're facing.</p>" +
-            '<p><strong>Quick wins you can do in 60 seconds:</strong></p>' +
-            '<ul style="line-height:2">' +
-            "<li>Log today's biggest challenge</li>" +
-            '<li>Ask the coach for one new strategy</li>' +
-            '<li>Do a daily check-in (how was today?)</li>' +
-            '</ul>' +
-            '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 28px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;margin:16px 0">Come Back to the Village</a>' +
-            '<p style="font-size:13px;color:#9E9790">You received this because you signed up for Modern Village. <a href="https://modernvillage.app/app.html" style="color:#9E9790">Manage preferences</a></p>' +
-            '</div>'
+          html: emailWrapper(reEngageBody)
         })
       });
     }
