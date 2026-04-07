@@ -1249,13 +1249,13 @@ function now(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2
 
 // ═══ AUTH ═══
 function showAuth(force){
-  S.authMode='signup';
+  S.authMode='login';
   document.getElementById('authModal').classList.remove('hidden');
-  document.getElementById('authTitle').textContent='Create Account';
-  document.getElementById('authSub').textContent='Save your strategies and track progress';
-  document.getElementById('authSubmit').textContent='Create Account';
-  document.getElementById('authToggle').innerHTML='Already have an account? <a onclick="toggleAuthMode()">Log in</a>';
-  document.getElementById('authNameField').classList.remove('hidden');
+  document.getElementById('authTitle').textContent='Welcome Back';
+  document.getElementById('authSub').textContent='Log in to your Modern Village account';
+  document.getElementById('authSubmit').textContent='Log In';
+  document.getElementById('authToggle').innerHTML='Don\'t have an account? <a onclick="toggleAuthMode()">Sign up</a>';
+  document.getElementById('authNameField').classList.add('hidden');
   document.getElementById('authError').style.display='none';
   document.getElementById('authSkipBtn').style.display=force?'none':'block';
   isProviderSignup=false;
@@ -1360,7 +1360,7 @@ async function handleAuth(){
       if(pendingToken){sessionStorage.removeItem('mv_invite_token');try{var ir=await authFetch(API_URL+'accept-invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:pendingToken})});var id=await ir.json();if(id.success){showToast('You\'ve joined the care team!');await loadProfile();applyRole()}}catch(e){}}
     }
   }catch(e){
-    errEl.textContent=e.message||'Something went wrong';
+    var msg=e.message||'Something went wrong';if(msg.includes('already registered')||msg.includes('already been registered')||msg.includes('User already registered'))msg='An account with this email already exists. Try logging in instead.';errEl.textContent=msg;
     errEl.style.display='block';
   }
   btn.disabled=false;
