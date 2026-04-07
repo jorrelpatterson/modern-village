@@ -182,6 +182,12 @@
 .bsum-count{font-size:13px;font-weight:700}
 .bsum-bar{height:6px;border-radius:3px;background:var(--sand);flex:2;position:relative;overflow:hidden}
 .bsum-fill{height:100%;border-radius:3px;background:var(--sage)}
+/* Voice Mode */
+.voice-btn{width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;background:var(--cream);color:var(--warm-gray)}
+.voice-btn.active{background:#C4745A;color:white;animation:voicePulse 1.5s ease-in-out infinite}
+.voice-btn.speaking{background:var(--sage);color:white;animation:voicePulse 1.5s ease-in-out infinite}
+@keyframes voicePulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(196,116,90,0.4)}50%{transform:scale(1.08);box-shadow:0 0 0 8px rgba(196,116,90,0)}}
+.voice-status{font-size:12px;font-weight:600;text-align:center;padding:4px 0;color:var(--warm-gray)}
 /* Crisis Mode */
 .crisis-overlay{position:fixed;inset:0;z-index:999;background:var(--sage-light);display:none;flex-direction:column;overflow:hidden}
 .crisis-overlay.open{display:flex}
@@ -1050,7 +1056,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     </div>
   </div></div>
 
-  <div id="chatBar" class="ci"><div class="ci-in"><textarea id="cTa" class="ci-ta" placeholder="Describe what's happening..." rows="1"></textarea><button id="sendBtn" class="ci-btn" onclick="send()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div></div>
+  <div id="chatBar" class="ci"><div class="ci-in"><div id="voiceStatus" class="voice-status" style="display:none"></div><textarea id="cTa" class="ci-ta" placeholder="Describe what's happening..." rows="1"></textarea><button id="voiceBtn" class="voice-btn" onclick="toggleVoice()" style="display:none" title="Voice mode"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button><button id="sendBtn" class="ci-btn" onclick="send()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div></div>
 
   <nav class="bnav"><div class="bnav-in">
     <button class="nb on" data-t="coach" onclick="switchTab('coach')"><div class="ndot"></div><svg width="22" height="22" viewBox="0 0 24 24" fill="#7A9E7E" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/></svg><span class="nl">Coach</span></button>
@@ -4305,16 +4311,171 @@ async function submitCrisisDebrief(){
 function crisisTalkToCoach(){
   closeCrisis();
   switchTab('coach');
-  var input=document.getElementById('cTa');
-  if(input){
-    input.value='I just went through a crisis with '+(S.child||'my child')+'. I need help processing what happened and figuring out next steps.';
-    input.focus();
-  }
+  // Activate voice mode for hands-free crisis support
+  setTimeout(function(){
+    if(window.SpeechRecognition||window.webkitSpeechRecognition){
+      startVoice();
+      document.getElementById('voiceStatus').textContent='Voice mode active — speak when ready';
+    } else {
+      var input=document.getElementById('cTa');
+      if(input){
+        input.value='I just went through a crisis with '+(S.child||'my child')+'. I need help processing what happened and figuring out next steps.';
+        input.focus();
+      }
+    }
+  },300);
 }
 
 function closeCrisis(){
   document.getElementById('crisisOverlay').classList.remove('open');
 }
+
+// ═══ VOICE MODE ═══
+var voiceRecognition=null;
+var voiceActive=false;
+var voiceSpeaking=false;
+
+// Check browser support and show mic button
+if(window.SpeechRecognition||window.webkitSpeechRecognition){
+  document.addEventListener('DOMContentLoaded',function(){
+    var btn=document.getElementById('voiceBtn');
+    if(btn)btn.style.display='flex';
+  });
+}
+
+function toggleVoice(){
+  if(voiceActive){
+    stopVoice();
+  } else {
+    startVoice();
+  }
+}
+
+function startVoice(){
+  var SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SpeechRecognition){showToast('Voice not supported in this browser');return}
+
+  voiceActive=true;
+  var btn=document.getElementById('voiceBtn');
+  btn.classList.add('active');
+  document.getElementById('voiceStatus').style.display='block';
+  document.getElementById('voiceStatus').textContent='Listening...';
+  document.getElementById('cTa').placeholder='Listening... tap mic to stop';
+
+  voiceRecognition=new SpeechRecognition();
+  voiceRecognition.continuous=false;
+  voiceRecognition.interimResults=false;
+  voiceRecognition.lang='en-US';
+
+  voiceRecognition.onresult=function(event){
+    var transcript=event.results[0][0].transcript;
+    document.getElementById('cTa').value=transcript;
+    document.getElementById('voiceStatus').textContent='Sending...';
+    // Auto-send after transcription
+    voiceSend(transcript);
+  };
+
+  voiceRecognition.onerror=function(event){
+    if(event.error==='no-speech'){
+      document.getElementById('voiceStatus').textContent='No speech detected. Try again...';
+      if(voiceActive)setTimeout(function(){try{voiceRecognition.start()}catch(e){}},500);
+    } else if(event.error!=='aborted'){
+      showToast('Voice error: '+event.error);
+      stopVoice();
+    }
+  };
+
+  voiceRecognition.onend=function(){
+    if(voiceActive&&!voiceSpeaking){
+      // Restart listening after processing
+      document.getElementById('voiceStatus').textContent='Listening...';
+      try{voiceRecognition.start()}catch(e){}
+    }
+  };
+
+  try{voiceRecognition.start()}catch(e){showToast('Could not start voice');stopVoice()}
+}
+
+function stopVoice(){
+  voiceActive=false;
+  voiceSpeaking=false;
+  var btn=document.getElementById('voiceBtn');
+  btn.classList.remove('active','speaking');
+  document.getElementById('voiceStatus').style.display='none';
+  document.getElementById('cTa').placeholder='Describe what\x27s happening...';
+  document.getElementById('cTa').value='';
+  if(voiceRecognition){try{voiceRecognition.abort()}catch(e){}}
+  if(window.speechSynthesis)window.speechSynthesis.cancel();
+}
+
+async function voiceSend(text){
+  if(!text.trim())return;
+  // Use the existing send flow but intercept the response for speech
+  document.getElementById('cTa').value=text;
+  window._voiceWaitingForResponse=true;
+  send();
+}
+
+// Hook into the chat response to speak it aloud
+var _origRenderChat=null;
+function setupVoiceHook(){
+  // We need to detect when a new AI message arrives
+  // Watch for changes to the chat messages area
+  var observer=new MutationObserver(function(mutations){
+    if(!window._voiceWaitingForResponse||!voiceActive)return;
+    // Check if the last message is from the AI (class mw-a)
+    var msgs=document.querySelectorAll('.mw-a');
+    if(msgs.length){
+      var lastMsg=msgs[msgs.length-1];
+      var text=lastMsg.textContent||'';
+      if(text&&window._voiceWaitingForResponse){
+        window._voiceWaitingForResponse=false;
+        speakResponse(text);
+      }
+    }
+  });
+  var chatEl=document.getElementById('chatMsgs');
+  if(chatEl)observer.observe(chatEl,{childList:true,subtree:true});
+}
+
+function speakResponse(text){
+  if(!voiceActive||!window.speechSynthesis)return;
+  // Clean text for speech — remove markdown-like formatting
+  var cleanText=text.replace(/\[.*?\]/g,'').replace(/\*\*/g,'').replace(/\*/g,'').replace(/#/g,'').replace(/\n\n/g,'. ').replace(/\n/g,'. ').substring(0,500);
+
+  voiceSpeaking=true;
+  var btn=document.getElementById('voiceBtn');
+  btn.classList.remove('active');
+  btn.classList.add('speaking');
+  document.getElementById('voiceStatus').textContent='Speaking...';
+
+  var utterance=new SpeechSynthesisUtterance(cleanText);
+  utterance.rate=0.95;
+  utterance.pitch=1.0;
+  utterance.onend=function(){
+    voiceSpeaking=false;
+    if(voiceActive){
+      btn.classList.remove('speaking');
+      btn.classList.add('active');
+      document.getElementById('voiceStatus').textContent='Listening...';
+      // Resume listening
+      try{voiceRecognition.start()}catch(e){}
+    }
+  };
+  utterance.onerror=function(){
+    voiceSpeaking=false;
+    if(voiceActive){
+      btn.classList.remove('speaking');
+      btn.classList.add('active');
+      try{voiceRecognition.start()}catch(e){}
+    }
+  };
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
+
+// Initialize voice hook when page loads
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',setupVoiceHook)}else{setupVoiceHook()}
 
 // ═══ BEHAVIOR SUMMARY (teachers) ═══
 async function openBehaviorSummary(){
