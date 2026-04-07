@@ -2745,6 +2745,148 @@ async function lookupZip(zip){
   }catch(e){return null}
 }
 
+// ═══ VILLAGE NEARBY ═══
+var VILL_INTERESTS=['Sensory Play','Outdoor Activities','ABA Strategies','IEP Advocacy','Social Skills','Routine Building','Sibling Support','Teen Parenting'];
+
+async function loadNearbyTab(){
+  var el=document.getElementById('villNearby');
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div>';
+  await loadVillageProfile();
+  if(!villProfile){showVillageOptIn();return}
+  loadNearbyParents();
+}
+
+function showVillageOptIn(){
+  var el=document.getElementById('villNearby');
+  var name=S.name||S.profile&&S.profile.name||'';
+  var h='<div class="vill-opt-in"><div style="font-size:48px;margin-bottom:12px">\uD83C\uDFD8\uFE0F</div>';
+  h+='<h3>Find Families Near You</h3>';
+  h+='<p style="font-size:14px;color:var(--warm-gray);max-width:300px;margin:0 auto 20px">Connect with other Modern Village parents in your area. You control what\x27s shared.</p>';
+  h+='<div style="text-align:left;max-width:360px;margin:0 auto">';
+  h+='<label class="vill-form-label">Visibility</label>';
+  h+='<div style="display:flex;gap:8px;margin-bottom:14px">';
+  h+='<label style="flex:1;display:flex;align-items:center;gap:6px;padding:10px 12px;border:1.5px solid var(--sand);border-radius:10px;cursor:pointer;font-size:13px"><input type="radio" name="villVis" value="city" checked> City only</label>';
+  h+='<label style="flex:1;display:flex;align-items:center;gap:6px;padding:10px 12px;border:1.5px solid var(--sand);border-radius:10px;cursor:pointer;font-size:13px"><input type="radio" name="villVis" value="neighborhood"> Neighborhood</label>';
+  h+='</div>';
+  h+='<label class="vill-form-label">Display Name</label>';
+  h+='<input id="villName" class="fi" value="'+esc(name)+'" placeholder="First name or nickname" maxlength="50" style="margin-bottom:14px">';
+  h+='<label class="vill-form-label">Short Bio <span style="font-weight:400;color:var(--warm-gray-light)">(optional, 200 chars)</span></label>';
+  h+='<textarea id="villBio" class="fi" rows="2" maxlength="200" placeholder="e.g. Mom of a 5yr old with autism in Pomona. Looking for playdate friends!" style="margin-bottom:14px;resize:none"></textarea>';
+  h+='<label class="vill-form-label">Child Age Range</label>';
+  h+='<select id="villAge" class="fi" style="margin-bottom:14px"><option value="">Select...</option><option value="0-2">0-2 years</option><option value="3-5">3-5 years</option><option value="6-9">6-9 years</option><option value="10-13">10-13 years</option><option value="14-17">14-17 years</option></select>';
+  h+='<label class="vill-form-label">Diagnosis Category</label>';
+  h+='<select id="villDx" class="fi" style="margin-bottom:14px"><option value="">Select...</option><option value="Autism">Autism</option><option value="ADHD">ADHD</option><option value="Both">Both</option><option value="Other">Other</option><option value="Prefer not to say">Prefer not to say</option></select>';
+  h+='<label class="vill-form-label">Interests</label>';
+  h+='<div id="villInterests" style="margin-bottom:14px">';
+  VILL_INTERESTS.forEach(function(t){h+='<span class="vill-interest-chip" onclick="this.classList.toggle(\x27on\x27)">'+t+'</span>'});
+  h+='</div>';
+  h+='<label class="vill-form-label">Location</label>';
+  h+='<div id="villLocStatus" style="margin-bottom:8px"></div>';
+  h+='<button class="btn btn-s" style="width:100%;margin-bottom:8px" onclick="requestVillageGeo()">\uD83D\uDCCD Use My Location</button>';
+  h+='<div style="text-align:center;font-size:12px;color:var(--warm-gray-light);margin-bottom:8px">\u2014 or \u2014</div>';
+  h+='<input id="villZip" class="fi" placeholder="Enter zip code" maxlength="5" style="margin-bottom:14px" onchange="resolveVillZip()">';
+  h+='<div class="vill-disclaimer">Information you share in My Village \u2014 including your name, city, and child\x27s age range \u2014 is visible to other members. This is not protected health information (PHI). Do not share specific medical details.</div>';
+  h+='<button class="btn btn-p" style="width:100%" onclick="submitVillageProfile()">'+(villProfile?'Update Profile':'Join My Village')+'</button>';
+  if(villProfile)h+='<button style="display:block;margin:12px auto 0;background:none;border:none;color:var(--terracotta);font-size:13px;cursor:pointer;font-weight:600" onclick="leaveVillage()">Leave My Village</button>';
+  h+='</div></div>';
+  el.innerHTML=h;
+}
+
+var villGeoData=null;
+
+function requestVillageGeo(){
+  var el=document.getElementById('villLocStatus');
+  el.innerHTML='<div style="font-size:13px;color:var(--warm-gray)">Getting location...</div>';
+  getVillageLocation(function(loc){
+    if(!loc){
+      el.innerHTML='<div style="font-size:13px;color:var(--terracotta)">Location denied. Please enter a zip code.</div>';
+      return;
+    }
+    villGeoData=loc;
+    el.innerHTML='<div style="font-size:13px;color:var(--sage-dark)">\u2705 Location set (approximate)</div>';
+  });
+}
+
+async function resolveVillZip(){
+  var zip=document.getElementById('villZip').value.trim();
+  if(zip.length!==5)return;
+  var el=document.getElementById('villLocStatus');
+  el.innerHTML='<div style="font-size:13px;color:var(--warm-gray)">Looking up zip...</div>';
+  var data=await lookupZip(zip);
+  if(!data){el.innerHTML='<div style="font-size:13px;color:var(--terracotta)">Zip not found</div>';return}
+  villGeoData={lat:data.lat,lng:data.lng};
+  document.getElementById('villZip').value=zip;
+  el.innerHTML='<div style="font-size:13px;color:var(--sage-dark)">\u2705 '+esc(data.city)+', '+esc(data.state)+'</div>';
+}
+
+async function submitVillageProfile(){
+  var name=document.getElementById('villName').value.trim();
+  if(!name){showToast('Display name is required');return}
+  if(!villGeoData){showToast('Please set your location');return}
+  var vis=document.querySelector('input[name="villVis"]:checked');
+  var interests=[];
+  document.querySelectorAll('#villInterests .vill-interest-chip.on').forEach(function(el){interests.push(el.textContent)});
+  var zipVal=document.getElementById('villZip').value.trim();
+  var cityState=document.getElementById('villLocStatus').textContent.replace('\u2705 ','').split(', ');
+  var profile={
+    user_id:S.user.id,
+    visibility:vis?vis.value:'city',
+    display_name:name,
+    bio:document.getElementById('villBio').value.trim()||null,
+    child_age_range:document.getElementById('villAge').value||null,
+    child_diagnosis_category:document.getElementById('villDx').value||null,
+    interests:interests,
+    city:cityState[0]||null,
+    state:cityState[1]||null,
+    zip:zipVal||null,
+    lat:villGeoData.lat,
+    lng:villGeoData.lng
+  };
+  try{
+    if(villProfile){
+      await sb.from('village_profiles').update(profile).eq('user_id',S.user.id);
+    } else {
+      await sb.from('village_profiles').insert(profile);
+    }
+    showToast(villProfile?'Profile updated!':'Welcome to My Village!');
+    villGeoData=null;
+    await loadVillageProfile();
+    loadNearbyParents();
+  }catch(e){console.error('Village profile save:',e);showToast('Could not save profile')}
+}
+
+function editVillageProfile(){
+  villGeoData=villProfile?{lat:villProfile.lat,lng:villProfile.lng}:null;
+  showVillageOptIn();
+  if(villProfile){
+    setTimeout(function(){
+      document.getElementById('villName').value=villProfile.display_name||'';
+      document.getElementById('villBio').value=villProfile.bio||'';
+      if(villProfile.child_age_range)document.getElementById('villAge').value=villProfile.child_age_range;
+      if(villProfile.child_diagnosis_category)document.getElementById('villDx').value=villProfile.child_diagnosis_category;
+      var vis=document.querySelector('input[name="villVis"][value="'+villProfile.visibility+'"]');
+      if(vis)vis.checked=true;
+      if(villProfile.zip)document.getElementById('villZip').value=villProfile.zip;
+      if(villProfile.city){
+        document.getElementById('villLocStatus').innerHTML='<div style="font-size:13px;color:var(--sage-dark)">\u2705 '+esc(villProfile.city)+(villProfile.state?', '+esc(villProfile.state):'')+'</div>';
+      }
+      if(villProfile.interests&&villProfile.interests.length){
+        document.querySelectorAll('#villInterests .vill-interest-chip').forEach(function(el){
+          if(villProfile.interests.indexOf(el.textContent)>=0)el.classList.add('on');
+        });
+      }
+    },50);
+  }
+}
+
+async function leaveVillage(){
+  if(!confirm('Leave My Village? Your profile will be removed and you won\x27t appear in nearby searches.'))return;
+  await sb.from('village_profiles').delete().eq('user_id',S.user.id);
+  villProfile=null;
+  showToast('You\x27ve left My Village');
+  showVillageOptIn();
+}
+
 // ═══ OVERLAY PAGES ═══
 function closeOverlay(id){document.getElementById(id).classList.remove('open')}
 
