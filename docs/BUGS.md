@@ -10,21 +10,15 @@ _(none currently)_
 
 ## High
 
-1. **Forgot password email flow incomplete** — Supabase sends the reset email, but when user clicks the link, app.html doesn't detect the reset token or show a "set new password" form. User just lands back in the app with no way to set a new password. Workaround: admin can reset via admin portal "Reset PW" button.
-
-2. **Profile email not synced from auth** — New Supabase auth users get a profile row with `email = null`. The `handleAuth` signup flow sets it, but direct Supabase dashboard user creation does not. Need a trigger or periodic sync.
-
-3. **Admin portal shows only 1 child per user** — The Users table reads legacy `child_name`/`child_age`/`diagnosis` from `profiles` table instead of querying the `children` table. Multi-child parents only show their first/legacy child. **Impact:** Also affects grant reporting metrics (`loadGrantData`) and behavior data stats (`loadBehavior`) which may use the same legacy profile fields. Fix: update admin `loadUsers()` to join on `children` table and show all children, or at least the active child. Also audit grant and behavior admin functions for the same issue.
+_(none currently)_
 
 ## Medium
 
-4. **Invite role validation too strict** — Worker `/invite` endpoint only accepts `caregiver` and `teacher` but not `provider`. Updated in latest code but needs worker redeploy to take effect.
-
-5. **Admin portal child data shows legacy fields** — Related to #3. The entire admin dashboard uses `profiles.child_name` etc. instead of the `children` table. Needs a systematic update across all admin functions.
+_(none currently)_
 
 ## Low
 
-6. **macOS resource fork files (._*) in git** — External volume creates AppleDouble metadata files that cause `non-monotonic index` warnings on every git operation. Cosmetic but noisy. Fix: add `._*` to `.gitignore` and run `git gc`.
+_(none currently)_
 
 ---
 
@@ -32,7 +26,15 @@ _Add new bugs below with the next number. Move to "Fixed" section when resolved.
 
 ## Fixed
 
-_(move resolved bugs here with date)_
+- **#1 Forgot password reset flow** — Replaced `prompt()` with proper modal UI (2026-04-07)
+- **#2 Profile email sync** — Migration with trigger added: `20260406_sync_profile_email.sql` (2026-04-06)
+- **#3 Admin shows only 1 child** — `loadUsers()` already joins on `children` table; grants/behavior use direct queries (2026-04-07)
+- **#4 Invite role validation** — Worker now accepts `co-parent`, `caregiver`, `teacher`, `provider` (2026-04-07)
+- **#5 Admin legacy child fields** — Resolved as part of #3 (2026-04-07)
+- **#6 macOS resource fork files** — `.gitignore` has `._*`, cleaned `.git/objects/pack/` (2026-04-07)
+- **#10 Check-in shows for all roles** — Added `S.role!=='parent'` guard to `checkDailyCheckin()` (2026-04-07)
+- **#11 Two-parent households** — Co-parent invite flow with `access_level: 'full'`, loads via `child_access` (2026-04-07)
+- **#12 Provider Insights wrong user_id** — Already fixed; queries `providerActiveChild.user_id` (2026-04-07)
 
 ---
 
@@ -44,8 +46,8 @@ _(move resolved bugs here with date)_
 
 9. **Community posts: file/photo uploads** — (Ariana feedback) Parents want to share visual aids, schedules, etc. in community posts. Needs Supabase Storage for image uploads + display in post cards.
 
-10. **Daily check-in prompt shows for all roles** — Only parents (and possibly children) should see the morning check-in modal. Providers, caregivers, and teachers should not be prompted. Fix: add `S.role === 'parent'` guard to `checkDailyCheckin()`.
+10. **Child/Teen login** — (moved from #7, same feature)
 
-11. **Two-parent households need dual parent access** — Currently only one parent account owns the child. Need to support a second parent (co-parent) with full access. Could use the invite flow with a new `co-parent` role that has `access_level: 'full'`, or add a second `user_id` on the children table.
+11. **Behavior log triggers should use ABA functions** — (moved from #8, Ariana feedback)
 
-12. **Provider Insights tab loads forever** — `fetchChildContext()` queries behavior_logs by `S.user.id` (the provider), but the logs belong to the parent's `user_id`. Provider Insights needs to query by `providerActiveChild.user_id` instead. The `loadClientTab` insights section already does this correctly for behavior logs but the insights renderer may call the wrong fetch.
+12. **Community posts: file/photo uploads** — (moved from #9, Ariana feedback)
