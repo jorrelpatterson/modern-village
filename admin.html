@@ -360,7 +360,7 @@
             <div id="sequenceSteps"></div>
           </div>
 
-          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Send Test To</label><div style="display:flex;gap:8px"><input id="campTestEmail" class="form-input" placeholder="your@email.com" style="flex:1"><button class="btn btn-sm btn-outline" onclick="sendTestCampaign()">Send Test</button></div></div>
+          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Send Test</label><div style="display:flex;gap:8px;margin-bottom:6px"><input id="campTestName" class="form-input" placeholder="Test name (e.g. Sarah)" style="flex:1"><input id="campTestEmail" class="form-input" placeholder="your@email.com" style="flex:1"></div><div style="display:flex;gap:8px"><button class="btn btn-sm btn-outline" onclick="sendTestCampaign(false)">Send Email 1</button><button class="btn btn-sm btn-outline" onclick="sendTestCampaign(true)">Send All 9 Tests</button></div></div>
           <div style="display:flex;gap:8px">
             <button class="btn btn-sm btn-sage" onclick="saveCampaign()">Save Draft</button>
             <button class="btn btn-sm btn-sage" onclick="saveCampaign(true)">Save &amp; Activate</button>
@@ -1634,33 +1634,41 @@ async function sendCampaign(campaignId,target){
   loadLeads();
 }
 
-async function sendTestCampaign(){
+async function sendTestCampaign(sendAll){
   var email=document.getElementById('campTestEmail').value.trim();
+  var testName=document.getElementById('campTestName').value.trim()||'there';
   if(!email){showToast('Enter a test email');return}
   try{
     var session=await sb.auth.getSession();
     var token=session.data.session?.access_token;
     if(campaignMode==='sequence'&&sequenceStepsData.length){
-      // Send first email of sequence as test
-      var step=sequenceStepsData[0];
-      var subA=document.getElementById('seqSubA_0');
-      var bodyEl=document.getElementById('seqBody_0');
-      var subject=subA?subA.value:step.subject_a;
-      var body=bodyEl?bodyEl.value:step.body;
-      if(!subject||!body){showToast('Fill in at least the first email');return}
-      var branded=emailWrapper(body);
-      var r=await fetch('https://village-api.jorrelpatterson.workers.dev/email',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-        body:JSON.stringify({to:email,subject:'[TEST 1/'+sequenceStepsData.length+'] '+subject,html:branded})
-      });
-      var d=await r.json();
-      if(d.id)showToast('Test of email 1/'+sequenceStepsData.length+' sent to '+email+'!');
-      else showToast('Error: '+(d.error||'Failed'));
+      var total=sequenceStepsData.length;
+      var toSend=sendAll?total:1;
+      for(var i=0;i<toSend;i++){
+        var subEl=document.getElementById('seqSubA_'+i);
+        var bodyEl=document.getElementById('seqBody_'+i);
+        var subject=subEl?subEl.value:sequenceStepsData[i].subject_a;
+        var body=bodyEl?bodyEl.value:sequenceStepsData[i].body;
+        if(!subject||!body)continue;
+        body=body.replace(/\{name\}/g,testName);
+        subject=subject.replace(/\{name\}/g,testName);
+        var branded=emailWrapper(body);
+        var r=await fetch('https://village-api.jorrelpatterson.workers.dev/email',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+          body:JSON.stringify({to:email,subject:'[TEST '+(i+1)+'/'+total+'] '+subject,html:branded})
+        });
+        var d=await r.json();
+        if(!d.id)showToast('Error on email '+(i+1)+': '+(d.error||'Failed'));
+        if(sendAll)await new Promise(function(res){setTimeout(res,500)});
+      }
+      showToast(sendAll?'All '+toSend+' test emails sent to '+email+'!':'Test email 1/'+total+' sent to '+email+'!');
     } else {
       var subA=document.getElementById('campSubjectA').value.trim();
       var body=document.getElementById('campBody').value.trim();
       if(!subA||!body){showToast('Fill in subject and body first');return}
+      body=body.replace(/\{name\}/g,testName);
+      subA=subA.replace(/\{name\}/g,testName);
       var branded=emailWrapper(body);
       var r=await fetch('https://village-api.jorrelpatterson.workers.dev/email',{
         method:'POST',
