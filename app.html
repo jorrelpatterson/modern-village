@@ -4330,7 +4330,53 @@ async function loadClientTab(){
     var logsR=await sb.from('behavior_logs').select('*').eq('user_id',providerActiveChild.user_id).order('logged_at',{ascending:false}).limit(100);
     var ctx={logs:logsR.data||[],strategies:[],patterns:{},conversationTopics:[],checkins:[]};
     ctx.patterns=detectPatterns(ctx.logs);
-    renderInsights(ctx);
+    // Render inline instead of into the overlay insightsContent element
+    var pat=ctx.patterns||{};
+    var logs=ctx.logs||[];
+    var cName=providerActiveChild.name||'child';
+    if(!pat.hasData){
+      el.innerHTML='<div style="text-align:center;padding:32px;color:var(--warm-gray-light)"><div style="font-size:40px;margin-bottom:8px">\ud83e\udde0</div><div style="font-size:15px;font-weight:600">Not enough data yet</div><div style="font-size:13px;margin-top:4px">At least 3 behavior logs are needed to see patterns for '+esc(cName)+'</div></div>';
+    } else {
+      var h='<div style="margin-bottom:16px"><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800">Insights for '+esc(cName)+'</div></div>';
+      // Trend
+      if(pat.trend&&pat.trend!=='new_user'){
+        var trendColor=pat.trend==='improving'?'var(--sage-dark)':pat.trend==='increasing'?'var(--terracotta)':'var(--warm-gray)';
+        var trendLabel=pat.trend==='improving'?'Improving':pat.trend==='increasing'?'Increasing':'Stable';
+        h+='<div class="session-card"><div style="font-size:12px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;margin-bottom:4px">30-Day Trend</div><div style="font-size:22px;font-weight:800;color:'+trendColor+'">'+trendLabel+'</div>';
+        if(pat.trendPct)h+='<div style="font-size:13px;color:var(--warm-gray)">'+pat.trendPct+'% vs previous month</div>';
+        h+='</div>';
+      }
+      // Stats row
+      h+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">';
+      h+='<div class="session-card" style="text-align:center"><div style="font-size:20px;font-weight:800">'+pat.recentCount+'</div><div style="font-size:11px;color:var(--warm-gray)">This month</div></div>';
+      if(pat.avgDuration)h+='<div class="session-card" style="text-align:center"><div style="font-size:20px;font-weight:800">'+pat.avgDuration+'m</div><div style="font-size:11px;color:var(--warm-gray)">Avg duration</div></div>';
+      if(pat.longestCalm)h+='<div class="session-card" style="text-align:center"><div style="font-size:20px;font-weight:800">'+pat.longestCalm+'d</div><div style="font-size:11px;color:var(--warm-gray)">Longest calm</div></div>';
+      h+='</div>';
+      // Top behaviors
+      if(pat.topBehaviors&&pat.topBehaviors.length){
+        h+='<div class="session-card"><div style="font-size:12px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;margin-bottom:8px">Top Behaviors</div>';
+        pat.topBehaviors.forEach(function(b){h+='<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px"><span style="text-transform:capitalize">'+esc(b.behavior)+'</span><span style="font-weight:700">'+b.count+'x</span></div>'});
+        h+='</div>';
+      }
+      // Top triggers
+      if(pat.topTriggers&&pat.topTriggers.length){
+        h+='<div class="session-card"><div style="font-size:12px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;margin-bottom:8px">Common Triggers</div>';
+        pat.topTriggers.forEach(function(t){h+='<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px"><span style="text-transform:capitalize">'+esc(t.trigger)+'</span><span style="font-weight:700">'+t.count+'x</span></div>'});
+        h+='</div>';
+      }
+      // Strategy effectiveness
+      if(pat.strategyEffectiveness&&pat.strategyEffectiveness.length){
+        h+='<div class="session-card"><div style="font-size:12px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;margin-bottom:8px">Strategy Effectiveness</div>';
+        pat.strategyEffectiveness.forEach(function(s){
+          var color=s.successRate>=60?'var(--sage)':s.successRate>=30?'var(--sunflower)':'var(--terracotta)';
+          h+='<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px"><span style="text-transform:capitalize">'+esc(s.strategy)+'</span><span style="font-weight:700;color:'+color+'">'+s.successRate+'%</span></div><div style="background:var(--sand);border-radius:4px;height:6px;overflow:hidden"><div style="height:100%;background:'+color+';width:'+s.successRate+'%;border-radius:4px"></div></div></div>';
+        });
+        h+='</div>';
+      }
+      if(pat.peakTimeOfDay)h+='<div class="session-card"><div style="font-size:12px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;margin-bottom:4px">Peak Time</div><div style="font-size:15px;font-weight:700;text-transform:capitalize">'+pat.peakTimeOfDay+'</div></div>';
+      if(pat.hardestDay)h+='<div class="session-card"><div style="font-size:12px;font-weight:700;color:var(--warm-gray);text-transform:uppercase;margin-bottom:4px">Hardest Day</div><div style="font-size:15px;font-weight:700">'+pat.hardestDay+' ('+pat.hardestDayCount+' incidents)</div></div>';
+      el.innerHTML=h;
+    }
   }
 }
 
