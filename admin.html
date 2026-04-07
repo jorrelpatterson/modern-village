@@ -1,3 +1,7 @@
+error: non-monotonic index .git/objects/pack/._pack-d3de4dff9f35d4e3df52eb6ec16dd4db52bd2ea6.idx
+error: non-monotonic index .git/objects/pack/._pack-d3de4dff9f35d4e3df52eb6ec16dd4db52bd2ea6.idx
+error: non-monotonic index .git/objects/pack/._pack-d3de4dff9f35d4e3df52eb6ec16dd4db52bd2ea6.idx
+error: non-monotonic index .git/objects/pack/._pack-d3de4dff9f35d4e3df52eb6ec16dd4db52bd2ea6.idx
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -181,6 +185,8 @@
     <div class="sb-item" data-page="referrals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>Referrals</div>
     <div class="sb-item" data-page="verification"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Verify Providers</div>
     <div class="sb-item" data-page="invites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>Invites</div>
+    <div class="sb-item" data-page="leads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Leads CRM<span class="sb-badge" id="leadCount">0</span></div>
+    <div class="sb-item" data-page="marketing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>Marketing</div>
   </aside>
 
   <main class="main">
@@ -313,6 +319,42 @@
     <div id="pgInvites" class="page">
       <h2>Invite Monitor</h2>
       <div id="inviteSection"></div>
+    </div>
+
+    <div id="pgLeads" class="page">
+      <h2>Leads CRM</h2>
+      <div class="stats" id="leadStats"></div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <select id="leadTypeFilter" onchange="loadLeads()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px">
+          <option value="">All Types</option>
+          <option value="district">Districts</option>
+          <option value="provider">Providers</option>
+          <option value="selpa">SELPAs</option>
+          <option value="grant">Grants</option>
+        </select>
+        <select id="leadStatusFilter" onchange="loadLeads()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px">
+          <option value="">All Status</option>
+          <option value="not_contacted">Not Contacted</option>
+          <option value="emailed">Emailed</option>
+          <option value="responded">Responded</option>
+          <option value="meeting">Meeting</option>
+          <option value="converted">Converted</option>
+          <option value="dead">Dead</option>
+        </select>
+        <input id="leadSearch" placeholder="Search name, org, city..." oninput="loadLeads()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px;flex:1;min-width:150px">
+        <button onclick="exportLeads()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--sage);background:white;color:var(--sage-dark);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600">Export CSV</button>
+      </div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">Leads</div><span id="leadResultCount" style="font-size:12px;color:var(--warm-gray-light)"></span></div><div class="panel-body"><table class="tbl" id="leadTable"><thead><tr><th>Name</th><th>Organization</th><th>Type</th><th>City</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody id="leadBody"></tbody></table></div></div>
+    </div>
+
+    <div id="pgMarketing" class="page">
+      <h2>Marketing</h2>
+      <div class="stats" id="marketingStats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="panel"><div class="panel-hdr"><div class="panel-title">Signups by Day (Last 30)</div></div><div class="panel-body" id="signupChart"></div></div>
+        <div class="panel"><div class="panel-hdr"><div class="panel-title">User Roles</div></div><div class="panel-body" id="roleBreakdown"></div></div>
+      </div>
+      <div class="panel" style="margin-top:16px"><div class="panel-hdr"><div class="panel-title">Conversion Funnel</div></div><div class="panel-body" id="conversionFunnel"></div></div>
     </div>
 
     <!-- BLOG EDITOR (overlay) -->
@@ -459,6 +501,8 @@ async function loadPage(pg){
   else if(pg==='referrals') await loadReferrals();
   else if(pg==='verification') loadVerification();
   else if(pg==='invites') loadInvites();
+  if(pg==='leads') loadLeads();
+  if(pg==='marketing') loadMarketing();
 }
 
 // ═══ DASHBOARD ═══
@@ -1176,6 +1220,191 @@ async function loadInvites(){
   document.getElementById('inviteSection').innerHTML=h;
 }
 
+
+// ═══ LEADS CRM ═══
+var leadsCache = [];
+
+async function loadLeads(){
+  var typeFilter = document.getElementById('leadTypeFilter').value;
+  var statusFilter = document.getElementById('leadStatusFilter').value;
+  var search = (document.getElementById('leadSearch').value || '').trim().toLowerCase();
+
+  // Build query
+  var q = sb.from('leads').select('*', {count: 'exact'});
+  if(typeFilter) q = q.eq('lead_type', typeFilter);
+  if(statusFilter) q = q.eq('outreach_status', statusFilter);
+  if(search) q = q.or('name.ilike.%'+search+'%,organization.ilike.%'+search+'%,city.ilike.%'+search+'%,email.ilike.%'+search+'%');
+  q = q.order('created_at', {ascending: false}).limit(100);
+
+  var r = await q;
+  var leads = r.data || [];
+  var totalCount = r.count || 0;
+  leadsCache = leads;
+
+  // Stats
+  var statsR = await sb.from('leads').select('lead_type,outreach_status', {count: 'exact'});
+  var allLeads = statsR.data || [];
+  var total = statsR.count || allLeads.length;
+  var districts = allLeads.filter(function(l){return l.lead_type==='district'}).length;
+  var providers = allLeads.filter(function(l){return l.lead_type==='provider'}).length;
+  var contacted = allLeads.filter(function(l){return l.outreach_status!=='not_contacted'}).length;
+  document.getElementById('leadStats').innerHTML =
+    statCard('Total Leads', total, '') + statCard('Districts', districts, '') + statCard('Providers', providers, '') + statCard('Contacted', contacted, Math.round(contacted/total*100)+'%');
+  document.getElementById('leadCount').textContent = total;
+
+  // Results count
+  document.getElementById('leadResultCount').textContent = 'Showing ' + leads.length + ' of ' + totalCount;
+
+  // Render table
+  var h = '';
+  leads.forEach(function(l){
+    var statusColors = {not_contacted:'',emailed:'tag-blue',responded:'tag-yellow',meeting:'tag-sage',converted:'tag-sage',dead:'tag-red'};
+    var statusLabel = (l.outreach_status || 'not_contacted').replace(/_/g, ' ');
+    h += '<tr>';
+    h += '<td style="font-weight:600;font-size:13px">' + esc(l.name || l.first_name || '\u2014') + '</td>';
+    h += '<td style="font-size:12px">' + esc(l.organization || '\u2014') + '</td>';
+    h += '<td><span class="tag ' + (l.lead_type==='district'?'tag-blue':l.lead_type==='provider'?'tag-sage':'tag-free') + '">' + esc(l.lead_type) + '</span></td>';
+    h += '<td style="font-size:12px">' + esc(l.city || '\u2014') + '</td>';
+    h += '<td style="font-size:12px">' + (l.phone ? '<a href="tel:' + esc(l.phone) + '" style="color:var(--sage-dark)">' + esc(l.phone) + '</a>' : '\u2014') + '</td>';
+    h += '<td><select style="padding:2px 6px;border-radius:6px;border:1px solid var(--sand);font-size:11px;font-family:inherit" onchange="updateLeadStatus(\x27' + l.id + '\x27,this.value)">';
+    ['not_contacted','emailed','responded','meeting','converted','dead'].forEach(function(s){
+      h += '<option value="' + s + '"' + (l.outreach_status===s?' selected':'') + '>' + s.replace(/_/g,' ') + '</option>';
+    });
+    h += '</select></td>';
+    h += '<td><button style="padding:2px 8px;border-radius:6px;border:1px solid var(--sand);background:white;cursor:pointer;font-size:11px;font-family:inherit" onclick="showLeadDetail(\x27' + l.id + '\x27)">View</button></td>';
+    h += '</tr>';
+  });
+  document.getElementById('leadBody').innerHTML = h || '<tr><td colspan="7" class="empty">No leads found</td></tr>';
+}
+
+async function updateLeadStatus(id, status){
+  await sb.from('leads').update({outreach_status: status, updated_at: new Date().toISOString()}).eq('id', id);
+  showToast('Status updated');
+}
+
+function showLeadDetail(id){
+  var lead = leadsCache.find(function(l){return l.id === id});
+  if(!lead) return;
+  var html = '<div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px" onclick="this.remove()">';
+  html += '<div style="background:white;border-radius:16px;padding:24px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto" onclick="event.stopPropagation()">';
+  html += '<h3 style="margin:0 0 4px">' + esc(lead.name || lead.first_name || 'Unknown') + '</h3>';
+  if(lead.organization) html += '<div style="font-size:14px;color:var(--warm-gray);margin-bottom:12px">' + esc(lead.organization) + '</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;margin-bottom:16px">';
+  if(lead.phone) html += '<div><strong>Phone:</strong> <a href="tel:' + esc(lead.phone) + '">' + esc(lead.phone) + '</a></div>';
+  if(lead.email) html += '<div><strong>Email:</strong> <a href="mailto:' + esc(lead.email) + '">' + esc(lead.email) + '</a></div>';
+  if(lead.city) html += '<div><strong>City:</strong> ' + esc(lead.city) + '</div>';
+  if(lead.state) html += '<div><strong>State:</strong> ' + esc(lead.state) + '</div>';
+  if(lead.credential) html += '<div><strong>Credential:</strong> ' + esc(lead.credential) + '</div>';
+  if(lead.specialty) html += '<div><strong>Specialty:</strong> ' + esc(lead.specialty) + '</div>';
+  html += '<div><strong>Source:</strong> ' + esc(lead.source) + '</div>';
+  html += '<div><strong>Type:</strong> ' + esc(lead.lead_type) + '</div>';
+  html += '</div>';
+  if(lead.notes) html += '<div style="font-size:13px;margin-bottom:12px"><strong>Notes:</strong> ' + esc(lead.notes) + '</div>';
+  html += '<div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Outreach Notes</label>';
+  html += '<textarea id="leadNotes_' + lead.id + '" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px;resize:none" rows="3" placeholder="Add notes about outreach...">' + esc(lead.outreach_notes || '') + '</textarea></div>';
+  html += '<div style="display:flex;gap:8px"><button class="btn btn-sm btn-sage" onclick="saveLeadNotes(\x27' + lead.id + '\x27)">Save Notes</button>';
+  html += '<select style="padding:6px 12px;border-radius:8px;border:1px solid var(--sand);font-size:12px;font-family:inherit" onchange="updateLeadStatus(\x27' + lead.id + '\x27,this.value)">';
+  ['not_contacted','emailed','responded','meeting','converted','dead'].forEach(function(s){
+    html += '<option value="' + s + '"' + (lead.outreach_status===s?' selected':'') + '>' + s.replace(/_/g,' ') + '</option>';
+  });
+  html += '</select></div>';
+  html += '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function saveLeadNotes(id){
+  var notes = document.getElementById('leadNotes_' + id).value;
+  await sb.from('leads').update({outreach_notes: notes, updated_at: new Date().toISOString()}).eq('id', id);
+  showToast('Notes saved');
+}
+
+function exportLeads(){
+  if(!leadsCache.length){showToast('No leads to export');return}
+  var csv = 'Name,Organization,Type,Phone,Email,City,State,Credential,Specialty,Status,Notes\n';
+  leadsCache.forEach(function(l){
+    csv += [l.name||'',l.organization||'',l.lead_type||'',l.phone||'',l.email||'',l.city||'',l.state||'',l.credential||'',l.specialty||'',l.outreach_status||'',l.outreach_notes||''].map(function(v){return '"'+v.replace(/"/g,'""')+'"'}).join(',')+'\n';
+  });
+  var blob = new Blob([csv],{type:'text/csv'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'modern-village-leads-' + new Date().toISOString().split('T')[0] + '.csv';
+  a.click();
+}
+
+// ═══ MARKETING METRICS ═══
+async function loadMarketing(){
+  var r = await sb.from('profiles').select('id,created_at,subscription_status,role,free_messages_used');
+  var users = r.data || [];
+  var total = users.length;
+  var pro = users.filter(function(u){return u.subscription_status==='pro'}).length;
+  var parents = users.filter(function(u){return !u.role||u.role==='parent'}).length;
+  var providers = users.filter(function(u){return u.role==='provider'}).length;
+
+  document.getElementById('marketingStats').innerHTML =
+    statCard('Total Users', total, '') + statCard('Pro Subscribers', pro, '') + statCard('Conversion', total?Math.round(pro/total*100)+'%':'0%', '') + statCard('Messages Sent', users.reduce(function(a,u){return a+(u.free_messages_used||0)},0), '');
+
+  // Signup chart (last 30 days)
+  var now = new Date();
+  var days = {};
+  for(var i=29;i>=0;i--){
+    var d = new Date(now);d.setDate(d.getDate()-i);
+    days[d.toISOString().split('T')[0]] = 0;
+  }
+  users.forEach(function(u){
+    var d = new Date(u.created_at).toISOString().split('T')[0];
+    if(days[d] !== undefined) days[d]++;
+  });
+  var maxSignups = Math.max.apply(null, Object.values(days)) || 1;
+  var chartH = '<div style="display:flex;align-items:flex-end;gap:2px;height:120px">';
+  Object.keys(days).forEach(function(d){
+    var count = days[d];
+    var pct = Math.round(count/maxSignups*100);
+    var label = new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    chartH += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%" title="'+label+': '+count+'">';
+    chartH += '<div style="font-size:9px;color:var(--warm-gray-light);margin-bottom:2px">'+(count||'')+'</div>';
+    chartH += '<div style="width:100%;background:'+(count?'var(--sage)':'var(--sand)');
+    chartH += ';border-radius:3px 3px 0 0;min-height:2px;height:'+Math.max(pct,2)+'%"></div>';
+    chartH += '</div>';
+  });
+  chartH += '</div>';
+  chartH += '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--warm-gray-light)"><span>30 days ago</span><span>Today</span></div>';
+  document.getElementById('signupChart').innerHTML = chartH;
+
+  // Role breakdown
+  var roles = {parent:parents,provider:providers,caregiver:users.filter(function(u){return u.role==='caregiver'}).length,teacher:users.filter(function(u){return u.role==='teacher'}).length};
+  var roleH = '';
+  Object.keys(roles).forEach(function(r){
+    var count = roles[r];
+    var pct = total ? Math.round(count/total*100) : 0;
+    roleH += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+    roleH += '<div style="width:80px;font-size:13px;font-weight:600;text-transform:capitalize">'+r+'</div>';
+    roleH += '<div style="flex:1;background:var(--sand);border-radius:4px;height:20px;overflow:hidden"><div style="height:100%;background:var(--sage);width:'+pct+'%;border-radius:4px;transition:width 0.3s"></div></div>';
+    roleH += '<div style="width:50px;text-align:right;font-size:12px;color:var(--warm-gray)">'+count+'</div>';
+    roleH += '</div>';
+  });
+  document.getElementById('roleBreakdown').innerHTML = roleH;
+
+  // Conversion funnel
+  var screenerR = await sb.from('screener_results').select('id',{count:'exact'});
+  var screenerCount = screenerR.count || 0;
+  var funnelSteps = [
+    {label:'Screener Completions',count:screenerCount,color:'var(--sky)'},
+    {label:'Signups',count:total,color:'var(--sage)'},
+    {label:'Active (3+ messages)',count:users.filter(function(u){return (u.free_messages_used||0)>=3}).length,color:'var(--sage-dark)'},
+    {label:'Pro Subscribers',count:pro,color:'var(--terracotta)'}
+  ];
+  var maxFunnel = Math.max.apply(null,funnelSteps.map(function(s){return s.count}))||1;
+  var funnelH = '';
+  funnelSteps.forEach(function(s,i){
+    var pct = Math.round(s.count/maxFunnel*100);
+    funnelH += '<div style="margin-bottom:12px">';
+    funnelH += '<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600">'+s.label+'</span><span style="font-size:13px;color:var(--warm-gray)">'+s.count+'</span></div>';
+    funnelH += '<div style="background:var(--sand);border-radius:6px;height:24px;overflow:hidden"><div style="height:100%;background:'+s.color+';width:'+pct+'%;border-radius:6px;transition:width 0.3s"></div></div>';
+    if(i>0){var prevCount=funnelSteps[i-1].count;if(prevCount)funnelH+='<div style="font-size:11px;color:var(--warm-gray-light);margin-top:2px">'+Math.round(s.count/prevCount*100)+'% conversion</div>'}
+    funnelH += '</div>';
+  });
+  document.getElementById('conversionFunnel').innerHTML = funnelH;
+}
 
 async function resetUserPassword(email){
   if(!email){showToast('No email for this user');return}
