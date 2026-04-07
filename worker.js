@@ -277,5 +277,215 @@ export default {
       });
       return new Response(JSON.stringify(await r.json()), { headers: h });
     } catch { return new Response('{"error":"AI failed"}', { status: 500, headers: h }); }
+  },  },
+
+  // ═══ CRON: Runs daily for booking reminders + email drips ═══
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runDailyTasks(env));
   }
 };
+
+async function runDailyTasks(env) {
+  const supaUrl = env.SUPABASE_URL;
+  const supaKey = env.SUPABASE_SERVICE_KEY;
+  const resendKey = env.RESEND_API_KEY;
+  const headers = { 'apikey': supaKey, 'Authorization': 'Bearer ' + supaKey, 'Content-Type': 'application/json' };
+
+  // ── BOOKING REMINDERS (24hr before) ──
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowIso = tomorrow.toISOString().split('T')[0];
+
+  try {
+    const bookRes = await fetch(supaUrl + '/rest/v1/bookings?session_date=eq.' + tomorrowIso + '&status=neq.cancelled&select=id,user_id,provider_name,session_type,session_date,session_time', { headers });
+    const bookings = await bookRes.json();
+
+    for (const b of (bookings || [])) {
+      // Get user email
+      const userRes = await fetch(supaUrl + '/rest/v1/profiles?id=eq.' + b.user_id + '&select=email,name', { headers });
+      const users = await userRes.json();
+      if (!users.length || !users[0].email) continue;
+
+      const user = users[0];
+      const sessionDate = new Date(b.session_date + 'T12:00:00');
+      const dateStr = sessionDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'Modern Village <hello@modernvillage.app>',
+          to: user.email,
+          subject: 'Reminder: Session with ' + b.provider_name + ' tomorrow',
+          html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px">' +
+            '<h2 style="color:#2D2D2D">Session Reminder</h2>' +
+            '<p>Hi ' + (user.name || 'there') + ',</p>' +
+            '<p>Just a reminder that you have a <strong>' + (b.session_type || 'session') + '</strong> with <strong>' + b.provider_name + '</strong> tomorrow.</p>' +
+            '<div style="background:#F5F5F0;border-radius:12px;padding:16px;margin:16px 0">' +
+            '<div style="font-weight:700">' + dateStr + '</div>' +
+            '<div style="color:#6B6560;margin-top:4px">' + (b.session_time || '') + '</div>' +
+            '</div>' +
+            '<p style="font-size:13px;color:#9E9790">Open Modern Village to view your booking details.</p>' +
+            '</div>'
+        })
+      });
+    }
+  } catch (e) { console.error('Booking reminders error:', e); }
+
+  // ── EMAIL DRIP: Welcome sequence for new users ──
+  try {
+    // Day 1: Welcome (users created yesterday)
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStart = yesterday.toISOString().split('T')[0] + 'T00:00:00';
+    const yesterdayEnd = yesterday.toISOString().split('T')[0] + 'T23:59:59';
+
+    const newUsersRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=gte.' + yesterdayStart + '&created_at=lte.' + yesterdayEnd + '&role=eq.parent&select=email,name', { headers });
+    const newUsers = await newUsersRes.json();
+
+    for (const u of (newUsers || [])) {
+      if (!u.email) continue;
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'Modern Village <hello@modernvillage.app>',
+          to: u.email,
+          subject: 'Welcome to Modern Village \u2014 your first strategy card awaits',
+          html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px">' +
+            '<h2 style="color:#2D2D2D">Welcome to the Village &#127807;</h2>' +
+            '<p>Hi ' + (u.name || 'there') + ',</p>' +
+            '<p>You just joined thousands of families navigating neurodiversity together.</p>' +
+            '<p>Here are 3 things to try today:</p>' +
+            '<ol style="line-height:2">' +
+            '<li><strong>Ask the AI Coach</strong> \u2014 describe what happened and get a step-by-step strategy card</li>' +
+            '<li><strong>Log a behavior</strong> \u2014 the more you log, the smarter your coach gets</li>' +
+            '<li><strong>Check the community</strong> \u2014 real parents sharing what works</li>' +
+            '</ol>' +
+            '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 28px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;margin:16px 0">Open Modern Village</a>' +
+            '<p style="font-size:13px;color:#9E9790">You received this because you signed up for Modern Village. <a href="https://modernvillage.app/app.html" style="color:#9E9790">Manage preferences</a></p>' +
+            '</div>'
+        })
+      });
+    }
+
+    // Day 3: Tip (users created 3 days ago)
+    const day3 = new Date();
+    day3.setDate(day3.getDate() - 3);
+    const day3Start = day3.toISOString().split('T')[0] + 'T00:00:00';
+    const day3End = day3.toISOString().split('T')[0] + 'T23:59:59';
+
+    const day3UsersRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=gte.' + day3Start + '&created_at=lte.' + day3End + '&role=eq.parent&select=email,name', { headers });
+    const day3Users = await day3UsersRes.json();
+
+    for (const u of (day3Users || [])) {
+      if (!u.email) continue;
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'Modern Village <hello@modernvillage.app>',
+          to: u.email,
+          subject: 'Pro tip: Log 3 behaviors to unlock pattern detection',
+          html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px">' +
+            '<h2 style="color:#2D2D2D">Your coach is learning &#129504;</h2>' +
+            '<p>Hi ' + (u.name || 'there') + ',</p>' +
+            '<p>Did you know? After you log just <strong>3 behaviors</strong>, the AI Coach starts detecting patterns \u2014 peak times, common triggers, which strategies work best.</p>' +
+            '<p>The more you log, the more personalized your strategies become.</p>' +
+            '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 28px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;margin:16px 0">Log a Behavior</a>' +
+            '<p style="font-size:13px;color:#9E9790">You received this because you signed up for Modern Village.</p>' +
+            '</div>'
+        })
+      });
+    }
+
+    // Day 7: Check-in (users created 7 days ago)
+    const day7 = new Date();
+    day7.setDate(day7.getDate() - 7);
+    const day7Start = day7.toISOString().split('T')[0] + 'T00:00:00';
+    const day7End = day7.toISOString().split('T')[0] + 'T23:59:59';
+
+    const day7UsersRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=gte.' + day7Start + '&created_at=lte.' + day7End + '&role=eq.parent&select=email,name,subscription_status', { headers });
+    const day7Users = await day7UsersRes.json();
+
+    for (const u of (day7Users || [])) {
+      if (!u.email) continue;
+      const isPro = u.subscription_status === 'pro';
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'Modern Village <hello@modernvillage.app>',
+          to: u.email,
+          subject: "One week in \u2014 how's it going?",
+          html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px">' +
+            '<h2 style="color:#2D2D2D">One week together &#128154;</h2>' +
+            '<p>Hi ' + (u.name || 'there') + ',</p>' +
+            "<p>It's been a week since you joined Modern Village. How are things going?</p>" +
+            "<p>Here's what you might not have tried yet:</p>" +
+            '<ul style="line-height:2">' +
+            '<li>&#128203; <strong>Build a routine</strong> \u2014 morning, bedtime, or after-school</li>' +
+            '<li>&#128196; <strong>Upload your IEP</strong> \u2014 get a plain-English breakdown</li>' +
+            '<li>&#129309; <strong>Invite your care team</strong> \u2014 grandparents, aides, teachers</li>' +
+            '</ul>' +
+            (!isPro ? '<p>Ready for unlimited coaching? <a href="https://modernvillage.app/app.html" style="color:#7A9E7E;font-weight:700">Upgrade to Pro \u2014 $19.99/mo</a></p>' : '') +
+            '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 28px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;margin:16px 0">Open Modern Village</a>' +
+            '<p style="font-size:13px;color:#9E9790">You received this because you signed up for Modern Village.</p>' +
+            '</div>'
+        })
+      });
+    }
+
+  } catch (e) { console.error('Email drip error:', e); }
+
+  // ── RE-ENGAGEMENT: Users inactive 7+ days ──
+  try {
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const weekAgoIso = weekAgo.toISOString();
+
+    // Find users who haven't had any activity (no behavior logs or conversations) in 7 days
+    // Simple approach: check profiles created more than 14 days ago with no recent behavior logs
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+    const inactiveRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=lte.' + twoWeeksAgo.toISOString() + '&role=eq.parent&select=id,email,name,created_at', { headers });
+    const potentialInactive = await inactiveRes.json();
+
+    for (const u of (potentialInactive || [])) {
+      if (!u.email) continue;
+      // Check if they have any recent behavior logs
+      const logRes = await fetch(supaUrl + '/rest/v1/behavior_logs?user_id=eq.' + u.id + '&logged_at=gte.' + weekAgoIso + '&select=id&limit=1', { headers });
+      const logs = await logRes.json();
+      if (logs && logs.length > 0) continue; // Active user, skip
+
+      // Only send once per 14 days \u2014 stagger by days since creation
+      const daysSinceCreation = Math.floor((Date.now() - new Date(u.created_at || 0).getTime()) / 86400000);
+      if (daysSinceCreation % 14 !== 0) continue;
+
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'Modern Village <hello@modernvillage.app>',
+          to: u.email,
+          subject: 'We miss you \u2014 your coach is ready when you are',
+          html: '<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:20px">' +
+            '<h2 style="color:#2D2D2D">Your village is here &#127807;</h2>' +
+            '<p>Hi ' + (u.name || 'there') + ',</p>' +
+            "<p>It's been a little while. No pressure \u2014 we know parenting is overwhelming.</p>" +
+            "<p>But whenever you're ready, your AI Coach remembers everything about your child and is ready to help with whatever you're facing.</p>" +
+            '<p><strong>Quick wins you can do in 60 seconds:</strong></p>' +
+            '<ul style="line-height:2">' +
+            "<li>Log today's biggest challenge</li>" +
+            '<li>Ask the coach for one new strategy</li>' +
+            '<li>Do a daily check-in (how was today?)</li>' +
+            '</ul>' +
+            '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 28px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;margin:16px 0">Come Back to the Village</a>' +
+            '<p style="font-size:13px;color:#9E9790">You received this because you signed up for Modern Village. <a href="https://modernvillage.app/app.html" style="color:#9E9790">Manage preferences</a></p>' +
+            '</div>'
+        })
+      });
+    }
+  } catch (e) { console.error('Re-engagement error:', e); }
+}
