@@ -606,6 +606,15 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
 .vill-filters{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .vill-filter{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--sand);background:white;color:var(--warm-gray);cursor:pointer}
 .vill-disclaimer{font-size:11px;color:var(--warm-gray-light);line-height:1.5;padding:12px;background:var(--cream);border-radius:10px;margin:12px 0}
+.vill-msg-card{background:white;border-radius:14px;padding:14px;border:1px solid var(--sand);margin-bottom:8px;cursor:pointer;transition:all 0.15s}
+.vill-msg-card:hover{border-color:var(--sage)}
+.vill-msg-unread{border-left:3px solid var(--sage)}
+.vill-resource-card{background:white;border-radius:16px;padding:16px;border:1px solid var(--sand);margin-bottom:10px;transition:all 0.15s}
+.vill-resource-card:hover{border-color:var(--sage);box-shadow:0 4px 16px rgba(0,0,0,0.04)}
+.vill-cat-badge{display:inline-block;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:700;background:var(--sky);color:var(--sky-dark)}
+.vill-stars{color:var(--sunflower);font-size:14px;letter-spacing:1px}
+.vill-comment{padding:10px 0;border-bottom:1px solid var(--sand)}
+.vill-comment:last-child{border-bottom:none}
 </style>
 </head>
 <body>
@@ -1086,6 +1095,8 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
         <div class="vill-tab active" data-vt="feed" onclick="switchVillTab('feed')">Feed</div>
         <div class="vill-tab" data-vt="nearby" onclick="switchVillTab('nearby')">Nearby</div>
         <div class="vill-tab" data-vt="events" onclick="switchVillTab('events')">Events</div>
+        <div class="vill-tab" data-vt="resources" onclick="switchVillTab('resources')">Resources</div>
+        <div class="vill-tab" data-vt="messages" onclick="switchVillTab('messages')">Messages<span id="villMsgBadge" style="display:none;margin-left:4px;background:var(--terracotta);color:white;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:700"></span></div>
       </div>
       <!-- FEED (existing forum) -->
       <div id="villFeed" class="vill-section active">
@@ -1104,6 +1115,10 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
       <div id="villNearby" class="vill-section"></div>
       <!-- EVENTS -->
       <div id="villEvents" class="vill-section"></div>
+      <!-- RESOURCES -->
+      <div id="villResources" class="vill-section"></div>
+      <!-- MESSAGES -->
+      <div id="villMessages" class="vill-section"></div>
     </div>
 
     <!-- CLIENTS TAB (providers) -->
@@ -2751,11 +2766,13 @@ function switchVillTab(t){
   villTab=t;
   document.querySelectorAll('.vill-tab').forEach(function(el){el.classList.toggle('active',el.getAttribute('data-vt')===t)});
   document.querySelectorAll('.vill-section').forEach(function(el){el.classList.remove('active')});
-  var ids={feed:'villFeed',nearby:'villNearby',events:'villEvents'};
+  var ids={feed:'villFeed',nearby:'villNearby',events:'villEvents',resources:'villResources',messages:'villMessages'};
   document.getElementById(ids[t]).classList.add('active');
   if(t==='feed')renderCommunityPosts();
   if(t==='nearby')loadNearbyTab();
   if(t==='events')loadEventsTab();
+  if(t==='resources')loadResourcesTab();
+  if(t==='messages')loadMessagesTab();
 }
 
 async function loadVillageProfile(){
@@ -3031,7 +3048,7 @@ function filterNearby(){
   document.getElementById('villParentList').innerHTML=h;
 }
 
-function openParentProfile(profileId){
+async function openParentProfile(profileId){
   var el=document.getElementById('villNearby');
   var nearby=JSON.parse(el.dataset.nearby||'[]');
   var p=nearby.find(function(x){return x.id===profileId});
@@ -3056,7 +3073,17 @@ function openParentProfile(profileId){
     p.interests.forEach(function(t){h+='<span class="vill-interest-chip on" style="cursor:default">'+esc(t)+'</span>'});
     h+='</div>';
   }
-  h+='<button class="btn btn-s" style="width:100%;opacity:0.5" disabled>Say Hi \u2014 messaging coming soon</button>';
+  // Connection button
+  var conn=await getConnectionStatus(p.user_id);
+  if(!conn){
+    h+='<button class="btn btn-p" style="width:100%" onclick="sendConnectionRequest(\x27'+p.user_id+'\x27);this.disabled=true;this.textContent=\x27Request Sent\x27">Connect</button>';
+  } else if(conn.status==='accepted'){
+    h+='<button class="btn btn-p" style="width:100%" onclick="switchVillTab(\x27messages\x27)">Message</button>';
+  } else if(conn.status==='pending'&&conn.requester_id===S.user.id){
+    h+='<button class="btn btn-s" style="width:100%;opacity:0.6" disabled>Request Pending</button>';
+  } else if(conn.status==='pending'&&conn.receiver_id===S.user.id){
+    h+='<div style="display:flex;gap:8px"><button class="btn btn-p" style="flex:1" onclick="acceptConnection(\x27'+conn.id+'\x27)">Accept</button><button class="btn btn-s" style="flex:1" onclick="blockConnection(\x27'+conn.id+'\x27)">Block</button></div>';
+  }
   h+='</div>';
   document.getElementById('villNearby').innerHTML=h;
 }
@@ -3277,6 +3304,8 @@ async function openEventDetail(eventId){
     }
     h+='<div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-s" style="flex:1;color:var(--terracotta);border-color:var(--terracotta)" onclick="cancelEvent(\\x27'+eventId+'\\x27)">Cancel Event</button></div>';
   }
+  var commentsHtml=await loadEventComments(eventId);
+  h+=commentsHtml;
   h+='</div>';
   el.innerHTML=h;
 }
@@ -3317,6 +3346,415 @@ async function cancelEvent(eventId){
   await sb.from('village_events').update({status:'cancelled'}).eq('id',eventId);
   showToast('Event cancelled');
   loadVillageEvents();
+}
+
+// ═══ VILLAGE EVENT COMMENTS ═══
+async function loadEventComments(eventId){
+  var r=await sb.from('village_event_comments').select('*').eq('event_id',eventId).order('created_at',{ascending:true});
+  var comments=r.data||[];
+  var userIds=[...new Set(comments.map(function(c){return c.user_id}))];
+  var nameMap={};
+  if(userIds.length){
+    var nr=await sb.from('village_profiles').select('user_id,display_name').in('user_id',userIds);
+    (nr.data||[]).forEach(function(n){nameMap[n.user_id]=n.display_name});
+  }
+  var h='<div style="margin-top:16px;border-top:1px solid var(--sand);padding-top:12px"><div style="font-size:13px;font-weight:700;color:var(--warm-gray);margin-bottom:8px">Comments ('+comments.length+')</div>';
+  comments.forEach(function(c){
+    var name=nameMap[c.user_id]||'Someone';
+    var d=new Date(c.created_at);
+    var timeStr=d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    h+='<div class="vill-comment"><div style="display:flex;justify-content:space-between"><div style="font-size:13px;font-weight:600">'+esc(name)+'</div><div style="font-size:11px;color:var(--warm-gray-light)">'+timeStr+'</div></div><div style="font-size:13px;color:var(--charcoal);margin-top:4px;line-height:1.4">'+esc(c.content)+'</div></div>';
+  });
+  h+='<div style="display:flex;gap:8px;margin-top:10px"><input id="evCommentInput_'+eventId+'" class="fi" placeholder="Add a comment..." maxlength="500" style="flex:1"><button class="btn btn-p" style="padding:8px 16px;font-size:12px" onclick="postEventComment(\x27'+eventId+'\x27)">Post</button></div></div>';
+  return h;
+}
+
+async function postEventComment(eventId){
+  var input=document.getElementById('evCommentInput_'+eventId);
+  if(!input)return;
+  var text=input.value.trim();
+  if(!text){showToast('Write something');return}
+  await sb.from('village_event_comments').insert({event_id:eventId,user_id:S.user.id,content:text});
+  showToast('Comment posted!');
+  openEventDetail(eventId);
+}
+
+// ═══ VILLAGE CONNECTIONS ═══
+async function sendConnectionRequest(userId){
+  try{
+    await sb.from('village_connections').insert({requester_id:S.user.id,receiver_id:userId});
+    showToast('Connection request sent!');
+  }catch(e){
+    if(e.code==='23505')showToast('Already connected');
+    else{console.error(e);showToast('Could not send request')}
+  }
+}
+
+async function getConnectionStatus(userId){
+  var r=await sb.from('village_connections').select('id,status,requester_id,receiver_id').or('requester_id.eq.'+S.user.id+',receiver_id.eq.'+S.user.id);
+  var all=r.data||[];
+  var conn=all.find(function(c){return(c.requester_id===userId||c.receiver_id===userId)});
+  return conn||null;
+}
+
+async function acceptConnection(connId){
+  await sb.from('village_connections').update({status:'accepted'}).eq('id',connId);
+  showToast('Connected!');
+  loadMessagesTab();
+}
+
+async function blockConnection(connId){
+  await sb.from('village_connections').update({status:'blocked'}).eq('id',connId);
+  showToast('Blocked');
+  loadMessagesTab();
+}
+
+// ═══ VILLAGE MESSAGES ═══
+async function loadMessagesTab(){
+  var el=document.getElementById('villMessages');
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div>';
+  await loadVillageProfile();
+  if(!villProfile){el.innerHTML='<div class="vill-opt-in"><div style="font-size:40px;margin-bottom:12px">\uD83D\uDCEC</div><h3>Messages</h3><p style="font-size:14px;color:var(--warm-gray)">Join My Village to message other parents</p><button class="btn btn-p" style="margin-top:12px" onclick="switchVillTab(\x27nearby\x27)">Set Up Profile</button></div>';return}
+
+  // Load connections
+  var cr=await sb.from('village_connections').select('*').or('requester_id.eq.'+S.user.id+',receiver_id.eq.'+S.user.id);
+  var connections=cr.data||[];
+  var accepted=connections.filter(function(c){return c.status==='accepted'});
+  var pendingIncoming=connections.filter(function(c){return c.status==='pending'&&c.receiver_id===S.user.id});
+
+  // Get names for all connected users
+  var connUserIds=[];
+  accepted.forEach(function(c){connUserIds.push(c.requester_id===S.user.id?c.receiver_id:c.requester_id)});
+  pendingIncoming.forEach(function(c){connUserIds.push(c.requester_id)});
+  connUserIds=[...new Set(connUserIds)];
+
+  var nameMap={};
+  if(connUserIds.length){
+    var nr=await sb.from('village_profiles').select('user_id,display_name').in('user_id',connUserIds);
+    (nr.data||[]).forEach(function(n){nameMap[n.user_id]=n.display_name});
+  }
+
+  // Get last message + unread count per conversation
+  var convData={};
+  if(accepted.length){
+    var mr=await sb.from('village_messages').select('*').or('sender_id.eq.'+S.user.id+',receiver_id.eq.'+S.user.id).order('created_at',{ascending:false}).limit(200);
+    var msgs=mr.data||[];
+    accepted.forEach(function(c){
+      var otherId=c.requester_id===S.user.id?c.receiver_id:c.requester_id;
+      var convMsgs=msgs.filter(function(m){return(m.sender_id===otherId&&m.receiver_id===S.user.id)||(m.sender_id===S.user.id&&m.receiver_id===otherId)});
+      var unread=convMsgs.filter(function(m){return m.receiver_id===S.user.id&&!m.read}).length;
+      convData[otherId]={lastMsg:convMsgs[0]||null,unread:unread};
+    });
+  }
+
+  var h='';
+
+  // Pending incoming requests
+  if(pendingIncoming.length){
+    h+='<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:700;color:var(--warm-gray);margin-bottom:8px">Connection Requests ('+pendingIncoming.length+')</div>';
+    pendingIncoming.forEach(function(c){
+      var name=nameMap[c.requester_id]||'Someone';
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:var(--cream);border-radius:12px;margin-bottom:6px">';
+      h+='<div style="display:flex;align-items:center;gap:8px"><div style="width:32px;height:32px;border-radius:10px;background:var(--sage-light);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--sage-dark)">'+esc(name[0].toUpperCase())+'</div><span style="font-size:13px;font-weight:600">'+esc(name)+'</span></div>';
+      h+='<div style="display:flex;gap:6px"><button class="btn btn-p" style="font-size:11px;padding:6px 12px" onclick="acceptConnection(\x27'+c.id+'\x27)">Accept</button><button class="btn btn-s" style="font-size:11px;padding:6px 12px" onclick="blockConnection(\x27'+c.id+'\x27)">Block</button></div>';
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+
+  // Conversations
+  if(!accepted.length&&!pendingIncoming.length){
+    h+='<div style="text-align:center;padding:32px 20px"><div style="font-size:40px;margin-bottom:12px">\uD83D\uDCEC</div><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:8px">No messages yet</div><div style="font-size:14px;color:var(--warm-gray);max-width:280px;margin:0 auto">Connect with parents in the Nearby tab to start messaging</div><button class="btn btn-s" style="margin-top:12px" onclick="switchVillTab(\x27nearby\x27)">Find Parents</button></div>';
+  } else if(accepted.length){
+    h+='<div style="font-size:13px;font-weight:700;color:var(--warm-gray);margin-bottom:8px">Conversations</div>';
+    // Sort by last message time
+    var sortedConvs=accepted.map(function(c){
+      var otherId=c.requester_id===S.user.id?c.receiver_id:c.requester_id;
+      return{connId:c.id,otherId:otherId,data:convData[otherId]||{lastMsg:null,unread:0}};
+    }).sort(function(a,b){
+      var aT=a.data.lastMsg?new Date(a.data.lastMsg.created_at).getTime():0;
+      var bT=b.data.lastMsg?new Date(b.data.lastMsg.created_at).getTime():0;
+      return bT-aT;
+    });
+    sortedConvs.forEach(function(conv){
+      var name=nameMap[conv.otherId]||'Someone';
+      var lastMsg=conv.data.lastMsg;
+      var unread=conv.data.unread;
+      var timeStr='';
+      if(lastMsg){var d=new Date(lastMsg.created_at);var mins=Math.round((Date.now()-d.getTime())/60000);timeStr=mins<60?mins+'m':mins<1440?Math.round(mins/60)+'h':Math.round(mins/1440)+'d'}
+      var preview=lastMsg?(lastMsg.sender_id===S.user.id?'You: ':'')+lastMsg.content.substring(0,50)+(lastMsg.content.length>50?'...':''):'No messages yet';
+      h+='<div class="vill-msg-card'+(unread?' vill-msg-unread':'')+'" onclick="openConversation(\x27'+conv.otherId+'\x27)">';
+      h+='<div style="display:flex;align-items:center;gap:10px">';
+      h+='<div style="width:40px;height:40px;border-radius:12px;background:var(--sage-light);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--sage-dark);flex-shrink:0">'+esc(name[0].toUpperCase())+'</div>';
+      h+='<div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between"><span style="font-weight:700;font-size:14px">'+esc(name)+'</span><span style="font-size:11px;color:var(--warm-gray-light)">'+timeStr+'</span></div>';
+      h+='<div style="font-size:12px;color:var(--warm-gray);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(preview)+'</div></div>';
+      if(unread)h+='<div style="width:20px;height:20px;border-radius:50%;background:var(--sage);color:white;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">'+unread+'</div>';
+      h+='</div></div>';
+    });
+  }
+
+  el.innerHTML=h;
+  // Update badge
+  var totalUnread=Object.values(convData).reduce(function(sum,c){return sum+c.unread},0);
+  var badge=document.getElementById('villMsgBadge');
+  if(badge){badge.style.display=totalUnread?'inline':'none';badge.textContent=totalUnread}
+}
+
+async function openConversation(otherId){
+  var el=document.getElementById('villMessages');
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div>';
+
+  // Get other user name
+  var pr=await sb.from('village_profiles').select('display_name').eq('user_id',otherId).single();
+  var otherName=pr.data?pr.data.display_name:'Someone';
+
+  // Load messages
+  var mr=await sb.from('village_messages').select('*').or('and(sender_id.eq.'+S.user.id+',receiver_id.eq.'+otherId+'),and(sender_id.eq.'+otherId+',receiver_id.eq.'+S.user.id+')').order('created_at',{ascending:true});
+  var msgs=mr.data||[];
+
+  // Mark unread as read
+  var unreadIds=msgs.filter(function(m){return m.receiver_id===S.user.id&&!m.read}).map(function(m){return m.id});
+  if(unreadIds.length){
+    for(var i=0;i<unreadIds.length;i++){
+      await sb.from('village_messages').update({read:true}).eq('id',unreadIds[i]);
+    }
+  }
+
+  var h='<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px"><button class="btn btn-s" onclick="loadMessagesTab()">\u2190</button><div style="font-weight:700;font-size:16px">'+esc(otherName)+'</div></div>';
+  h+='<div id="msgThread" style="max-height:60vh;overflow-y:auto;margin-bottom:12px;padding:4px">';
+  if(!msgs.length)h+='<div style="text-align:center;padding:20px;color:var(--warm-gray-light);font-size:13px">No messages yet. Say hi!</div>';
+  msgs.forEach(function(m){
+    var isMe=m.sender_id===S.user.id;
+    var d=new Date(m.created_at);
+    var timeStr=d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    h+='<div style="display:flex;justify-content:'+(isMe?'flex-end':'flex-start')+';margin-bottom:8px">';
+    h+='<div style="max-width:75%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.4;'+(isMe?'background:var(--sage);color:white;border-bottom-right-radius:4px':'background:white;border:1px solid var(--sand);color:var(--charcoal);border-bottom-left-radius:4px')+'">';
+    h+=esc(m.content);
+    h+='<div style="font-size:10px;margin-top:4px;opacity:0.7;text-align:right">'+timeStr+'</div>';
+    h+='</div></div>';
+  });
+  h+='</div>';
+  h+='<div style="display:flex;gap:8px;position:sticky;bottom:0;background:var(--cream);padding:8px 0"><input id="msgInput" class="fi" placeholder="Type a message..." maxlength="1000" style="flex:1" onkeydown="if(event.key===\x27Enter\x27)sendVillageMessage(\x27'+otherId+'\x27)"><button class="btn btn-p" style="padding:10px 18px" onclick="sendVillageMessage(\x27'+otherId+'\x27)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>';
+  el.innerHTML=h;
+  var thread=document.getElementById('msgThread');
+  if(thread)thread.scrollTop=thread.scrollHeight;
+}
+
+async function sendVillageMessage(receiverId){
+  var input=document.getElementById('msgInput');
+  if(!input)return;
+  var text=input.value.trim();
+  if(!text)return;
+  input.value='';
+  try{
+    await sb.from('village_messages').insert({sender_id:S.user.id,receiver_id:receiverId,content:text});
+    openConversation(receiverId);
+  }catch(e){console.error('Send message:',e);showToast('Could not send message')}
+}
+
+// ═══ VILLAGE RESOURCES ═══
+var RESOURCE_CATEGORIES=[
+  {value:'aba_therapy',label:'ABA Therapy',emoji:'\uD83E\uDDE9'},
+  {value:'occupational_therapy',label:'Occupational Therapy',emoji:'\uD83E\uDD32'},
+  {value:'speech_therapy',label:'Speech Therapy',emoji:'\uD83D\uDDE3\uFE0F'},
+  {value:'sensory_friendly',label:'Sensory-Friendly',emoji:'\uD83C\uDF08'},
+  {value:'parks',label:'Parks & Playgrounds',emoji:'\uD83C\uDFDE\uFE0F'},
+  {value:'support_groups',label:'Support Groups',emoji:'\uD83D\uDC9C'},
+  {value:'attorneys',label:'Special Needs Attorneys',emoji:'\u2696\uFE0F'},
+  {value:'respite',label:'Respite Care',emoji:'\uD83C\uDFE0'},
+  {value:'afterschool',label:'After-School Programs',emoji:'\uD83C\uDF1F'},
+  {value:'pediatric',label:'Pediatric Specialists',emoji:'\uD83E\uDE7A'},
+  {value:'other',label:'Other',emoji:'\uD83D\uDCCC'}
+];
+
+async function loadResourcesTab(){
+  var el=document.getElementById('villResources');
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div>';
+  await loadVillageProfile();
+  if(!villProfile){el.innerHTML='<div class="vill-opt-in"><div style="font-size:40px;margin-bottom:12px">\uD83D\uDCCD</div><h3>Local Resources</h3><p style="font-size:14px;color:var(--warm-gray)">Join My Village to browse and add resources</p><button class="btn btn-p" style="margin-top:12px" onclick="switchVillTab(\x27nearby\x27)">Set Up Profile</button></div>';return}
+
+  var r=await sb.from('village_resources').select('*').eq('status','approved').order('avg_rating',{ascending:false});
+  var resources=r.data||[];
+
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font-size:13px;color:var(--warm-gray)">'+resources.length+' resources</div><button class="btn btn-s" style="font-size:12px" onclick="openAddResource()">+ Add Resource</button></div>';
+
+  // Category filter
+  h+='<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px">';
+  h+='<button class="tp on" onclick="filterResources(\x27\x27,this)">All</button>';
+  RESOURCE_CATEGORIES.forEach(function(c){
+    h+='<button class="tp" onclick="filterResources(\x27'+c.value+'\x27,this)">'+c.emoji+' '+c.label+'</button>';
+  });
+  h+='</div>';
+
+  h+='<div id="villResourceList">';
+  if(!resources.length){
+    h+='<div style="text-align:center;padding:32px 20px"><div style="font-size:40px;margin-bottom:12px">\uD83D\uDCCD</div><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:8px">No resources yet</div><div style="font-size:14px;color:var(--warm-gray);max-width:280px;margin:0 auto">Be the first to add an autism-friendly resource in your area!</div></div>';
+  } else {
+    resources.forEach(function(res){h+=renderResourceCard(res)});
+  }
+  h+='</div>';
+
+  el.innerHTML=h;
+  el.dataset.resources=JSON.stringify(resources);
+}
+
+function renderResourceCard(res){
+  var cat=RESOURCE_CATEGORIES.find(function(c){return c.value===res.category})||{emoji:'\uD83D\uDCCC',label:'Other'};
+  var stars='';for(var i=1;i<=5;i++)stars+=i<=Math.round(res.avg_rating||0)?'\u2605':'\u2606';
+  var h='<div class="vill-resource-card" onclick="openResourceDetail(\x27'+res.id+'\x27)">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:start">';
+  h+='<div><div style="font-weight:700;font-size:15px;margin-bottom:4px">'+esc(res.name)+'</div>';
+  h+='<span class="vill-cat-badge">'+cat.emoji+' '+esc(cat.label)+'</span></div>';
+  if(res.verified)h+='<span style="font-size:11px;font-weight:700;color:var(--sage-dark);background:var(--sage-light);padding:3px 8px;border-radius:6px">\u2705 Verified</span>';
+  h+='</div>';
+  if(res.city)h+='<div style="font-size:12px;color:var(--warm-gray);margin-top:6px">\uD83D\uDCCD '+esc(res.city)+(res.state?', '+esc(res.state):'')+'</div>';
+  h+='<div style="display:flex;align-items:center;gap:6px;margin-top:6px"><span class="vill-stars">'+stars+'</span><span style="font-size:12px;color:var(--warm-gray-light)">('+res.review_count+')</span></div>';
+  if(res.description)h+='<div style="font-size:13px;color:var(--warm-gray);margin-top:6px;line-height:1.4">'+esc(res.description.substring(0,120))+(res.description.length>120?'...':'')+'</div>';
+  h+='</div>';
+  return h;
+}
+
+function filterResources(cat,btn){
+  var el=document.getElementById('villResources');
+  var resources=JSON.parse(el.dataset.resources||'[]');
+  var filtered=cat?resources.filter(function(r){return r.category===cat}):resources;
+  el.querySelectorAll('.tp').forEach(function(b){b.classList.remove('on')});
+  if(btn)btn.classList.add('on');
+  var h='';
+  if(!filtered.length)h='<div style="text-align:center;padding:24px;color:var(--warm-gray-light)">No resources in this category</div>';
+  else filtered.forEach(function(r){h+=renderResourceCard(r)});
+  document.getElementById('villResourceList').innerHTML=h;
+}
+
+async function openResourceDetail(resourceId){
+  var el=document.getElementById('villResources');
+  var resources=JSON.parse(el.dataset.resources||'[]');
+  var res=resources.find(function(r){return r.id===resourceId});
+  if(!res){showToast('Resource not found');return}
+
+  var cat=RESOURCE_CATEGORIES.find(function(c){return c.value===res.category})||{emoji:'\uD83D\uDCCC',label:'Other'};
+  var stars='';for(var i=1;i<=5;i++)stars+=i<=Math.round(res.avg_rating||0)?'\u2605':'\u2606';
+
+  // Load reviews
+  var rr=await sb.from('village_reviews').select('*').eq('resource_id',resourceId).order('created_at',{ascending:false});
+  var reviews=rr.data||[];
+  var reviewerIds=reviews.map(function(r){return r.user_id});
+  var reviewerNames={};
+  if(reviewerIds.length){
+    var nr=await sb.from('village_profiles').select('user_id,display_name').in('user_id',reviewerIds);
+    (nr.data||[]).forEach(function(n){reviewerNames[n.user_id]=n.display_name});
+  }
+
+  var h='<div style="padding:4px 0"><button class="btn btn-s" style="margin-bottom:16px" onclick="loadResourcesTab()">\u2190 Back</button>';
+  h+='<div style="margin-bottom:16px"><div style="font-family:Fraunces,serif;font-size:20px;font-weight:800">'+esc(res.name)+'</div>';
+  h+='<div style="margin-top:6px"><span class="vill-cat-badge">'+cat.emoji+' '+esc(cat.label)+'</span>';
+  if(res.verified)h+=' <span style="font-size:11px;font-weight:700;color:var(--sage-dark);background:var(--sage-light);padding:3px 8px;border-radius:6px;margin-left:4px">\u2705 Verified</span>';
+  h+='</div></div>';
+
+  h+='<div style="background:white;border-radius:14px;padding:14px;border:1px solid var(--sand);margin-bottom:12px">';
+  if(res.address)h+='<div style="font-size:14px;margin-bottom:6px">\uD83D\uDCCD '+esc(res.address)+(res.city?', '+esc(res.city):'')+(res.state?', '+esc(res.state):'')+' '+esc(res.zip||'')+'</div>';
+  else if(res.city)h+='<div style="font-size:14px;margin-bottom:6px">\uD83D\uDCCD '+esc(res.city)+(res.state?', '+esc(res.state):'')+'</div>';
+  if(res.phone)h+='<div style="font-size:14px;margin-bottom:6px">\uD83D\uDCDE '+esc(res.phone)+'</div>';
+  if(res.website)h+='<div style="font-size:14px;margin-bottom:6px">\uD83C\uDF10 <a href="'+esc(res.website)+'" target="_blank" style="color:var(--sage-dark)">'+esc(res.website.replace(/^https?:\/\//,'').substring(0,40))+'</a></div>';
+  h+='<div style="display:flex;align-items:center;gap:6px"><span class="vill-stars" style="font-size:18px">'+stars+'</span><span style="font-weight:700">'+((res.avg_rating||0).toFixed(1))+'</span><span style="color:var(--warm-gray-light);font-size:13px">('+res.review_count+' reviews)</span></div>';
+  h+='</div>';
+
+  if(res.description)h+='<div style="font-size:14px;line-height:1.6;color:var(--charcoal);margin-bottom:12px">'+esc(res.description)+'</div>';
+  if(res.tags&&res.tags.length){
+    h+='<div style="margin-bottom:12px">';
+    res.tags.forEach(function(t){h+='<span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;background:var(--cream);color:var(--warm-gray);margin:0 4px 4px 0">'+esc(t)+'</span>'});
+    h+='</div>';
+  }
+
+  // Reviews
+  h+='<div style="border-top:1px solid var(--sand);padding-top:12px;margin-top:8px"><div style="font-size:13px;font-weight:700;color:var(--warm-gray);margin-bottom:10px">Reviews</div>';
+  if(!reviews.length)h+='<div style="font-size:13px;color:var(--warm-gray-light);margin-bottom:10px">No reviews yet. Be the first!</div>';
+  reviews.forEach(function(rv){
+    var name=reviewerNames[rv.user_id]||'Someone';
+    var rstars='';for(var i=1;i<=5;i++)rstars+=i<=rv.rating?'\u2605':'\u2606';
+    h+='<div style="padding:10px 0;border-bottom:1px solid var(--sand)"><div style="display:flex;justify-content:space-between"><span style="font-size:13px;font-weight:600">'+esc(name)+'</span><span class="vill-stars" style="font-size:12px">'+rstars+'</span></div>';
+    if(rv.review_text)h+='<div style="font-size:13px;color:var(--warm-gray);margin-top:4px;line-height:1.4">'+esc(rv.review_text)+'</div>';
+    h+='</div>';
+  });
+
+  // Add review form
+  h+='<div style="margin-top:12px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">Leave a Review</div>';
+  h+='<div id="reviewStars" style="margin-bottom:8px">';
+  for(var i=1;i<=5;i++)h+='<span style="font-size:24px;cursor:pointer;color:var(--sand)" onclick="selectReviewStar('+i+')" data-star="'+i+'">\u2606</span>';
+  h+='</div>';
+  h+='<textarea id="reviewText" class="fi" rows="2" maxlength="500" placeholder="Share your experience..." style="margin-bottom:8px;resize:none"></textarea>';
+  h+='<button class="btn btn-p" style="width:100%" onclick="submitResourceReview(\x27'+resourceId+'\x27)">Submit Review</button>';
+  h+='</div></div></div>';
+
+  el.innerHTML=h;
+}
+
+var selectedReviewRating=0;
+function selectReviewStar(n){
+  selectedReviewRating=n;
+  document.querySelectorAll('#reviewStars span').forEach(function(s){
+    var val=parseInt(s.getAttribute('data-star'));
+    s.textContent=val<=n?'\u2605':'\u2606';
+    s.style.color=val<=n?'var(--sunflower)':'var(--sand)';
+  });
+}
+
+async function submitResourceReview(resourceId){
+  if(!selectedReviewRating){showToast('Select a star rating');return}
+  var text=document.getElementById('reviewText').value.trim();
+  try{
+    await sb.from('village_reviews').upsert({resource_id:resourceId,user_id:S.user.id,rating:selectedReviewRating,review_text:text||null},{onConflict:'resource_id,user_id'});
+    // Update avg rating on resource
+    var rr=await sb.from('village_reviews').select('rating').eq('resource_id',resourceId);
+    var ratings=rr.data||[];
+    var avg=ratings.reduce(function(s,r){return s+r.rating},0)/ratings.length;
+    await sb.from('village_resources').update({avg_rating:Math.round(avg*10)/10,review_count:ratings.length}).eq('id',resourceId);
+    showToast('Review submitted!');
+    selectedReviewRating=0;
+    openResourceDetail(resourceId);
+  }catch(e){console.error('Review:',e);showToast('Could not submit review')}
+}
+
+function openAddResource(){
+  var el=document.getElementById('villResources');
+  var h='<div style="padding:4px 0"><div style="display:flex;align-items:center;gap:12px;margin-bottom:20px"><button class="btn btn-s" onclick="loadResourcesTab()">\u2190 Back</button><div style="font-family:Fraunces,serif;font-size:18px;font-weight:800">Add Resource</div></div>';
+  h+='<label class="vill-form-label">Category</label><select id="resCategory" class="fi" style="margin-bottom:12px">';
+  RESOURCE_CATEGORIES.forEach(function(c){h+='<option value="'+c.value+'">'+c.emoji+' '+c.label+'</option>'});
+  h+='</select>';
+  h+='<label class="vill-form-label">Name</label><input id="resName" class="fi" placeholder="e.g. Sunshine ABA Center" maxlength="100" style="margin-bottom:12px">';
+  h+='<label class="vill-form-label">Description <span style="font-weight:400;color:var(--warm-gray-light)">(optional)</span></label><textarea id="resDesc" class="fi" rows="2" maxlength="500" placeholder="What makes this resource great?" style="margin-bottom:12px;resize:none"></textarea>';
+  h+='<label class="vill-form-label">Address</label><input id="resAddr" class="fi" placeholder="Full address" style="margin-bottom:12px">';
+  h+='<div style="display:flex;gap:8px;margin-bottom:12px"><div style="flex:2"><label class="vill-form-label">City</label><input id="resCity" class="fi" placeholder="City"></div><div style="flex:1"><label class="vill-form-label">State</label><input id="resState" class="fi" placeholder="CA" maxlength="2"></div><div style="flex:1"><label class="vill-form-label">Zip</label><input id="resZip" class="fi" placeholder="91767" maxlength="5"></div></div>';
+  h+='<label class="vill-form-label">Phone <span style="font-weight:400;color:var(--warm-gray-light)">(optional)</span></label><input id="resPhone" class="fi" placeholder="(909) 555-1234" style="margin-bottom:12px">';
+  h+='<label class="vill-form-label">Website <span style="font-weight:400;color:var(--warm-gray-light)">(optional)</span></label><input id="resWebsite" class="fi" placeholder="https://" style="margin-bottom:12px">';
+  h+='<div class="vill-disclaimer">Submitted resources are reviewed before being published. Please only add real businesses and services you have personally used or verified.</div>';
+  h+='<button class="btn btn-p" style="width:100%" onclick="submitResource()">Submit Resource</button></div>';
+  el.innerHTML=h;
+}
+
+async function submitResource(){
+  var name=document.getElementById('resName').value.trim();
+  var city=document.getElementById('resCity').value.trim();
+  if(!name){showToast('Name is required');return}
+  if(!city){showToast('City is required');return}
+  var resource={
+    submitted_by:S.user.id,
+    name:name,
+    category:document.getElementById('resCategory').value,
+    description:document.getElementById('resDesc').value.trim()||null,
+    address:document.getElementById('resAddr').value.trim()||null,
+    city:city,
+    state:document.getElementById('resState').value.trim().toUpperCase()||null,
+    zip:document.getElementById('resZip').value.trim()||null,
+    phone:document.getElementById('resPhone').value.trim()||null,
+    website:document.getElementById('resWebsite').value.trim()||null,
+    status:'pending'
+  };
+  try{
+    await sb.from('village_resources').insert(resource);
+    showToast('Resource submitted! It will appear after review.');
+    loadResourcesTab();
+  }catch(e){console.error('Submit resource:',e);showToast('Could not submit resource')}
 }
 
 // ═══ OVERLAY PAGES ═══
