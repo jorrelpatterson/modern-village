@@ -87,6 +87,7 @@
 | iOS/Android Capacitor wrap | Native app shell, Face ID, App Store distribution | High |
 | Push notifications | Daily check-in triggers, care team note alerts, session reminders, milestone celebrations | High (requires native app) |
 | **Medical billing module** | **DONE (Phase 1): Claims tracking, payer management, superbills, billing dashboard, aging reports. NEXT (Phase 2): Clearinghouse integration (EDI 837) for electronic claim submission via Availity/Office Ally. Phase 3: ERA/EOB auto-processing, denial management automation, batch claim submission.** | **Phase 1 Done** |
+| **Instagram auto-posting** | **Connect Instagram Graph API via Meta Business Suite for scheduled auto-publishing from admin panel. Requires: FB Business account + IG Professional account + Meta App Review.** | Medium |
 | Google Calendar sync | Routines → calendar events, session reminders for Ariana | Medium |
 | Booking reminders | 24hr email cron job before scheduled sessions | Medium |
 | Video behavior clips | Parent uploads video, AI analyzes behavior in context. Use Claude vision or other video-capable AI if needed. BCBA can also review clips. | Medium |
