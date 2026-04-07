@@ -47,3 +47,5 @@ _(move resolved bugs here with date)_
 10. **Daily check-in prompt shows for all roles** — Only parents (and possibly children) should see the morning check-in modal. Providers, caregivers, and teachers should not be prompted. Fix: add `S.role === 'parent'` guard to `checkDailyCheckin()`.
 
 11. **Two-parent households need dual parent access** — Currently only one parent account owns the child. Need to support a second parent (co-parent) with full access. Could use the invite flow with a new `co-parent` role that has `access_level: 'full'`, or add a second `user_id` on the children table.
+
+12. **Provider Insights tab loads forever** — `fetchChildContext()` queries behavior_logs by `S.user.id` (the provider), but the logs belong to the parent's `user_id`. Provider Insights needs to query by `providerActiveChild.user_id` instead. The `loadClientTab` insights section already does this correctly for behavior logs but the insights renderer may call the wrong fetch.
