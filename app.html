@@ -1393,6 +1393,21 @@ async function init(){
   setTimeout(function(){document.getElementById('splash').classList.add('out')},1800);
   setTimeout(async function(){
     document.getElementById('splash').classList.add('hidden');
+    // Handle password recovery from email link
+    if(window.location.hash.includes('type=recovery')){
+      document.getElementById('splash').classList.add('hidden');
+      var newPass=prompt('Enter your new password (8+ characters):');
+      if(newPass&&newPass.length>=8){
+        try{
+          var ur=await sb.auth.updateUser({password:newPass});
+          if(ur.error)alert('Error: '+ur.error.message);
+          else{alert('Password updated! You can now log in.');await sb.auth.signOut()}
+        }catch(e){alert('Error resetting password')}
+      }
+      window.location.hash='';
+      window.location.reload();
+      return;
+    }
     try {
       if(sb){
         var session=await sb.auth.getSession();

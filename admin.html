@@ -507,7 +507,7 @@ async function loadDashboard(){
   recent.forEach(function(u){
     var d = new Date(u.created_at);
     var ds = d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-    recentHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand)"><div><div style="font-weight:600;font-size:13px">'+(u.name||'Anonymous')+'</div><div style="font-size:11px;color:var(--warm-gray-light)">'+(u.child_name?'Parent of '+u.child_name:'')+'</div></div><div style="display:flex;align-items:center;gap:8px"><span class="tag '+(u.subscription_status==='pro'?'tag-sage':'tag-free')+'">'+(u.subscription_status==='pro'?'Pro':'Free')+'</span><span style="font-size:11px;color:var(--warm-gray-light)">'+ds+'</span></div></div>';
+    recentHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand)"><div><div style="font-weight:600;font-size:13px">'+(u.name||'Anonymous')+'</div><div style="font-size:11px;color:var(--warm-gray-light)">'+('')+'</div></div><div style="display:flex;align-items:center;gap:8px"><span class="tag '+(u.subscription_status==='pro'?'tag-sage':'tag-free')+'">'+(u.subscription_status==='pro'?'Pro':'Free')+'</span><span style="font-size:11px;color:var(--warm-gray-light)">'+ds+'</span></div></div>';
   });
   document.getElementById('dashRecent').innerHTML = recentHtml || '<div class="empty">No users yet</div>';
 }
@@ -518,22 +518,36 @@ function statCard(label, val, change){
 
 // ═══ USERS ═══
 async function loadUsers(){
-  var r = await sb.from('profiles').select('id,name,email,role,child_name,child_age,diagnosis,subscription_status,free_messages_used,created_at').order('created_at',{ascending:false});
+  var r = await sb.from('profiles').select('id,name,email,role,subscription_status,free_messages_used,created_at').order('created_at',{ascending:false});
   if(!r.data)return;
   var total=r.data.length, pro=0, free=0;
   r.data.forEach(function(u){if(u.subscription_status==='pro')pro++;else free++});
   document.getElementById('userStats').innerHTML =
     statCard('Total',total,'')+statCard('Pro',pro,'')+statCard('Free',free,'')+statCard('Conversion',total?Math.round(pro/total*100)+'%':'0%','');
 
+  // Fetch all children to join with profiles
+  var childR = await sb.from('children').select('user_id,name,age,diagnosis');
+  var childMap = {};
+  if(childR.data){
+    childR.data.forEach(function(c){
+      if(!childMap[c.user_id]) childMap[c.user_id] = [];
+      childMap[c.user_id].push(c);
+    });
+  }
+
   var h='';
   r.data.forEach(function(u){
     var d=new Date(u.created_at);
-    h+='<tr><td>'+(u.name?esc(u.name):'<span style="color:var(--warm-gray-light)">—</span>')+'</td><td style="font-size:12px">'+esc(u.email||'—')+'</td><td><span class="tag '+(u.role==='provider'?'tag-sage':u.role==='caregiver'?'tag-blue':u.role==='teacher'?'tag-free':'')+'">'+esc(u.role||'parent')+'</span></td><td>'+(u.child_name?esc(u.child_name):'—')+'</td><td>'+(u.child_age||'—')+'</td><td>'+(u.diagnosis||'—')+'</td><td><span class="tag '+(u.subscription_status==='pro'?'tag-sage':'tag-free')+'">'+(u.subscription_status==='pro'?'Pro':'Free')+'</span></td><td>'+(u.free_messages_used||0)+'</td><td>'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td>'+'<td><button style="padding:4px 10px;border-radius:6px;border:1px solid var(--sand);background:white;cursor:pointer;font-size:11px;font-family:inherit" onclick="resetUserPassword(\x27'+esc(u.email||'')+'\x27)">Reset PW</button></td></tr>';
+    var kids = childMap[u.id] || [];
+    var childNames = kids.map(function(c){return c.name}).join(', ') || '\u2014';
+    var childAges = kids.map(function(c){return c.age||''}).filter(function(a){return a}).join(', ') || '\u2014';
+    var childDx = kids.map(function(c){return c.diagnosis?c.diagnosis.join(', '):''}).filter(function(d){return d}).join('; ') || '\u2014';
+    h+='<tr><td>'+(u.name?esc(u.name):'<span style="color:var(--warm-gray-light)">\u2014</span>')+'</td><td style="font-size:12px">'+esc(u.email||'\u2014')+'</td><td><span class="tag '+(u.role==='provider'?'tag-sage':u.role==='caregiver'?'tag-blue':u.role==='teacher'?'tag-free':'')+'">'+esc(u.role||'parent')+'</span></td><td>'+esc(childNames)+'</td><td>'+esc(childAges)+'</td><td>'+esc(childDx)+'</td><td><span class="tag '+(u.subscription_status==='pro'?'tag-sage':'tag-free')+'">'+(u.subscription_status==='pro'?'Pro':'Free')+'</span></td><td>'+(u.free_messages_used||0)+'</td><td>'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td>'+'<td><button style="padding:4px 10px;border-radius:6px;border:1px solid var(--sand);background:white;cursor:pointer;font-size:11px;font-family:inherit" onclick="resetUserPassword(\x27'+esc(u.email||'')+'\x27)">Reset PW</button></td></tr>';
   });
   document.getElementById('userBody').innerHTML=h||'<tr><td colspan="10" class="empty">No users yet</td></tr>';
 }
 
-// ═══ AI REVIEWS ═══
+
 async function loadReviews(){
   var r = await sb.from('conversations').select('*').order('created_at',{ascending:false}).limit(20);
   var reviewed = await sb.from('admin_reviews').select('conversation_id');

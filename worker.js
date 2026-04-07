@@ -63,6 +63,51 @@ export default {
 
     const authToken = request.headers.get('Authorization')?.replace('Bearer ', '');
 
+    // ═══ ADMIN: RESET USER PASSWORD (requires admin session) ═══
+    if (url.pathname === '/admin/reset-password') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      // Verify caller is admin
+      const adminCheck = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=is_admin', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const adminData = await adminCheck.json();
+      if (!adminData.length || !adminData[0].is_admin) return new Response('{"error":"Admin only"}', { status: 403, headers: h });
+
+      const targetEmail = body.email;
+      const newPassword = body.password;
+      if (!targetEmail || !newPassword) return new Response('{"error":"Missing email or password"}', { status: 400, headers: h });
+      // Find target user
+      const findRes = await fetch(env.SUPABASE_URL + '/auth/v1/admin/users?page=1&per_page=1000', {
+        headers: { 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'apikey': env.SUPABASE_SERVICE_KEY }
+      });
+      const usersData = await findRes.json();
+      const users = usersData.users || usersData || [];
+      const targetUser = users.find(u => u.email === targetEmail);
+      if (!targetUser) return new Response('{"error":"User not found"}', { status: 404, headers: h });
+      // Reset password
+      const updateRes = await fetch(env.SUPABASE_URL + '/auth/v1/admin/users/' + targetUser.id, {
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'apikey': env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword })
+      });
+      if (!updateRes.ok) { const err = await updateRes.json(); return new Response(JSON.stringify({error: err}), { status: 500, headers: h }); }
+      return new Response('{"success":true}', { headers: h });
+    }
+
+    // ═══ SELF-SERVICE PASSWORD RESET (sends reset email) ═══
+    if (url.pathname === '/reset-password') {
+      if (!checkRate(ip, 'email')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
+      const email = (body.email || '').toLowerCase().trim();
+      if (!email) return new Response('{"error":"Email required"}', { status: 400, headers: h });
+      const resetRes = await fetch(env.SUPABASE_URL + '/auth/v1/recover', {
+        method: 'POST',
+        headers: { 'apikey': env.SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email })
+      });
+      return new Response('{"success":true}', { headers: h });
+    }
+
     // ═══ EMAIL ═══
     if (url.pathname === '/email') {
       if (!checkRate(ip, 'email')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
@@ -123,7 +168,7 @@ export default {
       const role = body.role;
       const childId = body.child_id;
       if (!email || !email.includes('@')) return new Response('{"error":"Invalid email"}', { status: 400, headers: h });
-      if (!['caregiver','teacher'].includes(role)) return new Response('{"error":"Invalid role"}', { status: 400, headers: h });
+      if (!['caregiver','teacher','provider'].includes(role)) return new Response('{"error":"Invalid role"}', { status: 400, headers: h });
       if (!childId) return new Response('{"error":"Missing child_id"}', { status: 400, headers: h });
 
       // Verify child belongs to user
@@ -192,7 +237,7 @@ export default {
       if (invite.email !== user.email.toLowerCase().trim()) return new Response('{"error":"This invite was sent to ' + invite.email + '"}', { status: 403, headers: h });
 
       // Set user role
-      const accessLevel = invite.role === 'caregiver' ? 'daily' : 'school';
+      const accessLevel = invite.role === 'caregiver' ? 'daily' : invite.role === 'provider' ? 'clinical' : 'school';
       await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id, {
         method: 'PATCH',
         headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
