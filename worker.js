@@ -277,7 +277,7 @@ export default {
       });
       return new Response(JSON.stringify(await r.json()), { headers: h });
     } catch { return new Response('{"error":"AI failed"}', { status: 500, headers: h }); }
-  },  },
+  },
 
   // ═══ CRON: Runs daily for booking reminders + email drips ═══
   async scheduled(event, env, ctx) {
