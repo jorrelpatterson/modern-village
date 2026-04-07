@@ -182,6 +182,23 @@
 .bsum-count{font-size:13px;font-weight:700}
 .bsum-bar{height:6px;border-radius:3px;background:var(--sand);flex:2;position:relative;overflow:hidden}
 .bsum-fill{height:100%;border-radius:3px;background:var(--sage)}
+/* Milestones & Celebrations */
+.milestone-overlay{position:fixed;inset:0;z-index:998;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;padding:24px}
+.milestone-overlay.open{display:flex}
+.milestone-card{background:white;border-radius:24px;padding:32px;text-align:center;max-width:340px;width:100%;animation:milestoneIn 0.5s ease-out}
+@keyframes milestoneIn{from{opacity:0;transform:scale(0.8) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.milestone-emoji{font-size:56px;margin-bottom:12px}
+.milestone-title{font-family:Fraunces,serif;font-size:22px;font-weight:800;margin-bottom:8px}
+.milestone-desc{font-size:14px;color:var(--warm-gray);line-height:1.5;margin-bottom:20px}
+.milestone-badge{display:inline-block;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+.milestone-list-card{background:white;border-radius:14px;padding:14px 16px;border:1px solid var(--sand);margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.milestone-list-emoji{font-size:24px;flex-shrink:0}
+.milestone-list-info{flex:1}
+.milestone-list-title{font-weight:700;font-size:14px}
+.milestone-list-date{font-size:11px;color:var(--warm-gray-light)}
+.confetti{position:fixed;top:-10px;z-index:999;pointer-events:none}
+.confetti-piece{position:absolute;width:10px;height:10px;border-radius:2px;animation:confettiFall 3s ease-out forwards}
+@keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
 /* Child Dashboard */
 .child-dash{padding:20px;max-width:480px;margin:0 auto}
 .child-greeting{font-family:Fraunces,serif;font-size:28px;font-weight:800;margin-bottom:4px}
@@ -1089,6 +1106,17 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     <button class="nb" data-t="track" onclick="switchTab('track')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2" stroke-linecap="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><span class="nl">Track</span></button>
     <button class="nb" data-t="clients" onclick="switchTab('clients')" style="display:none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9E9790" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="nl">Clients</span></button>
   </div></nav>
+  <!-- MILESTONE CELEBRATION -->
+  <div id="milestoneOverlay" class="milestone-overlay" onclick="closeMilestone()">
+    <div class="milestone-card" onclick="event.stopPropagation()">
+      <div class="milestone-emoji" id="milestoneEmoji"></div>
+      <div class="milestone-title" id="milestoneTitle"></div>
+      <div class="milestone-desc" id="milestoneDesc"></div>
+      <div id="milestoneBadge"></div>
+      <button class="btn btn-p" style="width:100%;margin-top:16px" onclick="closeMilestone()">Keep Going!</button>
+    </div>
+  </div>
+  <div id="confettiContainer"></div>
   <!-- CHILD LOGIN -->
   <div id="childLoginModal" class="child-login-modal">
     <div style="text-align:center;max-width:320px">
@@ -1595,6 +1623,7 @@ function enterApp(){
   checkReferralOnSignup();
   handleCheckoutReturn();
   if(S.user){checkDailyCheckin();loadStreak();}
+  if(S.user&&S.role==='parent')setTimeout(checkMilestones,3000);
 }
 
 function applyRole(){
@@ -1780,7 +1809,7 @@ function renderSb(){
   var displayName=S.name||( S.user?S.user.email:'Guest');
   document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Signed in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+displayName+'</div>'+(S.child?'<div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Parent of '+S.child+(S.age?', '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'')+'</div>':'');
   updateSubSt();
-  var allItems=[{label:"\u26a0\ufe0f Crisis Support",action:"openCrisis()",roles:['parent','caregiver','provider','teacher'],highlight:true},{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"Behavior Summary",action:"openBehaviorSummary()",roles:['teacher']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver','teacher']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver','teacher']},{label:"Session Notes",action:"openParentSessionNotes()",roles:['parent']},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
+  var allItems=[{label:"\u26a0\ufe0f Crisis Support",action:"openCrisis()",roles:['parent','caregiver','provider','teacher'],highlight:true},{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"Behavior Summary",action:"openBehaviorSummary()",roles:['teacher']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"My Milestones",action:"openMilestones()",roles:['parent']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver','teacher']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver','teacher']},{label:"Session Notes",action:"openParentSessionNotes()",roles:['parent']},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
   var items=allItems.filter(function(item){return !item.roles||item.roles.indexOf(S.role)>=0});
   var h='';for(var i=0;i<items.length;i++){var item=items[i];if(item.soon){h+='<div class="sb-item" onclick="showToast(\'Coming soon!\')"><span>'+item.label+'</span><span class="sb-soon">Soon</span></div>'}else{h+='<div class="sb-item'+(item.highlight?' sb-highlight':'')+'" onclick="closeSb();'+item.action+'"><span>'+item.label+'</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray-light)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>'}}
   if(S.user)h+='<div class="sb-logout" onclick="logout()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out</div>';
@@ -4394,6 +4423,155 @@ function crisisTalkToCoach(){
 
 function closeCrisis(){
   document.getElementById('crisisOverlay').classList.remove('open');
+}
+
+// ═══ MILESTONES & CELEBRATIONS ═══
+var milestoneDefinitions=[
+  {id:'streak_3',emoji:'\ud83d\udd25',title:'3-Day Streak!',desc:'You\x27ve checked in 3 days in a row. Consistency builds change.',badge:'Streak Starter',color:'var(--sage)'},
+  {id:'streak_7',emoji:'\ud83c\udf1f',title:'7-Day Streak!',desc:'A full week of showing up for your child. That\x27s powerful.',badge:'Week Warrior',color:'var(--sage)'},
+  {id:'streak_14',emoji:'\ud83d\udcaa',title:'2-Week Streak!',desc:'Two weeks of daily check-ins. You\x27re building real momentum.',badge:'Momentum Builder',color:'var(--sage-dark)'},
+  {id:'streak_30',emoji:'\ud83c\udfc6',title:'30-Day Streak!',desc:'A full month. Your dedication is making a real difference.',badge:'Village Champion',color:'var(--terracotta)'},
+  {id:'first_log',emoji:'\ud83d\udcdd',title:'First Log!',desc:'You logged your first behavior. Data is power.',badge:'Data Pioneer',color:'var(--sky-dark)'},
+  {id:'logs_10',emoji:'\ud83d\udcca',title:'10 Behaviors Logged!',desc:'Patterns are starting to emerge. The AI coach is learning your child.',badge:'Pattern Finder',color:'var(--sky-dark)'},
+  {id:'logs_50',emoji:'\ud83e\udde0',title:'50 Behaviors Logged!',desc:'Rich behavioral data. Your coach now deeply understands your child.',badge:'Data Champion',color:'var(--sky-dark)'},
+  {id:'first_strategy',emoji:'\u2b50',title:'First Strategy Saved!',desc:'You saved a strategy that resonated. Build your toolkit.',badge:'Strategy Collector',color:'var(--lavender)'},
+  {id:'strategies_5',emoji:'\ud83e\uddf0',title:'5 Strategies Saved!',desc:'A growing toolkit of what works for your family.',badge:'Toolkit Builder',color:'var(--lavender)'},
+  {id:'trend_improving',emoji:'\ud83d\udcc9',title:'Trend Improving!',desc:'Your child\x27s 30-day trend is going down. The strategies are working.',badge:'Progress Maker',color:'var(--sage)'},
+  {id:'first_routine',emoji:'\ud83d\udccb',title:'First Routine Created!',desc:'Structure helps everyone. Great first step.',badge:'Routine Builder',color:'var(--sunflower)'},
+  {id:'care_team',emoji:'\ud83e\udd1d',title:'Care Team Formed!',desc:'You invited someone to your child\x27s care team. It takes a village.',badge:'Village Builder',color:'var(--sage)'}
+];
+
+async function checkMilestones(){
+  if(!S.user||S.role!=='parent')return;
+  // Load achieved milestones from localStorage (simple, no new table needed)
+  var achieved=[];
+  try{achieved=JSON.parse(localStorage.getItem('mv_milestones_'+S.user.id)||'[]')}catch(e){}
+
+  var newMilestones=[];
+
+  // Check streak milestones
+  try{
+    var checkinR=await sb.from('daily_checkins').select('streak_count').eq('user_id',S.user.id).order('date',{ascending:false}).limit(1);
+    var streak=(checkinR.data&&checkinR.data[0])?checkinR.data[0].streak_count:0;
+    if(streak>=3&&achieved.indexOf('streak_3')<0)newMilestones.push('streak_3');
+    if(streak>=7&&achieved.indexOf('streak_7')<0)newMilestones.push('streak_7');
+    if(streak>=14&&achieved.indexOf('streak_14')<0)newMilestones.push('streak_14');
+    if(streak>=30&&achieved.indexOf('streak_30')<0)newMilestones.push('streak_30');
+  }catch(e){}
+
+  // Check behavior log milestones
+  try{
+    var logR=await sb.from('behavior_logs').select('id',{count:'exact'}).eq('user_id',S.user.id);
+    var logCount=logR.count||0;
+    if(logCount>=1&&achieved.indexOf('first_log')<0)newMilestones.push('first_log');
+    if(logCount>=10&&achieved.indexOf('logs_10')<0)newMilestones.push('logs_10');
+    if(logCount>=50&&achieved.indexOf('logs_50')<0)newMilestones.push('logs_50');
+  }catch(e){}
+
+  // Check strategy milestones
+  try{
+    var stratR=await sb.from('saved_strategies').select('id',{count:'exact'}).eq('user_id',S.user.id);
+    var stratCount=stratR.count||0;
+    if(stratCount>=1&&achieved.indexOf('first_strategy')<0)newMilestones.push('first_strategy');
+    if(stratCount>=5&&achieved.indexOf('strategies_5')<0)newMilestones.push('strategies_5');
+  }catch(e){}
+
+  // Check trend milestone
+  try{
+    var logsR=await sb.from('behavior_logs').select('logged_at').eq('user_id',S.user.id).order('logged_at',{ascending:false}).limit(100);
+    var pat=detectPatterns(logsR.data||[]);
+    if(pat.trend==='improving'&&achieved.indexOf('trend_improving')<0)newMilestones.push('trend_improving');
+  }catch(e){}
+
+  // Check routine milestone
+  try{
+    var routR=await sb.from('routines').select('id',{count:'exact'}).eq('user_id',S.user.id);
+    if((routR.count||0)>=1&&achieved.indexOf('first_routine')<0)newMilestones.push('first_routine');
+  }catch(e){}
+
+  // Check care team milestone
+  try{
+    if(S.activeChild){
+      var accessR=await sb.from('child_access').select('id',{count:'exact'}).eq('child_id',S.activeChild.id).is('revoked_at',null);
+      if((accessR.count||0)>1&&achieved.indexOf('care_team')<0)newMilestones.push('care_team');
+    }
+  }catch(e){}
+
+  // Show first new milestone (queue others)
+  if(newMilestones.length>0){
+    achieved=achieved.concat(newMilestones);
+    localStorage.setItem('mv_milestones_'+S.user.id,JSON.stringify(achieved));
+    showMilestoneCelebration(newMilestones[0]);
+  }
+}
+
+function showMilestoneCelebration(milestoneId){
+  var m=milestoneDefinitions.find(function(d){return d.id===milestoneId});
+  if(!m)return;
+  document.getElementById('milestoneEmoji').textContent=m.emoji;
+  document.getElementById('milestoneTitle').textContent=m.title;
+  document.getElementById('milestoneDesc').textContent=m.desc;
+  document.getElementById('milestoneBadge').innerHTML='<div class="milestone-badge" style="background:'+m.color+';color:white">'+m.badge+'</div>';
+  document.getElementById('milestoneOverlay').classList.add('open');
+  showConfetti();
+}
+
+function closeMilestone(){
+  document.getElementById('milestoneOverlay').classList.remove('open');
+  document.getElementById('confettiContainer').innerHTML='';
+}
+
+function showConfetti(){
+  var container=document.getElementById('confettiContainer');
+  var colors=['#7A9E7E','#C4745A','#E8C84A','#D4C8E8','#D0E4F0','#F0D5C8'];
+  var h='';
+  for(var i=0;i<50;i++){
+    var color=colors[i%colors.length];
+    var left=Math.random()*100;
+    var delay=Math.random()*2;
+    var size=6+Math.random()*8;
+    h+='<div class="confetti-piece" style="left:'+left+'%;background:'+color+';width:'+size+'px;height:'+size+'px;animation-delay:'+delay+'s"></div>';
+  }
+  container.innerHTML=h;
+  setTimeout(function(){container.innerHTML=''},4000);
+}
+
+function getMilestoneHistory(){
+  if(!S.user)return[];
+  var achieved=[];
+  try{achieved=JSON.parse(localStorage.getItem('mv_milestones_'+S.user.id)||'[]')}catch(e){}
+  return achieved.map(function(id){
+    return milestoneDefinitions.find(function(d){return d.id===id});
+  }).filter(function(m){return m});
+}
+
+function openMilestones(){
+  if(!S.user){showAuth(true);return}
+  closeSb();
+  var milestones=getMilestoneHistory();
+  var el=document.getElementById('tCoach');
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on')});
+  el.classList.add('on');
+
+  var h='<div style="padding:4px 0"><div style="font-family:Fraunces,serif;font-size:24px;font-weight:800;margin-bottom:4px">My Milestones</div><div style="font-size:14px;color:var(--warm-gray);margin-bottom:20px">'+milestones.length+' earned</div>';
+  if(!milestones.length){
+    h+='<div style="text-align:center;padding:32px;color:var(--warm-gray-light)"><div style="font-size:40px;margin-bottom:8px">\ud83c\udfc6</div><div style="font-size:15px;font-weight:600">No milestones yet</div><div style="font-size:13px;margin-top:4px">Keep logging behaviors, checking in, and building routines!</div></div>';
+  } else {
+    milestones.forEach(function(m){
+      h+='<div class="milestone-list-card"><div class="milestone-list-emoji">'+m.emoji+'</div><div class="milestone-list-info"><div class="milestone-list-title">'+m.title+'</div><div style="margin-top:2px"><span class="milestone-badge" style="background:'+m.color+';color:white;font-size:10px;padding:2px 10px">'+m.badge+'</span></div></div></div>';
+    });
+  }
+  // Show all possible milestones (locked)
+  var achieved=[];try{achieved=JSON.parse(localStorage.getItem('mv_milestones_'+S.user.id)||'[]')}catch(e){}
+  var locked=milestoneDefinitions.filter(function(d){return achieved.indexOf(d.id)<0});
+  if(locked.length){
+    h+='<div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--warm-gray);margin-top:24px;margin-bottom:12px">Coming Up</div>';
+    locked.forEach(function(m){
+      h+='<div class="milestone-list-card" style="opacity:0.5"><div class="milestone-list-emoji" style="filter:grayscale(1)">'+m.emoji+'</div><div class="milestone-list-info"><div class="milestone-list-title" style="color:var(--warm-gray)">'+m.title+'</div></div></div>';
+    });
+  }
+  h+='</div>';
+  el.innerHTML=h;
 }
 
 // ═══ CHILD/TEEN LOGIN ═══
