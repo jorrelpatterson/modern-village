@@ -48,7 +48,9 @@ async function verifyToken(token, env) {
   } catch { return null; }
 }
 
-function emailWrapper(bodyContent) {
+function emailWrapper(bodyContent, unsubscribeUrl) {
+  var unsub = unsubscribeUrl || 'https://modernvillage.app/app.html';
+  var unsubText = unsubscribeUrl ? 'Unsubscribe' : 'Manage email preferences';
   return (
     '<div style="background:#FDF8F0;padding:20px 0;font-family:sans-serif">' +
     '<div style="max-width:520px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;border:1px solid #E8DDD0">' +
@@ -64,7 +66,7 @@ function emailWrapper(bodyContent) {
     '<div style="font-size:11px;color:#9E9790;line-height:1.6">' +
     'Modern Village &mdash; ABA-powered support for neurodivergent families<br>' +
     '<a href="https://modernvillage.app" style="color:#7A9E7E;text-decoration:none">modernvillage.app</a><br>' +
-    '<a href="https://modernvillage.app/app.html" style="color:#9E9790;text-decoration:none;font-size:10px">Manage email preferences</a>' +
+    '<a href="' + unsub + '" style="color:#9E9790;text-decoration:none;font-size:10px">' + unsubText + '</a>' +
     '</div>' +
     '</div>' +
     '</div>' +
@@ -78,12 +80,17 @@ export default {
     const ip = request.headers.get('CF-Connecting-IP') || '0';
 
     if (request.method === 'OPTIONS') return new Response(null, { headers: h });
-    if (request.method !== 'POST') return new Response('{"error":"Method not allowed"}', { status: 405, headers: h });
-
-    let body;
-    try { body = await request.json(); } catch { return new Response('{"error":"Invalid JSON"}', { status: 400, headers: h }); }
 
     const url = new URL(request.url);
+
+    if (request.method !== 'POST' && !(request.method === 'GET' && url.pathname === '/unsubscribe')) {
+      return new Response('{"error":"Method not allowed"}', { status: 405, headers: h });
+    }
+
+    let body;
+    if (request.method === 'POST') {
+      try { body = await request.json(); } catch { return new Response('{"error":"Invalid JSON"}', { status: 400, headers: h }); }
+    }
 
     // ═══ RESEND WEBHOOK (email tracking — no auth required) ═══
     if (url.pathname === '/webhook/resend') {
@@ -115,6 +122,43 @@ export default {
         }
       }
       return new Response('{"ok":true}', { headers: h });
+    }
+
+    // === UNSUBSCRIBE (public, GET or POST) ===
+    if (url.pathname === '/unsubscribe') {
+      const token = url.searchParams.get('token');
+      const source = url.searchParams.get('source') || 'lead';
+      if (!token) return new Response('<html><body style="font-family:sans-serif;text-align:center;padding:60px"><h2>Invalid link</h2></body></html>', { status: 400, headers: { ...h, 'Content-Type': 'text/html' } });
+
+      let updated = false;
+      if (source === 'screener') {
+        const r = await fetch(env.SUPABASE_URL + '/rest/v1/screener_leads?unsubscribe_token=eq.' + encodeURIComponent(token), {
+          method: 'PATCH',
+          headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+          body: JSON.stringify({ unsubscribed: true })
+        });
+        const d = await r.json();
+        updated = d && d.length > 0;
+      } else if (source === 'user') {
+        const r = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?unsubscribe_token=eq.' + encodeURIComponent(token), {
+          method: 'PATCH',
+          headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+          body: JSON.stringify({ email_marketing_opted_in: false })
+        });
+        const d = await r.json();
+        updated = d && d.length > 0;
+      } else {
+        const r = await fetch(env.SUPABASE_URL + '/rest/v1/leads?unsubscribe_token=eq.' + encodeURIComponent(token), {
+          method: 'PATCH',
+          headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+          body: JSON.stringify({ unsubscribed: true })
+        });
+        const d = await r.json();
+        updated = d && d.length > 0;
+      }
+
+      const msg = updated ? 'You have been unsubscribed. You will no longer receive marketing emails from Modern Village.' : 'Unsubscribe link not recognized. You may have already unsubscribed.';
+      return new Response('<html><head><style>body{font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#FDF8F0}div{text-align:center;max-width:400px;padding:40px}.icon{font-size:48px;margin-bottom:16px}h2{color:#2D2D2D;margin-bottom:8px}p{color:#6B6560;line-height:1.6}</style></head><body><div><div class="icon">' + (updated ? '&#9989;' : '&#10060;') + '</div><h2>' + (updated ? 'Unsubscribed' : 'Not Found') + '</h2><p>' + msg + '</p></div></body></html>', { headers: { ...h, 'Content-Type': 'text/html' } });
     }
 
     const authToken = request.headers.get('Authorization')?.replace('Bearer ', '');
@@ -512,7 +556,7 @@ async function runDailyTasks(env) {
     const yesterdayStart = yesterday.toISOString().split('T')[0] + 'T00:00:00';
     const yesterdayEnd = yesterday.toISOString().split('T')[0] + 'T23:59:59';
 
-    const newUsersRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=gte.' + yesterdayStart + '&created_at=lte.' + yesterdayEnd + '&role=eq.parent&select=email,name', { headers });
+    const newUsersRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=gte.' + yesterdayStart + '&created_at=lte.' + yesterdayEnd + '&role=eq.parent&email_marketing_opted_in=eq.true&select=email,name', { headers });
     const newUsers = await newUsersRes.json();
 
     for (const u of (newUsers || [])) {
@@ -557,7 +601,7 @@ async function runDailyTasks(env) {
     const day3Start = day3.toISOString().split('T')[0] + 'T00:00:00';
     const day3End = day3.toISOString().split('T')[0] + 'T23:59:59';
 
-    const day3UsersRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=gte.' + day3Start + '&created_at=lte.' + day3End + '&role=eq.parent&select=email,name', { headers });
+    const day3UsersRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=gte.' + day3Start + '&created_at=lte.' + day3End + '&role=eq.parent&email_marketing_opted_in=eq.true&select=email,name', { headers });
     const day3Users = await day3UsersRes.json();
 
     for (const u of (day3Users || [])) {
@@ -592,7 +636,7 @@ async function runDailyTasks(env) {
     const day7Start = day7.toISOString().split('T')[0] + 'T00:00:00';
     const day7End = day7.toISOString().split('T')[0] + 'T23:59:59';
 
-    const day7UsersRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=gte.' + day7Start + '&created_at=lte.' + day7End + '&role=eq.parent&select=email,name,subscription_status', { headers });
+    const day7UsersRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=gte.' + day7Start + '&created_at=lte.' + day7End + '&role=eq.parent&email_marketing_opted_in=eq.true&select=email,name,subscription_status', { headers });
     const day7Users = await day7UsersRes.json();
 
     for (const u of (day7Users || [])) {
@@ -651,7 +695,7 @@ async function runDailyTasks(env) {
     const twoWeeksAgo = new Date();
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
-    const inactiveRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=lte.' + twoWeeksAgo.toISOString() + '&role=eq.parent&select=id,email,name,created_at', { headers });
+    const inactiveRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=lte.' + twoWeeksAgo.toISOString() + '&role=eq.parent&email_marketing_opted_in=eq.true&select=id,email,name,created_at', { headers });
     const potentialInactive = await inactiveRes.json();
 
     for (const u of (potentialInactive || [])) {
@@ -700,6 +744,108 @@ async function runDailyTasks(env) {
       });
     }
   } catch (e) { console.error('Re-engagement error:', e); }
+
+  // -- SCREENER LEAD AUTO-ENROLL: Send Day 0 email + create lead for sequence enrollment --
+  try {
+    const screenerRes = await fetch(supaUrl + '/rest/v1/screener_leads?marketing_consent=eq.true&enrolled_in_sequence=eq.false&unsubscribed=eq.false&select=id,email,parent_name,score,risk_level,unsubscribe_token', { headers });
+    const newScreenerLeads = await screenerRes.json();
+
+    for (const sl of (newScreenerLeads || [])) {
+      if (!sl.email) continue;
+
+      var unsubUrl = 'https://village-api.jorrelpatterson.workers.dev/unsubscribe?token=' + encodeURIComponent(sl.unsubscribe_token) + '&source=screener';
+
+      // Send Day 0 email: "Your screening results are ready"
+      const screenerBody = (
+        '<h1 style="font-size:24px;font-weight:800;color:#2D2D2D;margin:0 0 8px">Your screening is complete &#127807;</h1>' +
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">Hi ' + (sl.parent_name || 'there') + ', thank you for taking the M-CHAT-R screening. Your results are saved on our secure platform.</p>' +
+        '<div style="background:#FDF8F0;border-radius:12px;padding:20px;margin:16px 0;border-left:4px solid #7A9E7E">' +
+        '<p style="margin:0;color:#2D2D2D;font-size:15px;line-height:1.6">For your privacy, we don\'t include screening scores in emails. View your full results and recommended next steps on the platform.</p>' +
+        '</div>' +
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:20px 0">Modern Village gives you <strong>instant access to ABA-based strategies</strong> you can start using today &mdash; whether or not your child has a diagnosis. Our AI Coach learns your child\'s unique patterns and gives you personalized, step-by-step guidance.</p>' +
+        '<div style="text-align:center;margin:24px 0">' +
+        '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px;margin:16px 0">Get Started Free</a>' +
+        '</div>'
+      );
+
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'Modern Village <hello@modernvillage.app>',
+          to: sl.email,
+          subject: 'Your screening results + free strategies for your child',
+          html: emailWrapper(screenerBody, unsubUrl)
+        })
+      });
+
+      // Mark as enrolled
+      await fetch(supaUrl + '/rest/v1/screener_leads?id=eq.' + sl.id, {
+        method: 'PATCH', headers,
+        body: JSON.stringify({ enrolled_in_sequence: true })
+      });
+
+      await new Promise(r => setTimeout(r, 500));
+    }
+  } catch (e) { console.error('Screener auto-enroll error:', e); }
+
+  // -- WEEKLY DIGEST: Fridays only --
+  try {
+    const dayOfWeek = new Date().getDay();
+    if (dayOfWeek === 5) { // Friday
+      const activeUsersRes = await fetch(supaUrl + '/rest/v1/profiles?role=eq.parent&email_marketing_opted_in=eq.true&select=id,email,name', { headers });
+      const activeUsers = await activeUsersRes.json();
+
+      // Get this week's top community post
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const topPostRes = await fetch(supaUrl + '/rest/v1/community_posts?created_at=gte.' + weekAgo.toISOString() + '&status=eq.approved&order=created_at.desc&limit=1&select=content,author_name', { headers });
+      const topPosts = await topPostRes.json();
+      const topPost = topPosts && topPosts.length ? topPosts[0] : null;
+
+      // Get this week's stats
+      const logsRes = await fetch(supaUrl + '/rest/v1/behavior_logs?logged_at=gte.' + weekAgo.toISOString() + '&select=id', { headers: { ...headers, 'Prefer': 'count=exact' } });
+      const logCount = parseInt(logsRes.headers.get('content-range')?.split('/')[1] || '0');
+
+      const checkinsRes = await fetch(supaUrl + '/rest/v1/daily_checkins?date=gte.' + weekAgo.toISOString().split('T')[0] + '&select=id', { headers: { ...headers, 'Prefer': 'count=exact' } });
+      const checkinCount = parseInt(checkinsRes.headers.get('content-range')?.split('/')[1] || '0');
+
+      for (const u of (activeUsers || [])) {
+        if (!u.email) continue;
+
+        const digestBody = (
+          '<h1 style="font-size:24px;font-weight:800;color:#2D2D2D;margin:0 0 8px">Your Week in Review &#127807;</h1>' +
+          '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">Hi ' + (u.name || 'there') + ', here\'s what happened in your village this week.</p>' +
+          '<div style="display:flex;gap:12px;margin-bottom:20px">' +
+          '<div style="flex:1;background:#FDF8F0;border-radius:12px;padding:16px;text-align:center"><div style="font-size:28px;font-weight:800;color:#7A9E7E">' + logCount + '</div><div style="font-size:11px;color:#9E9790;margin-top:4px">Behaviors logged</div></div>' +
+          '<div style="flex:1;background:#FDF8F0;border-radius:12px;padding:16px;text-align:center"><div style="font-size:28px;font-weight:800;color:#6BA3C7">' + checkinCount + '</div><div style="font-size:11px;color:#9E9790;margin-top:4px">Check-ins</div></div>' +
+          '</div>' +
+          (topPost ? '<div style="background:#FDF8F0;border-radius:12px;padding:16px;margin-bottom:20px;border-left:4px solid #D4C8E8"><div style="font-size:11px;font-weight:600;color:#6B5B8D;text-transform:uppercase;margin-bottom:8px">Top Community Post</div><p style="margin:0;font-size:14px;color:#2D2D2D;line-height:1.5">"' + (topPost.content || '').substring(0, 150) + (topPost.content && topPost.content.length > 150 ? '...' : '') + '"</p><div style="font-size:12px;color:#9E9790;margin-top:6px">&mdash; ' + (topPost.author_name || 'A parent') + '</div></div>' : '') +
+          '<div style="background:#FDF8F0;border-radius:12px;padding:16px;margin-bottom:20px;border-left:4px solid #C4745A">' +
+          '<div style="font-size:11px;font-weight:600;color:#C4745A;text-transform:uppercase;margin-bottom:8px">Quick Tip</div>' +
+          '<p style="margin:0;font-size:14px;color:#2D2D2D;line-height:1.5">Consistency is the #1 predictor of behavior improvement. Even logging one behavior per day gives your AI Coach enough data to start detecting patterns.</p>' +
+          '</div>' +
+          '<div style="text-align:center;margin:24px 0">' +
+          '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px">Open Modern Village</a>' +
+          '</div>'
+        );
+
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: 'Modern Village <hello@modernvillage.app>',
+            to: u.email,
+            subject: 'Your week in review \u2014 ' + logCount + ' behaviors logged this week',
+            html: emailWrapper(digestBody)
+          })
+        });
+
+        await new Promise(r => setTimeout(r, 300));
+      }
+    }
+  } catch (e) { console.error('Weekly digest error:', e); }
+
   // ── EMAIL SEQUENCES: Process daily sends ──
   try {
     // Get all active sequence campaigns

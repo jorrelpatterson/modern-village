@@ -1046,6 +1046,12 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
           <div style="margin-bottom:14px"><label class="fl">Insurance provider</label><select id="profInsurance" class="fi"><option value="">Select</option><option>BlueCross BlueShield</option><option>Aetna</option><option>UnitedHealthcare</option><option>Cigna</option><option>Kaiser Permanente</option><option>Medicaid / Medi-Cal</option><option>Tricare</option><option>Other</option><option>No insurance</option></select></div>
         </div>
 
+        <!-- Email Preferences -->
+        <div style="background:white;border-radius:20px;padding:24px;border:1px solid var(--sand);margin-bottom:16px">
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:12px">Email Preferences</div>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--warm-gray)"><input type="checkbox" id="profEmailMarketing" onchange="toggleEmailMarketing(this.checked)"> Receive weekly digests and parenting tips</label>
+        </div>
+
         <button class="btn btn-p" style="width:100%;padding:16px;font-size:16px;margin-bottom:16px" onclick="saveProfile()">Save Changes</button>
 
         <!-- Subscription -->
@@ -4724,6 +4730,10 @@ function openProfile(){
   document.getElementById('profRelationship').value = S.profile&&S.profile.parent_relationship || '';
   document.getElementById('profInsurance').value = S.profile&&S.profile.insurance_provider || '';
 
+  // Email marketing opt-in
+  var emailMktEl = document.getElementById('profEmailMarketing');
+  if(emailMktEl) emailMktEl.checked = S.profile && S.profile.email_marketing_opted_in !== false;
+
   // Render children list
   renderProfileChildren();
 
@@ -6382,6 +6392,12 @@ async function postNoteComment(noteId){
   });
   if(r.error){showToast('Error posting reply');console.error(r.error)}
   else{showToast('Reply posted!');toggleNoteComments(noteId);toggleNoteComments(noteId)}
+}
+async function toggleEmailMarketing(val){
+  if(!S.user)return;
+  await sb.from('profiles').update({email_marketing_opted_in:val}).eq('id',S.user.id);
+  if(S.profile)S.profile.email_marketing_opted_in=val;
+  showToast(val?'Marketing emails enabled':'Marketing emails disabled');
 }
 async function saveProfile(){
   var name = document.getElementById('profName').value.trim();
