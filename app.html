@@ -615,6 +615,14 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
 .vill-stars{color:var(--sunflower);font-size:14px;letter-spacing:1px}
 .vill-comment{padding:10px 0;border-bottom:1px solid var(--sand)}
 .vill-comment:last-child{border-bottom:none}
+/* Feedback Widget */
+.fb-btn{position:fixed;bottom:80px;right:16px;width:44px;height:44px;border-radius:50%;background:var(--sage);color:white;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:9998;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.fb-btn:hover{transform:scale(1.1);box-shadow:0 6px 24px rgba(0,0,0,0.2)}
+.fb-modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:none;align-items:flex-end;justify-content:center;padding:0}
+.fb-modal.open{display:flex}
+.fb-sheet{background:white;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;animation:slideUp 0.3s}
+.fb-type-btn{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;border:1.5px solid var(--sand);background:white;color:var(--warm-gray);cursor:pointer;transition:all 0.15s}
+.fb-type-btn.on{background:var(--sage-light);border-color:var(--sage);color:var(--sage-dark)}
 </style>
 </head>
 <body>
@@ -7082,6 +7090,42 @@ function renderPredictionsCard(ctx){
   area.innerHTML='<div class="predictions-card"><div class="predictions-title">🧠 Coach Insights</div>'+items+'</div>';
 }
 
+// ═══ USER FEEDBACK ═══
+var fbType='feedback';
+
+function openFeedback(){
+  document.getElementById('fbModal').classList.add('open');
+  document.getElementById('fbContent').value='';
+  fbType='feedback';
+  document.querySelectorAll('.fb-type-btn').forEach(function(b){b.classList.remove('on')});
+}
+
+function closeFeedback(){document.getElementById('fbModal').classList.remove('open')}
+
+function selectFbType(type,btn){
+  fbType=type;
+  document.querySelectorAll('.fb-type-btn').forEach(function(b){b.classList.remove('on')});
+  btn.classList.add('on');
+}
+
+async function submitFeedback(){
+  var content=document.getElementById('fbContent').value.trim();
+  if(!content){showToast('Please write something');return}
+  try{
+    await sb.from('user_feedback').insert({
+      user_id:S.user?S.user.id:null,
+      user_email:S.user?S.user.email:null,
+      user_name:S.name||null,
+      user_role:S.role||null,
+      feedback_type:fbType,
+      page:S.tab||'unknown',
+      content:content
+    });
+    closeFeedback();
+    showToast('Thanks for your feedback!');
+  }catch(e){console.error('Feedback:',e);showToast('Could not send feedback')}
+}
+
 </script>
 <!-- ADD/EDIT CHILD MODAL -->
 <div id="addChildModal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px">
@@ -7164,6 +7208,28 @@ function renderPredictionsCard(ctx){
     <div id="refHistory" style="background:var(--cream);border-radius:12px;padding:12px;max-height:150px;overflow-y:auto"></div>
   </div>
 </div>
+<!-- Feedback Button -->
+<button class="fb-btn" onclick="openFeedback()" title="Send Feedback"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+
+<!-- Feedback Modal -->
+<div id="fbModal" class="fb-modal" onclick="if(event.target===this)closeFeedback()">
+  <div class="fb-sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800">Send Feedback</div>
+      <button style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--warm-gray)" onclick="closeFeedback()">&times;</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:14px">
+      <button class="fb-type-btn" data-type="bug" onclick="selectFbType('bug',this)">&#x1F41B; Bug</button>
+      <button class="fb-type-btn" data-type="improvement" onclick="selectFbType('improvement',this)">&#x1F4A1; Improvement</button>
+      <button class="fb-type-btn" data-type="feedback" onclick="selectFbType('feedback',this)">&#x1F4AC; Feedback</button>
+      <button class="fb-type-btn" data-type="question" onclick="selectFbType('question',this)">&#x2753; Question</button>
+    </div>
+    <textarea id="fbContent" style="width:100%;padding:12px;border:2px solid var(--sand);border-radius:12px;font-size:14px;font-family:'DM Sans',sans-serif;resize:none;min-height:100px;color:var(--charcoal)" placeholder="What's on your mind? Be as specific as you can..."></textarea>
+    <div style="font-size:11px;color:var(--warm-gray-light);margin-top:6px;margin-bottom:14px">Include what you were doing, what happened, and what you expected.</div>
+    <button class="btn btn-p" style="width:100%" onclick="submitFeedback()">Send Feedback</button>
+  </div>
+</div>
+
 <!-- Daily Check-in Modal -->
 <div id="checkinModal" class="ci-modal-wrap hidden">
   <div class="ci-modal">

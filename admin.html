@@ -183,6 +183,7 @@
     <div class="sb-item" data-page="verification"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Verify Providers</div>
     <div class="sb-item" data-page="invites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>Invites</div>
     <div class="sb-item" data-page="team"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4.354a4 4 0 1 1 0 7.292M15 21H3v-1a6 6 0 0 1 12 0v1zm0 0h6v-1a6 6 0 0 0-9-5.197"/></svg>VA Team</div>
+    <div class="sb-item" data-page="feedback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Feedback<span class="sb-badge" id="feedbackCount">0</span></div>
 
     <div class="sb-label">Clinical</div>
     <div class="sb-item" data-page="reviews"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>AI Accuracy Review</div>
@@ -468,6 +469,17 @@
       <div class="panel"><div class="panel-hdr"><div class="panel-title">Team Members</div></div><div class="panel-body" id="teamList"></div></div>
     </div>
 
+    <!-- FEEDBACK -->
+    <div id="pgFeedback" class="page">
+      <div class="page-hdr"><div><h1>User Feedback</h1><p>Bug reports, suggestions, and feedback from users</p></div></div>
+      <div class="stats" id="feedbackStats"></div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <select id="fbFilterType" onchange="loadFeedback()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px"><option value="">All Types</option><option value="bug">Bugs</option><option value="improvement">Improvements</option><option value="feedback">Feedback</option><option value="question">Questions</option></select>
+        <select id="fbFilterStatus" onchange="loadFeedback()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px"><option value="">All Status</option><option value="new">New</option><option value="reviewed">Reviewed</option><option value="in_progress">In Progress</option><option value="fixed">Fixed</option><option value="wont_fix">Won't Fix</option><option value="duplicate">Duplicate</option></select>
+      </div>
+      <div class="panel"><div class="panel-body" id="feedbackList"></div></div>
+    </div>
+
   </main>
 </div>
 
@@ -622,6 +634,7 @@ async function loadPage(pg){
   if(pg==='leads'){loadLeads();loadCampaigns()}
   if(pg==='marketing') loadMarketing();
   if(pg==='team') loadTeam();
+  if(pg==='feedback') loadFeedback();
 }
 
 // ═══ DASHBOARD ═══
@@ -2009,6 +2022,78 @@ async function removeVA(userId, email){
   await sb.from('profiles').update({is_admin:false,admin_role:null}).eq('id',userId);
   showToast('Admin access removed');
   loadTeam();
+}
+
+// ═══ FEEDBACK MANAGEMENT ═══
+async function loadFeedback(){
+  var typeFilter=document.getElementById('fbFilterType').value;
+  var statusFilter=document.getElementById('fbFilterStatus').value;
+  var q=sb.from('user_feedback').select('*').order('created_at',{ascending:false});
+  if(typeFilter)q=q.eq('feedback_type',typeFilter);
+  if(statusFilter)q=q.eq('status',statusFilter);
+  var r=await q;
+  var items=r.data||[];
+
+  var total=items.length;
+  var newCount=items.filter(function(f){return f.status==='new'}).length;
+  var bugs=items.filter(function(f){return f.feedback_type==='bug'}).length;
+  var improvements=items.filter(function(f){return f.feedback_type==='improvement'}).length;
+
+  document.getElementById('feedbackStats').innerHTML=
+    statCard('Total',total,'')+statCard('New',newCount,'')+statCard('Bugs',bugs,'')+statCard('Ideas',improvements,'');
+  document.getElementById('feedbackCount').textContent=newCount||'';
+
+  if(!items.length){
+    document.getElementById('feedbackList').innerHTML='<div class="empty"><div class="empty-icon">&#128172;</div>No feedback yet</div>';
+    return;
+  }
+
+  var h='';
+  items.forEach(function(f){
+    var d=new Date(f.created_at);
+    var dateStr=d.toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    var typeEmoji=f.feedback_type==='bug'?'\uD83D\uDC1B':f.feedback_type==='improvement'?'\uD83D\uDCA1':f.feedback_type==='question'?'\u2753':'\uD83D\uDCAC';
+    var statusColor=f.status==='new'?'tag-yellow':f.status==='fixed'?'tag-sage':f.status==='in_progress'?'tag-blue':'tag-free';
+    h+='<div style="padding:16px;border-bottom:1px solid var(--sand)">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">';
+    h+='<div><span style="font-size:16px">'+typeEmoji+'</span> <strong>'+esc(f.feedback_type)+'</strong>';
+    h+=' <span class="tag '+statusColor+'">'+esc(f.status)+'</span>';
+    if(f.priority)h+=' <span class="tag '+(f.priority==='critical'?'tag-red':f.priority==='high'?'tag-yellow':'tag-free')+'">'+esc(f.priority)+'</span>';
+    h+='</div>';
+    h+='<span style="font-size:11px;color:var(--warm-gray-light)">'+dateStr+'</span></div>';
+    h+='<div style="font-size:14px;line-height:1.6;margin-bottom:8px">'+esc(f.content)+'</div>';
+    h+='<div style="font-size:12px;color:var(--warm-gray)">'+esc(f.user_name||'Anonymous')+' ('+esc(f.user_role||'unknown')+') &middot; '+esc(f.user_email||'no email')+' &middot; Page: '+esc(f.page||'?')+'</div>';
+    if(f.admin_notes)h+='<div style="margin-top:8px;padding:8px 12px;background:var(--cream);border-radius:8px;font-size:12px;color:var(--warm-gray)"><strong>Admin:</strong> '+esc(f.admin_notes)+'</div>';
+    h+='<div style="display:flex;gap:6px;margin-top:8px">';
+    h+='<select style="padding:4px 8px;border-radius:6px;border:1px solid var(--sand);font-size:11px;font-family:inherit" onchange="updateFeedbackStatus(\x27'+f.id+'\x27,this.value)">';
+    ['new','reviewed','in_progress','fixed','wont_fix','duplicate'].forEach(function(s){
+      h+='<option value="'+s+'"'+(f.status===s?' selected':'')+'>'+s.replace('_',' ')+'</option>';
+    });
+    h+='</select>';
+    h+='<select style="padding:4px 8px;border-radius:6px;border:1px solid var(--sand);font-size:11px;font-family:inherit" onchange="updateFeedbackPriority(\x27'+f.id+'\x27,this.value)">';
+    h+='<option value=""'+((!f.priority)?' selected':'')+'>Priority...</option>';
+    ['critical','high','medium','low'].forEach(function(p){
+      h+='<option value="'+p+'"'+(f.priority===p?' selected':'')+'>'+p+'</option>';
+    });
+    h+='</select>';
+    h+='<input placeholder="Admin note..." style="flex:1;padding:4px 8px;border-radius:6px;border:1px solid var(--sand);font-size:11px;font-family:inherit" value="'+esc(f.admin_notes||'')+'" onchange="updateFeedbackNote(\x27'+f.id+'\x27,this.value)">';
+    h+='</div></div>';
+  });
+  document.getElementById('feedbackList').innerHTML=h;
+}
+
+async function updateFeedbackStatus(id,status){
+  await sb.from('user_feedback').update({status:status}).eq('id',id);
+  showToast('Status updated');
+}
+
+async function updateFeedbackPriority(id,priority){
+  await sb.from('user_feedback').update({priority:priority}).eq('id',id);
+  showToast('Priority set');
+}
+
+async function updateFeedbackNote(id,note){
+  await sb.from('user_feedback').update({admin_notes:note}).eq('id',id);
 }
 
 </script>
