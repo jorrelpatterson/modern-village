@@ -24,10 +24,12 @@ h1{font-family:'Fraunces',serif;font-size:28px;text-align:center;margin-bottom:8
 .mv-handle{position:absolute;bottom:24px;right:24px;font-size:12px;font-weight:600;color:rgba(0,0,0,0.3);z-index:2}
 .mv-handle.white{color:rgba(255,255,255,0.4)}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
 <h1>Modern Village — Instagram Posts</h1>
-<p class="sub">Right-click each post → "Save image as" or screenshot at 1080×1080</p>
+<p class="sub">Click the download button under each post to save as 1080×1080 PNG</p>
+<div style="text-align:center;margin-bottom:32px"><button onclick="downloadAll()" style="padding:14px 32px;background:#7A9E7E;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:DM Sans,sans-serif">Download All 30 Posts</button></div>
 <div class="grid">
 
 <!-- POST 1: Quick Tip - Instead of / Try This -->
@@ -616,5 +618,39 @@ h1{font-family:'Fraunces',serif;font-size:28px;text-align:center;margin-bottom:8
 </div></div>
 
 </div>
+<script>
+async function downloadPost(idx){
+  var posts=document.querySelectorAll('.post');
+  if(!posts[idx])return;
+  var post=posts[idx];
+  var canvas=await html2canvas(post,{scale:2,width:540,height:540,backgroundColor:null,useCORS:true});
+  var link=document.createElement('a');
+  link.download='modern-village-post-'+(idx+1)+'.png';
+  link.href=canvas.toDataURL('image/png');
+  link.click();
+}
+
+async function downloadAll(){
+  var posts=document.querySelectorAll('.post');
+  var btn=event.target;
+  btn.disabled=true;btn.textContent='Downloading...';
+  for(var i=0;i<posts.length;i++){
+    await downloadPost(i);
+    await new Promise(function(r){setTimeout(r,500)});
+  }
+  btn.disabled=false;btn.textContent='Download All 30 Posts';
+}
+
+// Add download buttons under each post
+document.querySelectorAll('.post-wrap').forEach(function(wrap,i){
+  var btn=document.createElement('button');
+  btn.textContent='Download PNG';
+  btn.style.cssText='margin-top:8px;padding:8px 20px;background:white;border:1.5px solid #E8DDD0;border-radius:8px;font-size:12px;font-weight:600;color:#6B6560;cursor:pointer;font-family:DM Sans,sans-serif;transition:all 0.15s';
+  btn.onmouseover=function(){this.style.borderColor='#7A9E7E';this.style.color='#5C7F60'};
+  btn.onmouseout=function(){this.style.borderColor='#E8DDD0';this.style.color='#6B6560'};
+  btn.onclick=function(){downloadPost(i)};
+  wrap.appendChild(btn);
+});
+</script>
 </body>
 </html>
