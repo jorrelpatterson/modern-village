@@ -119,6 +119,53 @@ export default {
 
     const authToken = request.headers.get('Authorization')?.replace('Bearer ', '');
 
+    // === ADMIN: CREATE VA ACCOUNT (requires super admin) ===
+    if (url.pathname === '/admin/create-va') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+
+      // Verify caller is super admin
+      const adminCheck = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=is_admin,admin_role', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const adminData = await adminCheck.json();
+      if (!adminData.length || !adminData[0].is_admin || adminData[0].admin_role !== 'super') {
+        return new Response('{"error":"Super admin access required"}', { status: 403, headers: h });
+      }
+
+      const email = (body.email || '').toLowerCase().trim();
+      const password = body.password;
+      const name = body.name || '';
+      const adminRole = body.admin_role || 'marketing';
+
+      if (!email || !password || password.length < 8) {
+        return new Response('{"error":"Email and password (8+ chars) required"}', { status: 400, headers: h });
+      }
+
+      // Create user via Supabase Admin API
+      const createRes = await fetch(env.SUPABASE_URL + '/auth/v1/admin/users', {
+        method: 'POST',
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, email_confirm: true })
+      });
+
+      if (!createRes.ok) {
+        const err = await createRes.json();
+        return new Response(JSON.stringify({ error: err.msg || err.message || 'Failed to create user' }), { status: 400, headers: h });
+      }
+
+      const newUser = await createRes.json();
+
+      // Set profile fields
+      await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + newUser.id, {
+        method: 'PATCH',
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ name: name, email: email, is_admin: true, admin_role: adminRole, role: 'parent' })
+      });
+
+      return new Response(JSON.stringify({ success: true, user_id: newUser.id }), { headers: h });
+    }
+
     // === ADMIN: RESET USER PASSWORD (requires admin session) ===
     if (url.pathname === '/admin/reset-password') {
       const user = await verifyToken(authToken, env);

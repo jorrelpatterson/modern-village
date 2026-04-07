@@ -182,6 +182,7 @@
     <div class="sb-item" data-page="providers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Providers</div>
     <div class="sb-item" data-page="verification"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Verify Providers</div>
     <div class="sb-item" data-page="invites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>Invites</div>
+    <div class="sb-item" data-page="team"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4.354a4 4 0 1 1 0 7.292M15 21H3v-1a6 6 0 0 1 12 0v1zm0 0h6v-1a6 6 0 0 0-9-5.197"/></svg>VA Team</div>
 
     <div class="sb-label">Clinical</div>
     <div class="sb-item" data-page="reviews"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>AI Accuracy Review</div>
@@ -460,6 +461,13 @@
       </div>
     </div>
 
+    <!-- VA TEAM -->
+    <div id="pgTeam" class="page">
+      <div class="page-hdr"><div><h1>VA Team</h1><p>Manage virtual assistant accounts</p></div><button class="btn btn-outline" onclick="openCreateVA()">+ Add VA</button></div>
+      <div class="stats" id="teamStats"></div>
+      <div class="panel"><div class="panel-hdr"><div class="panel-title">Team Members</div></div><div class="panel-body" id="teamList"></div></div>
+    </div>
+
   </main>
 </div>
 
@@ -613,6 +621,7 @@ async function loadPage(pg){
   if(pg==='social') loadSocialPosts('all');
   if(pg==='leads'){loadLeads();loadCampaigns()}
   if(pg==='marketing') loadMarketing();
+  if(pg==='team') loadTeam();
 }
 
 // ═══ DASHBOARD ═══
@@ -1899,6 +1908,107 @@ function loadContentCalendar(){
   });
   h+='</tbody></table>';
   document.getElementById('contentCalendar').innerHTML=h;
+}
+
+// ═══ VA TEAM MANAGEMENT ═══
+async function loadTeam(){
+  var r = await sb.from('profiles').select('id,name,email,admin_role,is_admin,created_at').eq('is_admin',true).order('created_at',{ascending:false});
+  var members = r.data || [];
+  var total = members.length;
+  var supers = members.filter(function(m){return m.admin_role==='super'}).length;
+  var marketing = members.filter(function(m){return m.admin_role==='marketing'}).length;
+  var billing = members.filter(function(m){return m.admin_role==='billing'}).length;
+  var content = members.filter(function(m){return m.admin_role==='content'}).length;
+
+  document.getElementById('teamStats').innerHTML =
+    statCard('Total',total,'')+statCard('Super',supers,'')+statCard('Marketing',marketing,'')+statCard('Billing',billing,'')+statCard('Content',content,'');
+
+  var h = '';
+  if(!members.length){
+    h = '<div class="empty"><div class="empty-icon">&#128101;</div>No team members yet</div>';
+  } else {
+    h = '<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Added</th><th>Actions</th></tr></thead><tbody>';
+    members.forEach(function(m){
+      var d = new Date(m.created_at);
+      var roleColor = m.admin_role==='super'?'tag-sage':m.admin_role==='marketing'?'tag-blue':m.admin_role==='billing'?'tag-yellow':'tag-free';
+      h += '<tr>';
+      h += '<td>'+(m.name?esc(m.name):'<span style="color:var(--warm-gray-light)">\u2014</span>')+'</td>';
+      h += '<td style="font-size:12px">'+esc(m.email||'\u2014')+'</td>';
+      h += '<td><select style="padding:4px 8px;border-radius:6px;border:1px solid var(--sand);font-size:12px;font-family:inherit" onchange="updateVARole(\x27'+m.id+'\x27,this.value)">';
+      h += '<option value="super"'+(m.admin_role==='super'?' selected':'')+'>Super</option>';
+      h += '<option value="marketing"'+(m.admin_role==='marketing'?' selected':'')+'>Marketing</option>';
+      h += '<option value="billing"'+(m.admin_role==='billing'?' selected':'')+'>Billing</option>';
+      h += '<option value="content"'+(m.admin_role==='content'?' selected':'')+'>Content</option>';
+      h += '</select></td>';
+      h += '<td style="font-size:12px">'+d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+'</td>';
+      h += '<td>';
+      if(m.email !== adminUser.email){
+        h += '<button style="padding:4px 10px;border-radius:6px;border:1px solid var(--terracotta);background:white;cursor:pointer;font-size:11px;font-family:inherit;color:var(--terracotta)" onclick="removeVA(\x27'+m.id+'\x27,\x27'+esc(m.email||'')+'\x27)">Remove</button>';
+      } else {
+        h += '<span style="font-size:11px;color:var(--warm-gray-light)">You</span>';
+      }
+      h += '</td></tr>';
+    });
+    h += '</tbody></table>';
+  }
+  document.getElementById('teamList').innerHTML = h;
+}
+
+function openCreateVA(){
+  var h = '<div style="max-width:400px;margin:0 auto;padding:20px">';
+  h += '<h3 style="font-family:Fraunces,serif;font-size:18px;font-weight:800;margin-bottom:16px">Add VA Team Member</h3>';
+  h += '<label class="fl">Email</label><input id="vaEmail" class="fi" type="email" placeholder="va@example.com" style="margin-bottom:12px">';
+  h += '<label class="fl">Name</label><input id="vaName" class="fi" placeholder="Full name" style="margin-bottom:12px">';
+  h += '<label class="fl">Password</label><input id="vaPass" class="fi" type="password" placeholder="Temporary password (8+ chars)" style="margin-bottom:12px">';
+  h += '<label class="fl">Role</label><select id="vaRole" class="fi" style="margin-bottom:16px"><option value="marketing">Marketing VA</option><option value="billing">Billing VA</option><option value="content">Content VA</option><option value="super">Super Admin</option></select>';
+  h += '<div style="display:flex;gap:8px"><button class="btn btn-p" style="flex:1" onclick="createVA()">Create Account</button><button class="btn btn-s" onclick="loadTeam()">Cancel</button></div>';
+  h += '<div id="vaError" style="display:none;margin-top:8px;font-size:12px;color:var(--terracotta)"></div>';
+  h += '</div>';
+  document.getElementById('teamList').innerHTML = h;
+  document.getElementById('teamStats').innerHTML = '';
+}
+
+async function createVA(){
+  var email = document.getElementById('vaEmail').value.trim().toLowerCase();
+  var name = document.getElementById('vaName').value.trim();
+  var pass = document.getElementById('vaPass').value;
+  var role = document.getElementById('vaRole').value;
+  var err = document.getElementById('vaError');
+  err.style.display = 'none';
+
+  if(!email || !email.includes('@')){err.textContent='Valid email required';err.style.display='block';return}
+  if(!name){err.textContent='Name required';err.style.display='block';return}
+  if(!pass || pass.length < 8){err.textContent='Password must be 8+ characters';err.style.display='block';return}
+
+  try{
+    // Create auth user via admin API through worker
+    var token = (await sb.auth.getSession()).data.session.access_token;
+    var r = await fetch('https://village-api.jorrelpatterson.workers.dev/admin/create-va', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({email:email,password:pass,name:name,admin_role:role})
+    });
+    var d = await r.json();
+    if(d.error){err.textContent=d.error;err.style.display='block';return}
+    alert('VA account created! They can log in at admin.html with: '+email);
+    loadTeam();
+  }catch(e){
+    console.error('Create VA:',e);
+    err.textContent='Failed to create account';
+    err.style.display='block';
+  }
+}
+
+async function updateVARole(userId, newRole){
+  await sb.from('profiles').update({admin_role:newRole}).eq('id',userId);
+  showToast('Role updated');
+}
+
+async function removeVA(userId, email){
+  if(!confirm('Remove admin access for '+email+'? They will no longer be able to log into the admin panel.'))return;
+  await sb.from('profiles').update({is_admin:false,admin_role:null}).eq('id',userId);
+  showToast('Admin access removed');
+  loadTeam();
 }
 
 </script>
