@@ -321,7 +321,7 @@
       <h2>Leads CRM</h2>
       <div class="stats" id="leadStats"></div>
       <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-        <select id="leadTypeFilter" onchange="loadLeads()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px"><option value="">All Types</option><option value="district">Districts</option><option value="provider">Providers</option><option value="selpa">SELPAs</option><option value="grant">Grants</option></select>
+        <select id="leadTypeFilter" onchange="loadLeads()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px"><option value="">All Types</option><option value="district">Districts</option><option value="provider">Providers</option><option value="selpa">SELPAs</option><option value="grant">Grants</option><option value="regional_center">Regional Centers</option></select>
         <select id="leadStatusFilter" onchange="loadLeads()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px"><option value="">All Status</option><option value="not_contacted">Not Contacted</option><option value="emailed">Emailed</option><option value="responded">Responded</option><option value="meeting">Meeting</option><option value="converted">Converted</option><option value="dead">Dead</option></select>
         <input id="leadSearch" placeholder="Search name, org, city..." oninput="loadLeads()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px;flex:1;min-width:150px">
         <button onclick="exportLeads()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--sage);background:white;color:var(--sage-dark);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600">Export CSV</button>
@@ -344,7 +344,7 @@
             <button id="modeSequence" class="btn btn-sm btn-outline" onclick="setCampaignMode('sequence')">Drip Sequence (9 emails)</button>
           </div>
           <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Campaign Name</label><input id="campName" class="form-input" placeholder="e.g. BCBA Outreach Q2"></div>
-          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Target</label><select id="campTarget" class="form-input"><option value="all">All Leads</option><option value="district">Districts Only</option><option value="provider">Providers Only</option><option value="selpa">SELPAs Only</option><option value="not_contacted">Not Yet Contacted</option></select></div>
+          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Target</label><select id="campTarget" class="form-input"><option value="all">All Leads</option><option value="district">Districts Only</option><option value="provider">Providers Only</option><option value="selpa">SELPAs Only</option><option value="regional_center">Regional Centers</option><option value="not_contacted">Not Yet Contacted</option></select></div>
 
           <!-- Single blast fields -->
           <div id="blastFields">

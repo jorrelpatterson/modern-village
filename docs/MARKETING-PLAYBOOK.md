@@ -224,3 +224,70 @@ Build the child/teen login first (already done — username + PIN). As children 
 - [x] District one-pager + email templates
 - [x] Instagram graphics + captions
 - [x] Grant application packages
+
+---
+
+## Client Type 7: Regional Centers (B2G) — NEW OPPORTUNITY
+
+**Revenue:** $3-10/family/year (enterprise licensing)
+**Market:** 21 Regional Centers in California, serving 350,000+ individuals with developmental disabilities
+**Budget source:** California Department of Developmental Services (DDS) — publicly funded, discretionary budgets for family support services
+**Decision maker:** Family Support Services Director or Community Services Manager
+
+### Why This is Massive
+
+- RCOC (Orange County) spent **~$250K** on a single 1-day parent conference (Dear Mom Co, $495/ticket × 500 families)
+- RCSD (San Diego) did the same
+- Modern Village provides **365 days/year** of parent support for $240/year
+- At $5/family/year for 28,000 RCOC families = **$140,000/year recurring**
+- That's **less than one conference** and provides continuous AI coaching, behavior tracking, IEP tools, care team collaboration
+- 21 Regional Centers × $50K-150K average = **$1M-3M total addressable market** in CA alone
+
+### Messaging Framework
+- **Hook:** "You spent $250K on one day of parent support. What if families had support every day?"
+- **Promise:** "AI behavior coaching, IEP tools, care team collaboration — for every family you serve, 365 days a year."
+- **Proof:** "Parents report fewer crisis calls and improved IEP participation within 30 days."
+- **Cost comparison:** "$5/family/year vs $495/family for a single conference day"
+- **CTA:** "Let us run a free 90-day pilot with 100 families."
+
+### Channels
+| Channel | Strategy |
+|---------|----------|
+| **Direct outreach** | Email Family Support Services directors at all 21 RCs |
+| **Ariana's network** | She likely knows RC contacts through her BCBA work |
+| **Conference presence** | Attend RC-sponsored events, demo the app |
+| **DDS relationship** | State-level advocacy for platform adoption |
+| **Dear Mom Co partnership** | Offer Modern Village as the digital companion to their conferences |
+
+### The 21 California Regional Centers
+1. Alta California (Sacramento)
+2. Central Valley (Fresno)
+3. East Bay (Oakland)
+4. Eastern Los Angeles
+5. Far Northern (Redding)
+6. Frank D. Lanterman (LA)
+7. Golden Gate (SF)
+8. Harbor (Long Beach)
+9. Inland (San Bernardino/Riverside)
+10. Kern
+11. North Bay (Napa)
+12. North Los Angeles
+13. Orange County ← **already spending $250K on parent support**
+14. Redwood Coast (Eureka)
+15. San Andreas (San Jose)
+16. San Diego ← **already spending on parent support**
+17. San Gabriel/Pomona
+18. South Central Los Angeles
+19. Tri-Counties (Santa Barbara)
+20. Valley Mountain (Stockton)
+21. Westside (Culver City)
+
+### Conversion Path
+Direct outreach → 15-min demo → Free 90-day pilot (100 families) → Measure outcomes → Present to RC board → Annual contract
+
+### Immediate Action Items
+- [ ] Run Regional Center scraper to get contact info
+- [ ] Identify Family Support Services directors at RCOC and RCSD
+- [ ] Draft RC-specific email sequence
+- [ ] Ask Ariana for RC contacts from her clinical network
+- [ ] Research Dear Mom Co partnership opportunity
