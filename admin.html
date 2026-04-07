@@ -8,7 +8,28 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <title>Modern Village — Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,100..900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js">
+async function sendTestCampaign(){
+  var email=document.getElementById('campTestEmail').value.trim();
+  if(!email){showToast('Enter a test email');return}
+  var subA=document.getElementById('campSubjectA').value.trim();
+  var body=document.getElementById('campBody').value.trim();
+  if(!subA||!body){showToast('Fill in subject and body first');return}
+  var branded=emailWrapper(body);
+  try{
+    var session=await sb.auth.getSession();
+    var token=session.data.session?.access_token;
+    var r=await fetch('https://village-api.jorrelpatterson.workers.dev/email',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({to:email,subject:'[TEST] '+subA,html:branded})
+    });
+    var d=await r.json();
+    if(d.id)showToast('Test sent to '+email+'!');
+    else showToast('Error: '+(d.error||'Failed'));
+  }catch(e){showToast('Error sending test')}
+}
+</script>
 <style>
 :root{--cream:#FDF8F0;--sage:#7A9E7E;--sage-dark:#5C7F60;--sage-light:#E8F0E8;--terracotta:#C4745A;--terracotta-light:#F5E6E0;--sand:#E8DDD0;--sand-dark:#C4B8A8;--charcoal:#2D2D2D;--warm-gray:#4A4540;--warm-gray-light:#706B65;--blush:#F0D5C8;--lavender:#D4C8E8;--sunflower:#E8C84A;--sky:#D0E4F0;--sky-dark:#6BA3C7;color-scheme:light}
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',sans-serif;background:#F0EBE3;color:var(--charcoal);min-height:100vh}
@@ -346,7 +367,7 @@
           <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Target</label><select id="campTarget" class="form-input"><option value="all">All Leads</option><option value="district">Districts Only</option><option value="provider">Providers Only</option><option value="selpa">SELPAs Only</option><option value="not_contacted">Not Yet Contacted</option></select></div>
           <button class="btn btn-sm btn-outline" onclick="aiGenerateVariants()" id="aiGenBtn" style="margin-bottom:12px;width:100%">✨ AI Generate Subject Lines &amp; Body</button>
           <div id="campPreview" style="display:none;margin-bottom:12px;padding:16px;background:#f9f9f9;border-radius:12px"></div>
-          <div style="display:flex;gap:8px"><button class="btn btn-sm btn-sage" onclick="saveCampaign()">Save Draft</button><button class="btn btn-sm btn-sage" onclick="saveCampaign(true)">Save &amp; Send</button><button class="btn btn-sm btn-outline" onclick="closeCampaignComposer()">Cancel</button></div>
+          <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Send Test To</label><div style="display:flex;gap:8px"><input id="campTestEmail" class="form-input" placeholder="your@email.com" style="flex:1"><button class="btn btn-sm btn-outline" onclick="sendTestCampaign()">Send Test</button></div></div><div style="display:flex;gap:8px"><button class="btn btn-sm btn-sage" onclick="saveCampaign()">Save Draft</button><button class="btn btn-sm btn-sage" onclick="saveCampaign(true)">Save &amp; Send</button><button class="btn btn-sm btn-outline" onclick="closeCampaignComposer()">Cancel</button></div>
         </div>
       </div>
     </div>
@@ -1492,6 +1513,27 @@ async function sendCampaign(campaignId,target){
   }
   loadCampaigns();
   loadLeads();
+}
+
+async function sendTestCampaign(){
+  var email=document.getElementById('campTestEmail').value.trim();
+  if(!email){showToast('Enter a test email');return}
+  var subA=document.getElementById('campSubjectA').value.trim();
+  var body=document.getElementById('campBody').value.trim();
+  if(!subA||!body){showToast('Fill in subject and body first');return}
+  var branded=emailWrapper(body);
+  try{
+    var session=await sb.auth.getSession();
+    var token=session.data.session?.access_token;
+    var r=await fetch('https://village-api.jorrelpatterson.workers.dev/email',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({to:email,subject:'[TEST] '+subA,html:branded})
+    });
+    var d=await r.json();
+    if(d.id)showToast('Test sent to '+email+'!');
+    else showToast('Error: '+(d.error||'Failed'));
+  }catch(e){showToast('Error sending test')}
 }
 </script>
 </body>
