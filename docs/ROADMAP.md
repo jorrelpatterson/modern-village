@@ -102,11 +102,11 @@
 
 Turns the app from a solo parenting tool into a real-world support network. Strongest retention mechanism possible — parents who form real friendships through the app never cancel.
 
-**Phase 1 (MVP):**
-- [ ] `village_profiles` table + opt-in flow (hidden/city/neighborhood visibility)
-- [ ] Nearby parents list view (distance-sorted, filtered by age/diagnosis/interests)
-- [ ] Events creation + RSVP + list view (6 event types, approval flow)
-- [ ] Replace Community tab with hybrid Feed/Nearby/Events sub-tabs
+**Phase 1 (MVP) — DONE 2026-04-07:**
+- [x] `village_profiles` table + opt-in flow (hidden/city/neighborhood visibility)
+- [x] Nearby parents list view (distance-sorted, filtered by age/diagnosis/interests)
+- [x] Events creation + RSVP + list view (6 event types, approval flow)
+- [x] Replace Community tab with hybrid Feed/Nearby/Events sub-tabs
 
 **Phase 2 (Enhancement):**
 - [ ] Map view (Mapbox or Google Maps) with parent/event/resource pins
