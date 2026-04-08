@@ -951,4 +951,215 @@ async function runDailyTasks(env) {
       }
     }
   } catch (e) { console.error('Sequence processing error:', e); }
+
+  // ── AUTORESEARCH: Nightly Strategy Rankings ──
+  try {
+    const startTime = Date.now();
+
+    // Fetch all behavior logs with outcomes and strategies
+    const logsRes = await fetch(supaUrl + '/rest/v1/behavior_logs?outcome=not.is.null&strategy_used=not.is.null&strategy_used=neq.&select=user_id,behavior,trigger_type,trigger_desc,strategy_used,outcome,duration_minutes,logged_at', {
+      headers: { ...headers, 'Prefer': 'count=exact' }
+    });
+    const allLogs = await logsRes.json();
+    const totalLogs = allLogs ? allLogs.length : 0;
+
+    if (totalLogs >= 5) {
+      // Fetch child profiles to get diagnosis and age
+      const childUserIds = [...new Set((allLogs || []).map(l => l.user_id))];
+      const childMap = {};
+
+      // Batch fetch children data
+      for (let i = 0; i < childUserIds.length; i += 50) {
+        const batch = childUserIds.slice(i, i + 50);
+        const childRes = await fetch(supaUrl + '/rest/v1/children?user_id=in.(' + batch.join(',') + ')&select=user_id,age,diagnosis', { headers });
+        const children = await childRes.json();
+        (children || []).forEach(c => {
+          if (!childMap[c.user_id]) childMap[c.user_id] = c;
+        });
+      }
+
+      // Compute rankings: group by diagnosis × age_range × trigger × strategy
+      const buckets = {};
+      (allLogs || []).forEach(log => {
+        const child = childMap[log.user_id];
+        if (!child) return;
+
+        // Determine diagnosis category
+        const dx = child.diagnosis && child.diagnosis.length ? child.diagnosis[0] : 'Other';
+        let dxCat = 'Other';
+        if (dx && dx.toLowerCase().includes('autism')) dxCat = 'Autism';
+        else if (dx && dx.toLowerCase().includes('adhd')) dxCat = 'ADHD';
+        else if (dx && (dx.toLowerCase().includes('autism') && dx.toLowerCase().includes('adhd'))) dxCat = 'Both';
+
+        // Determine age range
+        const age = child.age || 0;
+        let ageRange = 'unknown';
+        if (age <= 2) ageRange = '0-2';
+        else if (age <= 5) ageRange = '3-5';
+        else if (age <= 9) ageRange = '6-9';
+        else if (age <= 13) ageRange = '10-13';
+        else ageRange = '14-17';
+
+        // Trigger type (ABA function or free text)
+        let trigType = log.trigger_type || 'Unknown';
+        if (!['Tangible', 'Escape', 'Attention', 'Sensory'].includes(trigType)) trigType = 'Unknown';
+
+        const strategy = (log.strategy_used || '').trim().toLowerCase().substring(0, 100);
+        if (!strategy) return;
+
+        const key = dxCat + '|' + ageRange + '|' + trigType + '|' + strategy;
+        if (!buckets[key]) buckets[key] = { dx: dxCat, age: ageRange, trig: trigType, strat: strategy, improved: 0, no_change: 0, escalated: 0, total: 0, durations: [] };
+
+        buckets[key].total++;
+        if (log.outcome === 'improved') buckets[key].improved++;
+        else if (log.outcome === 'no_change') buckets[key].no_change++;
+        else if (log.outcome === 'escalated') buckets[key].escalated++;
+        if (log.duration_minutes) buckets[key].durations.push(log.duration_minutes);
+      });
+
+      // Convert to rankings and upsert
+      const rankings = Object.values(buckets).filter(b => b.total >= 2);
+
+      // Group by dx+age+trigger to assign ranks
+      const groups = {};
+      rankings.forEach(r => {
+        r.success_rate = Math.round((r.improved / r.total) * 10000) / 100;
+        r.avg_duration = r.durations.length ? Math.round(r.durations.reduce((a, b) => a + b, 0) / r.durations.length * 10) / 10 : null;
+        r.confidence = r.total >= 50 ? 'high' : r.total >= 10 ? 'medium' : 'low';
+        const gKey = r.dx + '|' + r.age + '|' + r.trig;
+        if (!groups[gKey]) groups[gKey] = [];
+        groups[gKey].push(r);
+      });
+
+      // Sort each group by success rate descending and assign ranks
+      let totalRankings = 0;
+      let topFinding = '';
+      let topRate = 0;
+
+      for (const gKey in groups) {
+        groups[gKey].sort((a, b) => b.success_rate - a.success_rate);
+        for (let i = 0; i < groups[gKey].length; i++) {
+          const r = groups[gKey][i];
+          r.rank = i + 1;
+
+          // Track top finding
+          if (r.success_rate > topRate && r.total >= 5) {
+            topRate = r.success_rate;
+            topFinding = r.strat + ' has ' + r.success_rate + '% success for ' + r.dx + ' ages ' + r.age + ' (' + r.trig + ' triggers, n=' + r.total + ')';
+          }
+
+          // Upsert ranking
+          await fetch(supaUrl + '/rest/v1/strategy_rankings', {
+            method: 'POST',
+            headers: { ...headers, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify({
+              diagnosis_category: r.dx,
+              age_range: r.age,
+              trigger_type: r.trig,
+              strategy: r.strat,
+              times_used: r.total,
+              times_improved: r.improved,
+              times_no_change: r.no_change,
+              times_escalated: r.escalated,
+              success_rate: r.success_rate,
+              avg_duration_minutes: r.avg_duration,
+              sample_size: r.total,
+              confidence: r.confidence,
+              rank: r.rank,
+              last_computed_at: new Date().toISOString()
+            })
+          });
+          totalRankings++;
+        }
+      }
+
+      // Log the run
+      const runDuration = Date.now() - startTime;
+      await fetch(supaUrl + '/rest/v1/strategy_ranking_runs', {
+        method: 'POST',
+        headers: { ...headers, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          total_logs_analyzed: totalLogs,
+          total_rankings_computed: totalRankings,
+          top_finding: topFinding || 'Not enough data for findings',
+          run_duration_ms: runDuration
+        })
+      });
+    }
+  } catch (e) { console.error('Strategy rankings error:', e); }
+
+  // ── AUTORESEARCH: Email Campaign Auto-Optimization ──
+  try {
+    // Find campaigns sent 48+ hours ago that haven't been auto-optimized yet
+    const cutoff = new Date();
+    cutoff.setHours(cutoff.getHours() - 48);
+
+    const campaignRes = await fetch(supaUrl + '/rest/v1/campaigns?is_sequence=eq.false&status=eq.active&created_at=lte.' + cutoff.toISOString() + '&select=id,name,subject_a,subject_b,body,target_type', { headers });
+    const campaigns = await campaignRes.json();
+
+    for (const camp of (campaigns || [])) {
+      // Check if already optimized
+      const optCheck = await fetch(supaUrl + '/rest/v1/email_optimization_logs?campaign_id=eq.' + camp.id + '&action=eq.winner_picked&select=id&limit=1', { headers });
+      const optExists = await optCheck.json();
+      if (optExists && optExists.length) continue;
+
+      // Get send stats per variant
+      const sendsRes = await fetch(supaUrl + '/rest/v1/campaign_sends?campaign_id=eq.' + camp.id + '&select=variant,status', { headers });
+      const sends = await sendsRes.json();
+      if (!sends || sends.length < 10) continue;
+
+      const statsA = { sent: 0, opened: 0 };
+      const statsB = { sent: 0, opened: 0 };
+      (sends || []).forEach(s => {
+        if (s.variant === 'a') { statsA.sent++; if (s.status === 'opened' || s.status === 'clicked') statsA.opened++; }
+        else if (s.variant === 'b') { statsB.sent++; if (s.status === 'opened' || s.status === 'clicked') statsB.opened++; }
+      });
+
+      const rateA = statsA.sent ? Math.round(statsA.opened / statsA.sent * 1000) / 10 : 0;
+      const rateB = statsB.sent ? Math.round(statsB.opened / statsB.sent * 1000) / 10 : 0;
+      const winner = rateA >= rateB ? 'a' : 'b';
+      const winningSubject = winner === 'a' ? camp.subject_a : (camp.subject_b || camp.subject_a);
+
+      // Log the winner
+      await fetch(supaUrl + '/rest/v1/email_optimization_logs', {
+        method: 'POST',
+        headers: { ...headers, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          campaign_id: camp.id,
+          action: 'winner_picked',
+          details: { winner: winner, subject_a: camp.subject_a, subject_b: camp.subject_b, open_rate_a: rateA, open_rate_b: rateB, winning_subject: winningSubject, total_sends: sends.length }
+        })
+      });
+
+      // Generate a new variant using Claude (iterate on the winner)
+      try {
+        const optimizePrompt = 'You are an email marketing optimizer for Modern Village, an ABA-powered parenting platform for neurodivergent families.\n\nA/B test results:\n- Subject A: "' + camp.subject_a + '" → ' + rateA + '% open rate (' + statsA.sent + ' sends)\n- Subject B: "' + (camp.subject_b || 'none') + '" → ' + rateB + '% open rate (' + statsB.sent + ' sends)\n\nWinner: Variant ' + winner.toUpperCase() + ' ("' + winningSubject + '")\n\nGenerate 2 new subject line variants that iterate on what worked. Keep what made the winner succeed (emotional hook, length, emoji usage, specificity) but test a new angle.\n\nRespond with ONLY a JSON object: {"subject_a": "...", "subject_b": "..."}';
+
+        const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 200, messages: [{ role: 'user', content: optimizePrompt }] })
+        });
+        const aiData = await aiRes.json();
+        const aiText = aiData.content && aiData.content[0] ? aiData.content[0].text : '';
+
+        // Parse the JSON response
+        const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const newVariants = JSON.parse(jsonMatch[0]);
+
+          // Log the new variant generation
+          await fetch(supaUrl + '/rest/v1/email_optimization_logs', {
+            method: 'POST',
+            headers: { ...headers, 'Prefer': 'return=minimal' },
+            body: JSON.stringify({
+              campaign_id: camp.id,
+              action: 'new_variant_generated',
+              details: { previous_winner: winningSubject, new_subject_a: newVariants.subject_a, new_subject_b: newVariants.subject_b }
+            })
+          });
+        }
+      } catch (aiErr) { console.error('AI optimization error:', aiErr); }
+    }
+  } catch (e) { console.error('Email optimization error:', e); }
 }
