@@ -10,7 +10,7 @@
 
 ## 1. Structure Overview
 
-Modern Village shall operate as a **dual-entity MSO/PC structure**:
+Modern Village shall operate as a **dual-entity MSO / Clinical LLC structure**:
 
 ### 1.1 Modern Village Services LLC (the "MSO")
 - **Entity type:** California LLC
@@ -24,23 +24,26 @@ Modern Village shall operate as a **dual-entity MSO/PC structure**:
   - Customer support operations and non-clinical employees
 - **Liability exposure:** Business, technology, marketing, and operational liability only. Zero clinical liability.
 
-### 1.2 Modern Village PC (the "PC")
-- **Entity type:** California Professional Corporation
-- **Owner:** Ariana Roberts, 100%
+### 1.2 Modern Village LLC (the Clinical LLC)
+- **Entity type:** California Limited Liability Company
+- **Status:** **Already formed as of [DATE] — Ariana filed the LLC**
+- **Sole Member:** Ariana Roberts, 100%
 - **Purpose:** Holds all clinical licenses, employs clinicians, provides clinical services, and bills insurance
-- **Assets owned by PC:**
+- **Assets owned by the Clinical LLC:**
   - Ariana's BCBA license and any clinical credentials
   - Patient/client records and clinical documentation
   - Clinical staff employment contracts
   - Insurance billing relationships (CPT 97156 Parent Consultation contracts)
 - **Liability exposure:** All clinical malpractice, HIPAA, and patient-related liability
 
+> **Note:** California does not currently require a Professional Corporation structure for BCBA practices. The LLC form is used with contractual ownership restrictions (members must be licensed BCBAs) to preserve clinical practice integrity.
+
 ---
 
 ## 2. Management Services Agreement (MSA)
 
-### 2.1 Services Provided by MSO to PC
-The MSO shall provide the PC with a comprehensive platform including:
+### 2.1 Services Provided by MSO to the Clinical LLC
+The MSO shall provide the Clinical LLC with a comprehensive platform including:
 - Software and technology platform
 - Marketing and lead generation
 - Billing systems and administrative support
@@ -49,13 +52,13 @@ The MSO shall provide the PC with a comprehensive platform including:
 - Training and continuing education tools
 
 ### 2.2 Management Fee
-- **Structure:** 50% of PC gross revenue, paid monthly
-- **Floor:** Minimum monthly fee of $500 regardless of PC revenue (prevents PC from freeloading)
+- **Structure:** 50% of Clinical LLC gross revenue, paid monthly
+- **Floor:** Minimum monthly fee of $500 regardless of Clinical LLC revenue (prevents the Clinical LLC from freeloading)
 - **Adjustment:** Fee may be renegotiated annually upon mutual written agreement
 
 ### 2.3 Revenue Allocation (Day-to-Day)
 - **MSO retains 100% of:** Parent subscriptions, marketplace fees from third-party providers, district contracts, grant funding, any non-clinical revenue
-- **PC retains 50% of:** Clinical session revenue after the MSA fee is paid to MSO (the other 50% flows to MSO as management fee)
+- **Clinical LLC retains 50% of:** Clinical session revenue after the MSA fee is paid to MSO (the other 50% flows to MSO as management fee)
 - **Each party draws salary/distributions from their own entity**
 
 ---
@@ -88,7 +91,7 @@ Before pooling the combined proceeds, Jorrel shall be reimbursed for:
 After Capital Recovery and investor distributions, the remaining proceeds shall be split 50/50 between Jorrel and Ariana, subject to the Vesting Schedule in Section 4.
 
 ### 3.5 Worked Example
-- Combined sale: $10,000,000 ($9M MSO + $1M PC)
+- Combined sale: $10,000,000 ($9M MSO + $1M Clinical LLC)
 - Investor holdings: 20% of MSO = $1,800,000 off the top
 - Subtotal: $8,200,000
 - Capital Recovery to Jorrel: $300,000
@@ -113,8 +116,8 @@ Ariana's share of the 50/50 pooling under Section 3.4 vests monthly over 48 mont
 
 ### 4.3 Definition of "Actively Contributing"
 Ariana is "Actively Contributing" if ALL of the following are true:
-- (a) She is employed by Modern Village PC as Chief Clinical Officer
-- (b) She is providing a minimum of 10 hours per week of services to the PC
+- (a) She is employed by Modern Village LLC (the Clinical LLC) as Chief Clinical Officer
+- (b) She is providing a minimum of 10 hours per week of services to the Clinical LLC
 - (c) She has not given notice of resignation
 - (d) She has not been terminated for Cause (defined below)
 
@@ -136,8 +139,8 @@ If Ariana ceases Actively Contributing before a Liquidity Event, her vesting loc
 **Scenario C — Fired for Cause at month 10, sale at month 24:**
 - Cause termination → forfeits ALL vested shares
 - Ariana receives **$0** from pooling
-- She keeps only her PC entity and its standalone value
-- Jorrel receives 100% of MSO proceeds + any PC proceeds from buy-sell
+- She keeps only her Clinical LLC and its standalone value
+- Jorrel receives 100% of MSO proceeds + any Clinical LLC proceeds from buy-sell
 
 ---
 
@@ -215,8 +218,8 @@ Jorrel serves as Managing Member of the MSO with unilateral authority over:
 
 ### 7.2 Reserved Matters (Require Both Parties' Consent)
 The following actions require written approval from both Jorrel and Ariana:
-- Sale of the MSO, PC, or substantially all assets of either
-- Dissolution of the MSO or PC
+- Sale of the MSO, Clinical LLC, or substantially all assets of either
+- Dissolution of the MSO or Clinical LLC
 - Taking on debt exceeding $100,000
 - Issuing new equity in the MSO to any third party
 - Amendments to this agreement
@@ -224,9 +227,9 @@ The following actions require written approval from both Jorrel and Ariana:
 - Changes to the MSA Management Fee structure
 
 ### 7.3 Ariana's Role
-Ariana serves as Chief Clinical Officer of the PC with full authority over:
+Ariana serves as Chief Clinical Officer of the Clinical LLC with full authority over:
 - Clinical service delivery and quality
-- Clinician hiring and supervision within the PC
+- Clinician hiring and supervision within the Clinical LLC
 - Clinical training and continuing education content
 - HIPAA compliance and patient records management
 
@@ -256,14 +259,14 @@ Given California's strict non-compete laws, a traditional non-compete is not enf
 
 ### 8.4 Right of First Refusal
 - **On MSO sale:** If Jorrel receives an offer to sell the MSO, Ariana has first right to match the offer within 30 days
-- **On PC sale:** If Ariana receives an offer to sell the PC, Jorrel has first right to match within 30 days
+- **On Clinical LLC sale:** If Ariana receives an offer to sell the Clinical LLC, Jorrel has first right to match within 30 days
 - These ROFRs are subject to the Drag-Along rights in Section 8.5
 
 ### 8.5 Drag-Along Rights
-If Jorrel receives a bona fide acquisition offer for the MSO exceeding $3,000,000, Ariana is contractually obligated to sell her PC at the same terms to the same buyer. This prevents sale paralysis.
+If Jorrel receives a bona fide acquisition offer for the MSO exceeding $3,000,000, Ariana is contractually obligated to sell her Clinical LLC at the same terms to the same buyer. This prevents sale paralysis.
 
 ### 8.6 Tag-Along Rights
-If Ariana receives a bona fide acquisition offer for the PC, Jorrel has the right to force the buyer to also acquire the MSO at fair market value as a condition of closing.
+If Ariana receives a bona fide acquisition offer for the Clinical LLC, Jorrel has the right to force the buyer to also acquire the MSO at fair market value as a condition of closing.
 
 ### 8.7 Buy-Sell on Death or Disability
 - **Death:** The surviving partner has the right to purchase the deceased partner's entity at a pre-agreed formula (book value + 3x trailing 12-month EBITDA) within 180 days
@@ -288,9 +291,9 @@ Any such restructuring shall not materially reduce either party's economic right
 - **Target:** $0 in Year 1 (sweat equity), scaling to market rate ($120K-$180K) as revenue allows
 
 ### 10.2 Ariana
-- **Title:** Chief Clinical Officer, PC
-- **Salary:** To be determined by Ariana from PC operating cash flow, not to exceed net PC revenue after MSA fee
-- **Clinical rates:** Ariana may draw clinical session fees through the PC for her direct client work
+- **Title:** Chief Clinical Officer, Clinical LLC
+- **Salary:** To be determined by Ariana from Clinical LLC operating cash flow, not to exceed net Clinical LLC revenue after MSA fee
+- **Clinical rates:** Ariana may draw clinical session fees through the Clinical LLC for her direct client work
 
 ---
 
@@ -303,7 +306,26 @@ Any such restructuring shall not materially reduce either party's economic right
 
 ---
 
-## 12. Effective Date and Term
+## 12. Entity Formation Status
+
+### Modern Village LLC (Clinical LLC)
+- **Status:** Already formed by Ariana Roberts
+- **Filing number:** [TO BE INSERTED — search bizfileonline.sos.ca.gov]
+- **Sole Member:** Ariana Roberts
+
+### Modern Village Services LLC (MSO)
+- **Status:** To be formed by Jorrel Patterson before Effective Date
+- **Filing target date:** [DATE]
+- **Sole Member:** Jorrel Patterson
+
+### Stripe Account Transition
+- During the 60 days following the Effective Date, parent subscription revenue may route through a separate Stripe account owned by a Jorrel-controlled entity as a pass-through
+- All transitional revenue remits to the MSO within 7 days
+- Full MSO Stripe account established within 60 days
+
+---
+
+## 13. Effective Date and Term
 
 This agreement is effective upon signature by both parties and remains in effect until:
 - (a) Mutual written termination
@@ -323,7 +345,7 @@ This agreement is effective upon signature by both parties and remains in effect
 ## Attorney Review Checklist
 
 Before signing, an attorney should review and finalize:
-- [ ] Proper LLC and PC formation documents
+- [ ] Proper LLC formation documents (both MSO and Clinical LLC)
 - [ ] Management Services Agreement (MSA) with fair market value validation
 - [ ] Pooling Agreement as a standalone enforceable contract
 - [ ] Vesting schedule and acceleration provisions
@@ -335,4 +357,4 @@ Before signing, an attorney should review and finalize:
 - [ ] Restructuring clause for future VC rounds
 - [ ] Tax implications of profits interest and Capital Recovery
 - [ ] Corporate practice of medicine compliance (CA Medical Practice Act)
-- [ ] HIPAA BAA between MSO and PC
+- [ ] HIPAA BAA between MSO and Clinical LLC

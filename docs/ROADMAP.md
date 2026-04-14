@@ -6,6 +6,12 @@
 
 ## Completed
 
+### Partnership Legal Framework (2026-04-14)
+- [x] Full term sheet drafted (`docs/legal/TERM-SHEET.md`)
+- [x] 7 draft contracts for attorney review (`docs/legal/1-7.md`)
+- [x] Structure locked: MSO/Clinical LLC dual-entity, 50/50 pooling with vesting, capital recovery, commissions
+- [x] Ariana's Modern Village LLC already filed
+
 ### Original Build (Pre-Session)
 - [x] 9 Pillars: AI Coach, Pro Sessions, Community, Strategy Library, Behavior Tracker, Progress Dashboard, Routine Builder, IEP Wizard, Resource Directory
 - [x] Adaptive AI Engine (coach learns each child's patterns across 12 dimensions)
@@ -126,6 +132,8 @@ Turns the app from a solo parenting tool into a real-world support network. Stro
 
 ### PC Billing Build — Parent Consultation Insurance Path (High Priority, Revenue)
 
+> **Note:** "PC" in this section refers to Parent Consultation (CPT 97156), not a Professional Corporation entity. The Modern Village clinical entity is an LLC (see `docs/legal/TERM-SHEET.md`).
+
 **Intel from Ariana (2026-04-07):** Modern Village sessions can be billed as **Parent Consultation (PC)** — CPT code **97156** — which is covered by multiple CA insurance plans. This is the main insurance path for the platform. Changes the pitch to parents ("may be covered by insurance") and BCBAs ("we handle your PC billing").
 
 **Confirmed payers that accept 97156 (Parent Consultation):**
@@ -203,9 +211,13 @@ Turns the app from a solo parenting tool into a real-world support network. Stro
 ## Not Started — Business Tasks
 
 ### 🔴 Revenue (do first — no code needed)
-- [ ] Form LLC → bizfileonline.sos.ca.gov
-- [ ] Get EIN → irs.gov
-- [ ] Create Stripe account with real payments ($19.99/mo + session fees)
+- [x] LLC formation: Ariana formed Modern Village LLC (clinical entity)
+- [ ] LLC formation: Jorrel to form Modern Village Services LLC (MSO/tech entity) — bizfileonline.sos.ca.gov, $70 filing fee
+- [ ] EIN for Modern Village Services LLC (free, instant online from IRS.gov)
+- [ ] Business bank account for Modern Village Services LLC
+- [ ] Healthcare attorney review of contract set (~$2-4K flat fee)
+- [ ] Sign all 7 partnership contracts with Ariana
+- [ ] Transfer Stripe account from Jorrel's existing entity to Modern Village Services LLC (within 60 days of signing)
 
 ### 🟡 Marketing
 - [ ] Post first 4 graphics on Instagram
@@ -308,7 +320,8 @@ Turns the app from a solo parenting tool into a real-world support network. Stro
 2. **Have Ariana test:** Crisis mode, voice mode, care team invites, ABA trigger buttons (Tangible/Escape/Attention/Sensory), community photo uploads, provider signup flow
 3. **Ready to launch campaigns:** 9-email drip sequences for BCBAs (15,000 leads), Districts (994 leads), Regional Centers (21 leads) — all in admin CRM
 4. **Next to build:** My Village — local community layer (nearby parents, events/meetups, resource directory). Full spec in `docs/MY-VILLAGE-SPEC.md`. This is the #1 retention feature.
-5. **Business tasks:** Form LLC, get EIN, activate Stripe real payments, OAR grant application (open now, $50K)
+5. **Business tasks:** Jorrel to form Modern Village Services LLC, get EIN, activate Stripe real payments, OAR grant application (open now, $50K)
+5a. **Partnership Contracts:** Full set of 7 draft contracts at `docs/legal/`. Ariana's LLC already formed as "Modern Village LLC". Jorrel still needs to form "Modern Village Services LLC" before signing. Attorney review needed (estimated $2K-4K flat fee). See `docs/legal/TERM-SHEET.md` for the plain-English overview.
 6. **Regional Centers:** 21 imported into CRM. Craft RC-specific email sequence. Find Family Support Services director contacts at RCOC and RCSD. Ask Ariana for RC contacts.
 7. **Dear Mom Co:** Research partnership opportunity — they got RCs to pay $495/ticket. Modern Village could be the digital companion.
 8. **Bugs cleared:** All 12 tracked bugs resolved as of 2026-04-07. Admin sidebar reorganized into 8 grouped sections.
