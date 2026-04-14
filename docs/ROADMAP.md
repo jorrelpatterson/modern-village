@@ -86,8 +86,8 @@
 |---------|-------------|----------|
 | iOS/Android Capacitor wrap | Native app shell wrapping existing HTML. Web-only Stripe payments (no in-app purchases — saves $3-6K/mo). Native plugins: push, biometrics, camera, geolocation, share, haptics, offline cache, badge count. See `docs/SUPPLEMENTARY.md` §8 for full strategy. | High |
 | Push notifications | HIPAA-safe generic text only. Daily check-in (8pm), morning routine (7am), booking reminder (24hr), streak at risk, milestone celebration, weekly digest, community reply, new strategy card. | High (requires native app) |
-| **Medical billing module** | **DONE (Phase 1): Claims tracking, payer management, superbills, billing dashboard, aging reports. NEXT (Phase 2): Clearinghouse integration (EDI 837) for electronic claim submission via Availity/Office Ally. Phase 3: ERA/EOB auto-processing, denial management automation, batch claim submission.** | **Phase 1 Done** |
-| **Admin role-based access** | **Different VA roles for admin panel: Marketing VA (leads, campaigns, social), Billing VA (claims, payers), Content VA (blog, social, moderation). Add admin_role field to profiles.** | Medium |
+| **Medical billing module** | **DONE (Phase 1): Claims tracking, payer management, superbills, billing dashboard, aging reports. NEXT (Phase 2): PC (Parent Consultation / CPT 97156) billing — the main insurance path. See "PC Billing Build" section below. Phase 3: Clearinghouse integration (EDI 837). Phase 4: ERA/EOB auto-processing, denial management automation, batch claim submission.** | **Phase 1 Done** |
+| ~~**Admin role-based access**~~ | **DONE** (2026-04-07). VA roles in admin panel: Marketing VA, Billing VA, Content VA, Super. VA Team management page with create/edit/remove. | Medium |
 | **Instagram auto-posting** | **Connect Instagram Graph API via Meta Business Suite for scheduled auto-publishing from admin panel. Requires: FB Business account + IG Professional account + Meta App Review.** | Medium |
 | Google Calendar sync | Routines → calendar events, session reminders for Ariana | Medium |
 | Booking reminders | 24hr email cron job before scheduled sessions | Medium |
@@ -123,6 +123,64 @@ Turns the app from a solo parenting tool into a real-world support network. Stro
 **New tables (8):** village_profiles, village_events, village_rsvps, village_event_comments, village_resources, village_reviews, village_messages, village_connections
 
 **Privacy:** Default hidden, approximate location only (~0.5mi), no children's names/photos in profiles, event address hidden until RSVP approved, messaging requires mutual connection, HIPAA disclaimer (non-clinical, no PHI).
+
+### PC Billing Build — Parent Consultation Insurance Path (High Priority, Revenue)
+
+**Intel from Ariana (2026-04-07):** Modern Village sessions can be billed as **Parent Consultation (PC)** — CPT code **97156** — which is covered by multiple CA insurance plans. This is the main insurance path for the platform. Changes the pitch to parents ("may be covered by insurance") and BCBAs ("we handle your PC billing").
+
+**Confirmed payers that accept 97156 (Parent Consultation):**
+- Regional Centers (all 21 CA counties)
+- CalOptima (Orange County Medi-Cal)
+- Blue Shield CA
+- Aetna
+- Cigna
+- Kaiser
+- (There may be more — Ariana listed these from personal experience)
+
+**Billing structure (critical — different from current 30/60-min sessions):**
+- Bill in **15-minute units**
+- Always **+1 unit for note taking**
+- Example: 30-minute consult = **3 units** (2 for session + 1 for notes)
+- Example: 60-minute consult = **5 units** (4 for session + 1 for notes)
+
+**Prior authorization:**
+- **Required by all payers Ariana has worked with**
+- Need a prior auth number on every claim
+- Need to track PA start/end dates per client
+- **Research task:** identify states that don't require PA for PC billing — "lean into states that don't" (per Ariana). Most states require it, but some may not.
+
+**Documentation requirements:**
+- Structured "Consultation Service Note" template (Ariana has one — TODO: get from her)
+- AI fills template from voice transcription of the session
+- Must include: parent goals, strategies taught, parent response, next steps, billable units
+
+### PC Billing Build Queue
+
+**Phase 2a — Data model (can start without Ariana's template):**
+- [ ] Seed payer database with 6 confirmed payers (Regional Centers, CalOptima, Blue Shield CA, Aetna, Cigna, Kaiser)
+- [ ] Add `prior_auth_number`, `prior_auth_start`, `prior_auth_end` fields to payer_enrollments table
+- [ ] Add `units`, `unit_rate`, `total_units` fields to claims table
+- [ ] Add `note_units` (default: 1) to session_notes table
+
+**Phase 2b — Billing UI (can start without Ariana's template):**
+- [ ] Update session booking to show units + dollar amounts (not just minutes)
+- [ ] Claim generation auto-adds +1 note unit
+- [ ] Prior authorization tracker in admin panel + provider view
+- [ ] Aging reports broken down by units
+
+**Phase 2c — Note template + transcription (blocked on Ariana's template):**
+- [ ] Get Ariana's Consultation Service Note template
+- [ ] Build template in app with structured sections
+- [ ] Add voice recording during session (Web Speech API or native Capacitor plugin)
+- [ ] AI transcription (Whisper API or equivalent)
+- [ ] AI auto-fills note template from transcription
+- [ ] Provider reviews/edits + signs before submission
+
+**Phase 2d — Research:**
+- [ ] State-by-state PC billing rules research — which states don't require prior auth
+- [ ] Target launch states based on research
+
+**Note:** Phase 2c is blocked until Ariana provides her note template. Phase 2a + 2b can start immediately.
 
 ### Phase 4
 | Feature | Description |
