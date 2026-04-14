@@ -315,20 +315,27 @@ export default {
       const code = (body.code || '').toUpperCase().trim();
       if (!code) return new Response('{"valid":false}', { headers: h });
       try {
-        const r = await fetch(env.SUPABASE_URL + '/rest/v1/promo_codes?code=eq.' + encodeURIComponent(code) + '&active=eq.true&select=code,plan,label,max_uses,times_used', {
+        const r = await fetch(env.SUPABASE_URL + '/rest/v1/promo_codes?code=eq.' + encodeURIComponent(code) + '&active=eq.true&select=code,plan,label,max_uses,times_used,expires_at', {
           headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
         });
         const codes = await r.json();
         if (codes.length && codes[0].times_used < codes[0].max_uses) {
+          // Check if the code itself is expired
+          if (codes[0].expires_at && new Date(codes[0].expires_at) < new Date()) {
+            return new Response('{"valid":false,"error":"Code expired"}', { headers: h });
+          }
           await fetch(env.SUPABASE_URL + '/rest/v1/promo_codes?code=eq.' + encodeURIComponent(code), {
             method: 'PATCH',
             headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
             body: JSON.stringify({ times_used: codes[0].times_used + 1 })
           });
+          // Set user's subscription expiration to match the code's expires_at
+          const profileUpdate = { subscription_status: 'pro', promo_code: code };
+          if (codes[0].expires_at) profileUpdate.subscription_expires_at = codes[0].expires_at;
           await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id, {
             method: 'PATCH',
             headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-            body: JSON.stringify({ subscription_status: 'pro', promo_code: code })
+            body: JSON.stringify(profileUpdate)
           });
           return new Response(JSON.stringify({ valid: true, plan: codes[0].plan, label: codes[0].label }), { headers: h });
         }
