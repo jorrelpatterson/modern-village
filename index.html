@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Modern Village — ABA-Powered Parenting Support</title>
-<meta name="description" content="AI-powered behavioral coaching for parents of children with autism. Strategy cards, certified BCBA sessions, and a parent community — all in one app.">
+<title>Modern Village — Support for Neurodivergent Families</title>
+<meta name="description" content="Support for families raising neurodivergent children. Live coaching from certified BCBAs, AI strategies 24/7, a local parent community, and everything you need in one place.">
 <meta name="theme-color" content="#7A9E7E">
 <meta name="color-scheme" content="light only">
 <meta name="supported-color-schemes" content="light only">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<meta property="og:title" content="Modern Village — ABA-Powered Parenting Support">
-<meta property="og:description" content="AI-powered behavioral strategies, certified BCBAs, and a parent community. Your child's next meltdown has a strategy.">
+<meta property="og:title" content="Modern Village — Support for Neurodivergent Families">
+<meta property="og:description" content="Support for families raising neurodivergent children. Live coaching from certified BCBAs, AI strategies 24/7, a local parent community, and everything you need in one place.">
 <meta property="og:image" content="https://modernvillage.app/og-image.png">
 <meta property="og:url" content="https://modernvillage.app">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Modern Village — ABA-Powered Parenting Support">
-<meta name="twitter:description" content="AI-powered behavioral strategies, certified BCBAs, and a parent community.">
+<meta name="twitter:title" content="Modern Village — Support for Neurodivergent Families">
+<meta name="twitter:description" content="Support for families raising neurodivergent children. Live coaching from certified BCBAs, AI strategies 24/7, a local parent community, and everything you need in one place.">
 <meta name="twitter:image" content="https://modernvillage.app/og-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet">
@@ -174,8 +174,41 @@ a{text-decoration:none;color:inherit}
 .footer-link{font-size:13px;color:var(--warm-gray);font-weight:600;cursor:pointer}.footer-link:hover{color:var(--sage)}
 .footer-disclaimer{max-width:1100px;margin:20px auto 0;padding-top:20px;border-top:1px solid var(--sand);font-size:12px;color:var(--warm-gray);line-height:1.6;text-align:center}
 
+/* FEATURES GRID */
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:56px}
+.feature-card{background:white;border-radius:22px;padding:32px;border:1px solid var(--sand);transition:all 0.3s;display:flex;flex-direction:column}
+.feature-card:hover{transform:translateY(-4px);box-shadow:0 16px 48px rgba(0,0,0,0.07);border-color:var(--sage)}
+.feature-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:26px}
+.feature-title{font-family:'Fraunces',serif;font-size:21px;font-weight:900;line-height:1.25;margin-bottom:10px;letter-spacing:-0.3px}
+.feature-desc{font-size:14px;color:var(--warm-gray);line-height:1.65;margin-bottom:16px}
+.feature-list{display:flex;flex-direction:column;gap:8px;margin-top:auto}
+.feature-list-item{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.5;color:var(--warm-gray)}
+.feature-list-item svg{flex-shrink:0;margin-top:3px}
+
+/* MY VILLAGE HERO SECTION */
+.village-section{background:linear-gradient(135deg,var(--sage-light) 0%,var(--cream) 60%,var(--blush) 100%);padding:110px 32px;position:relative;overflow:hidden}
+.village-section::before{content:'';position:absolute;top:-15%;right:-10%;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(122,158,126,0.18) 0%,transparent 70%);pointer-events:none}
+.village-section::after{content:'';position:absolute;bottom:-20%;left:-8%;width:440px;height:440px;border-radius:50%;background:radial-gradient(circle,rgba(240,213,200,0.3) 0%,transparent 70%);pointer-events:none}
+.village-inner{max-width:1100px;margin:0 auto;position:relative;z-index:1;text-align:center}
+.village-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 18px;background:white;border-radius:20px;font-size:12px;font-weight:800;color:var(--sage-dark);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:20px;box-shadow:0 4px 16px rgba(0,0,0,0.05)}
+.village-title{font-family:'Fraunces',serif;font-size:48px;font-weight:900;line-height:1.1;letter-spacing:-1.5px;margin-bottom:18px;color:var(--charcoal)}
+.village-title em{font-style:italic;font-weight:400;color:var(--sage-dark)}
+.village-sub{font-size:18px;line-height:1.7;color:var(--warm-gray);max-width:640px;margin:0 auto 48px}
+.village-features{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:48px}
+.village-feature{background:rgba(255,255,255,0.75);backdrop-filter:blur(10px);border-radius:20px;padding:28px 24px;border:1px solid rgba(255,255,255,0.8);text-align:center;transition:all 0.3s}
+.village-feature:hover{transform:translateY(-4px);background:white;box-shadow:0 16px 40px rgba(122,158,126,0.12)}
+.village-feature-icon{font-size:36px;margin-bottom:12px;display:block}
+.village-feature-title{font-family:'Fraunces',serif;font-size:19px;font-weight:800;margin-bottom:6px;color:var(--charcoal)}
+.village-feature-desc{font-size:13px;color:var(--warm-gray);line-height:1.6}
+.village-cta{display:inline-flex;align-items:center;gap:10px;padding:16px 36px;background:var(--sage);color:white;border-radius:16px;font-size:16px;font-weight:700;box-shadow:0 10px 32px rgba(122,158,126,0.35);transition:all 0.3s}
+.village-cta:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(122,158,126,0.45)}
+
 /* RESPONSIVE */
 @media(max-width:900px){
+  .features-grid{grid-template-columns:1fr}
+  .village-features{grid-template-columns:1fr}
+  .village-title{font-size:32px}
+  .village-section{padding:70px 20px}
   .hero-inner{grid-template-columns:1fr;gap:40px;text-align:center}
   .hero h1{font-size:36px}
   .hero-sub{margin:0 auto 32px}
@@ -215,12 +248,13 @@ a{text-decoration:none;color:inherit}
     <div class="nav-logo-text">Modern <span>Village</span></div>
   </div>
   <div class="nav-links">
-    <a class="nav-link" href="#how">How It Works</a>
-    <a class="nav-link" href="#ariana">Our BCBA</a>
+    <a class="nav-link" href="#features">Features</a>
+    <a class="nav-link" href="#village">My Village</a>
     <a class="nav-link" href="#pricing">Pricing</a>
     <a class="nav-link" href="#districts">For Districts</a>
     <a class="nav-link" href="/blog.html">Blog</a>
     <a class="nav-link" href="/screener.html" style="color:var(--terracotta)">Free Screening</a>
+    <a class="nav-link" href="app.html" style="color:var(--warm-gray);font-weight:600">Sign In</a>
     <a class="nav-cta" href="app.html">Get Started Free</a>
   </div>
   <button class="nav-mobile" onclick="document.querySelector('.nav-links').classList.toggle('open')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--charcoal)" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
@@ -230,17 +264,17 @@ a{text-decoration:none;color:inherit}
 <section class="hero">
   <div class="hero-inner">
     <div class="hero-content">
-      <div class="hero-badge"><div class="hero-badge-dot"></div>ABA-Powered Behavioral Support</div>
-      <h1>Your child's next meltdown has a <em>strategy.</em></h1>
-      <p class="hero-sub">Modern Village delivers instant, step-by-step behavioral strategies rooted in Applied Behavior Analysis — so you're never alone in the hard moments. AI coaching, a certified BCBA, and a parent community, all in one app.</p>
+      <div class="hero-badge"><div class="hero-badge-dot"></div>Support for Neurodivergent Families</div>
+      <h1>You're not raising them <em>alone anymore.</em></h1>
+      <p class="hero-sub">Connect with certified behavior analysts, find parents nearby, and get instant ABA strategies — even at 3am. Modern Village is the support system neurodivergent families have been missing.</p>
       <div class="hero-ctas">
         <a class="hero-cta-primary" href="app.html">Get Started Free <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
-        <a class="hero-cta-secondary" href="#how">See How It Works</a>
+        <a class="hero-cta-secondary" href="#features">See What's Inside</a>
       </div>
       <div class="hero-proof">
-        <div class="hero-proof-item"><div class="hero-proof-num">24/7</div><div class="hero-proof-label">AI Coach Access</div></div>
-        <div class="hero-proof-item"><div class="hero-proof-num">BCBA</div><div class="hero-proof-label">Clinical Oversight</div></div>
-        <div class="hero-proof-item"><div class="hero-proof-num">Free</div><div class="hero-proof-label">Parent Community</div></div>
+        <div class="hero-proof-item"><div class="hero-proof-num">Live</div><div class="hero-proof-label">Certified Providers</div></div>
+        <div class="hero-proof-item"><div class="hero-proof-num">24/7</div><div class="hero-proof-label">AI Coach Backup</div></div>
+        <div class="hero-proof-item"><div class="hero-proof-num">Local</div><div class="hero-proof-label">Parent Community</div></div>
       </div>
     </div>
     <div class="hero-visual">
@@ -267,7 +301,7 @@ a{text-decoration:none;color:inherit}
   <div class="section-inner section-center">
     <div class="section-label">The Problem</div>
     <h2 class="section-title">Families are navigating alone.</h2>
-    <p class="section-sub">Parents of children with autism face behavioral challenges every day — but support is months away, impossibly expensive, or nonexistent.</p>
+    <p class="section-sub">Families raising neurodivergent children — autism, ADHD, learning differences, sensory processing, anxiety — face behavioral challenges every day. But support is months away, impossibly expensive, or nonexistent.</p>
     <div class="problem-grid">
       <div class="problem-card">
         <div class="problem-icon" style="background:var(--terracotta-light)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--terracotta)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
@@ -277,9 +311,9 @@ a{text-decoration:none;color:inherit}
       </div>
       <div class="problem-card">
         <div class="problem-icon" style="background:var(--sky)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--sky-dark)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>
-        <div class="problem-stat">1 in 36</div>
-        <div class="problem-title">Children Have Autism</div>
-        <div class="problem-desc">CDC data shows growing prevalence, but services haven't scaled to match.</div>
+        <div class="problem-stat">1 in 6</div>
+        <div class="problem-title">Children Are Neurodivergent</div>
+        <div class="problem-desc">Autism, ADHD, learning differences, and more. Services haven't scaled to meet the need.</div>
       </div>
       <div class="problem-card">
         <div class="problem-icon" style="background:var(--lavender)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B6FA0" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
@@ -291,88 +325,142 @@ a{text-decoration:none;color:inherit}
   </div>
 </section>
 
-<!-- HOW IT WORKS / PILLARS -->
-<section class="section" id="how">
-  <div class="section-inner">
-    <div class="section-label">How It Works</div>
-    <h2 class="section-title">Three pillars. One village.</h2>
-    <p class="section-sub">Everything a parent needs to navigate behavioral challenges — instant guidance, professional support, and community.</p>
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="section-inner section-center">
+    <div class="section-label">What's Inside</div>
+    <h2 class="section-title">Everything your family needs.</h2>
+    <p class="section-sub">Live coaching from real people. AI support when humans aren't available. A local village of families who get it. All in one place.</p>
 
-    <div class="pillars-grid">
-      <!-- Pillar 1 -->
-      <div class="pillar">
-        <div class="pillar-content">
-          <div class="pillar-num" style="background:var(--sage)">1</div>
-          <h3 class="pillar-title">AI Coach</h3>
-          <p class="pillar-desc">Describe what's happening and get instant, structured ABA strategy cards — step-by-step guidance with exact scripts you can say out loud. Personalized to your child's age and needs.</p>
-          <div class="pillar-features">
-            <div class="pillar-feature"><div class="pillar-check" style="background:var(--sage-light)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>Step-by-step strategy cards with parent scripts</div>
-            <div class="pillar-feature"><div class="pillar-check" style="background:var(--sage-light)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>Adapts to your child's age and diagnosis</div>
-            <div class="pillar-feature"><div class="pillar-check" style="background:var(--sage-light)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>Available 24/7 — even at 3am</div>
-            <div class="pillar-feature"><div class="pillar-check" style="background:var(--sage-light)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>BCBA-reviewed for clinical accuracy</div>
-          </div>
-        </div>
-        <div class="pillar-visual">
-          <div class="pillar-visual-inner" style="background:linear-gradient(135deg,var(--sage-light),rgba(232,240,232,0.5))">
-            <div style="background:white;border-radius:16px;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,0.06);animation:cardFloat2 5s ease-in-out infinite">
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--sage-dark);margin-bottom:8px">Try This Now</div>
-              <div style="font-family:'Fraunces',serif;font-size:16px;font-weight:800;margin-bottom:12px">Step-by-Step Strategy</div>
-              <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px"><div style="width:24px;height:24px;border-radius:7px;background:var(--sage);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">1</div><div style="font-size:13px;line-height:1.5"><strong>Acknowledge first:</strong> "I see you're really upset."</div></div>
-              <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px"><div style="width:24px;height:24px;border-radius:7px;background:var(--sage);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">2</div><div style="font-size:13px;line-height:1.5"><strong>Offer a choice:</strong> "Do you want a hug or space?"</div></div>
-              <div style="display:flex;gap:8px;align-items:flex-start"><div style="width:24px;height:24px;border-radius:7px;background:var(--sage);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">3</div><div style="font-size:13px;line-height:1.5"><strong>Reinforce calm:</strong> "You calmed down! That's amazing."</div></div>
-            </div>
-          </div>
+    <div class="features-grid">
+      <!-- 1. Live Coaching -->
+      <div class="feature-card">
+        <div class="feature-icon" style="background:var(--sage-light)">&#128172;</div>
+        <h3 class="feature-title">Live Coaching from Certified Providers</h3>
+        <p class="feature-desc">Browse certified providers — BCBAs, OTs, SLPs, psychologists, and education specialists. Book the person who fits your family.</p>
+        <div class="feature-list">
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>30-min check-ins ($55) or 60-min sessions ($95)</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Insurance billing available (Parent Consultation contracts)</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Autism, ADHD, sensory, early intervention</div>
         </div>
       </div>
 
-      <!-- Pillar 2 -->
-      <div class="pillar" id="ariana">
-        <div class="pillar-content">
-          <div class="pillar-num" style="background:var(--lavender);color:var(--charcoal)">2</div>
-          <h3 class="pillar-title">Certified BCBA Sessions</h3>
-          <p class="pillar-desc">When you need deeper, individualized support, book a virtual session with a board certified behavior analyst. They'll help you build behavior plans, review progress, and tackle your toughest challenges.</p>
-          <div class="pillar-features">
-            <div class="pillar-feature"><div class="pillar-check" style="background:var(--lavender)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7B6FA0" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>30-min check-ins ($55) or 60-min sessions ($95)</div>
-            <div class="pillar-feature"><div class="pillar-check" style="background:var(--lavender)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7B6FA0" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>Board Certified Behavior Analyst</div>
-            <div class="pillar-feature"><div class="pillar-check" style="background:var(--lavender)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7B6FA0" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>Specializes in autism & early intervention</div>
-            <div class="pillar-feature"><div class="pillar-check" style="background:var(--lavender)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7B6FA0" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>Insurance billing coming soon (CA SB 946)</div>
-          </div>
-        </div>
-        <div class="pillar-visual">
-          <div class="pillar-visual-inner" style="background:linear-gradient(135deg,var(--lavender),rgba(212,200,232,0.3))">
-            <div style="text-align:center">
-              <div style="width:100px;height:100px;border-radius:28px;background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;margin:0 auto 16px;box-shadow:0 8px 32px rgba(0,0,0,0.06)">AR</div>
-              <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:800">Your BCBA</div>
-              <div style="font-size:14px;color:var(--warm-gray);margin-top:4px">Board Certified Behavior Analyst</div>
-              <div style="display:flex;gap:12px;justify-content:center;margin-top:16px">
-                <div style="padding:8px 16px;background:rgba(255,255,255,0.6);border-radius:10px;font-size:13px;font-weight:700;color:var(--sage-dark)">200+ families</div>
-                <div style="padding:8px 16px;background:rgba(255,255,255,0.6);border-radius:10px;font-size:13px;font-weight:700;color:var(--sage-dark)">8 yrs experience</div>
-              </div>
-            </div>
-          </div>
+      <!-- 2. AI Coach -->
+      <div class="feature-card">
+        <div class="feature-icon" style="background:var(--blush)">&#127769;</div>
+        <h3 class="feature-title">AI Coach — Your 3am Backup</h3>
+        <p class="feature-desc">When the provider is asleep and you're not, the AI Coach is there. Step-by-step strategies and parent scripts — instantly.</p>
+        <div class="feature-list">
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>ABA strategy cards with exact parent scripts</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Learns your child from logged behaviors</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Recommends what works for similar families</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Available 24/7. BCBA-reviewed for accuracy.</div>
         </div>
       </div>
 
-      <!-- Pillar 3 -->
-      <div class="pillar">
-        <div class="pillar-content">
-          <div class="pillar-num" style="background:var(--blush);color:var(--charcoal)">3</div>
-          <h3 class="pillar-title">Parent Community</h3>
-          <p class="pillar-desc">You're not alone. Connect with hundreds of parents who understand what you're going through. Share wins, ask questions, swap strategies, and find your village.</p>
-          <div class="pillar-features">
-            <div class="pillar-feature"><div class="pillar-check" style="background:var(--terracotta-light)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--terracotta)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>Always free — community never has a paywall</div>
-            <div class="pillar-feature"><div class="pillar-check" style="background:var(--terracotta-light)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--terracotta)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>Topics: wins, advice, tips, encouragement</div>
-            <div class="pillar-feature"><div class="pillar-check" style="background:var(--terracotta-light)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--terracotta)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>Moderated for safety and support</div>
-          </div>
+      <!-- 3. My Village -->
+      <div class="feature-card" style="background:linear-gradient(135deg,var(--sage-light),rgba(232,240,232,0.3));border-color:var(--sage)">
+        <div class="feature-icon" style="background:white">&#127968;</div>
+        <h3 class="feature-title">My Village — Find Families Near You</h3>
+        <p class="feature-desc">The layer no other app has. Connect with neurodivergent families in your actual neighborhood.</p>
+        <div class="feature-list">
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Nearby parents, playdates, support groups</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Local resources: sensory-friendly venues, respite care</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Privacy-first — you control what's shared</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>In-app messaging with mutual connections</div>
         </div>
-        <div class="pillar-visual">
-          <div class="pillar-visual-inner" style="background:linear-gradient(135deg,var(--blush),rgba(240,213,200,0.3))">
-            <div style="display:flex;flex-direction:column;gap:12px">
-              <div style="background:rgba(255,255,255,0.7);border-radius:14px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,0.04)"><div style="font-weight:700;font-size:13px">MamaOf3</div><div style="font-size:12px;color:var(--warm-gray);margin-top:4px">Win today! My 5yo used his words instead of hitting. We've been working on this for MONTHS.</div><div style="margin-top:8px;font-size:11px;color:var(--terracotta);font-weight:600">&#10084; 47</div></div>
-              <div style="background:rgba(255,255,255,0.7);border-radius:14px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,0.04)"><div style="font-weight:700;font-size:13px">SingleDadWins</div><div style="font-size:12px;color:var(--warm-gray);margin-top:4px">Normalizing asking for help. Booked my first session with Ariana. Best decision I've made as a parent.</div><div style="margin-top:8px;font-size:11px;color:var(--terracotta);font-weight:600">&#10084; 201</div></div>
-            </div>
-          </div>
+      </div>
+
+      <!-- 4. Behavior Tracker -->
+      <div class="feature-card">
+        <div class="feature-icon" style="background:var(--sky)">&#128202;</div>
+        <h3 class="feature-title">Behavior Tracker with Pattern Detection</h3>
+        <p class="feature-desc">Log behaviors in seconds. Let the app find the patterns — peak times, triggers, and what actually works.</p>
+        <div class="feature-list">
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>ABA function tags: Tangible, Escape, Attention, Sensory</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>AI spots patterns and trigger windows</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Progress dashboard to see improvement over time</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Share with your child's care team</div>
         </div>
+      </div>
+
+      <!-- 5. IEP Toolkit -->
+      <div class="feature-card">
+        <div class="feature-icon" style="background:var(--lavender)">&#128218;</div>
+        <h3 class="feature-title">IEP Toolkit</h3>
+        <p class="feature-desc">Upload your child's IEP and find the gaps. Understand what every term means. Advocate with confidence.</p>
+        <div class="feature-list">
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>AI finds missing services and gaps</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>IEP terms translated in plain language (7 languages)</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>One-click formal parent letters</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>IDEA-compliant advocacy tools</div>
+        </div>
+      </div>
+
+      <!-- 6. Care Team -->
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(232,200,74,0.2)">&#129309;</div>
+        <h3 class="feature-title">Care Team Coordination</h3>
+        <p class="feature-desc">Bring co-parents, caregivers, teachers, and providers into one place. Everyone stays on the same page.</p>
+        <div class="feature-list">
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Invite anyone who supports your child</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Shared notes and updates between everyone</div>
+          <div class="feature-list-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--sage-dark)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Crisis Mode: 6-step de-escalation when you need it</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MY VILLAGE HERO SECTION -->
+<section class="village-section" id="village">
+  <div class="village-inner">
+    <div class="village-badge">&#127968; The Differentiator</div>
+    <h1 class="village-title">Your village is <em>closer than you think.</em></h1>
+    <p class="village-sub">Find neurodivergent families in your neighborhood. Organize local meetups. Build real friendships with parents who get it — the kind of community that can't exist in a Facebook group.</p>
+    <div class="village-features">
+      <div class="village-feature">
+        <span class="village-feature-icon">&#128106;</span>
+        <div class="village-feature-title">Nearby Parents</div>
+        <div class="village-feature-desc">Connect with neurodivergent families right in your neighborhood. Privacy-first and opt-in.</div>
+      </div>
+      <div class="village-feature">
+        <span class="village-feature-icon">&#127880;</span>
+        <div class="village-feature-title">Local Events</div>
+        <div class="village-feature-desc">Playdates, support groups, sensory-friendly outings — organized by parents like you.</div>
+      </div>
+      <div class="village-feature">
+        <span class="village-feature-icon">&#128205;</span>
+        <div class="village-feature-title">Neighborhood Resources</div>
+        <div class="village-feature-desc">Find sensory-friendly venues, respite care, and trusted local providers.</div>
+      </div>
+    </div>
+    <a class="village-cta" href="app.html">Find Your Village <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+  </div>
+</section>
+
+<!-- FOUNDING BCBA -->
+<section class="section ariana-section" id="ariana">
+  <div class="section-inner section-center">
+    <div class="section-label">Clinical Leadership</div>
+    <h2 class="section-title">Meet our founding BCBA.</h2>
+    <p class="section-sub">Every strategy on Modern Village is clinically grounded. Our founding BCBA leads the provider marketplace — and it's growing every month.</p>
+    <div class="ariana-card">
+      <div class="ariana-avatar">AR</div>
+      <div>
+        <div class="ariana-name">Ariana</div>
+        <div class="ariana-creds">
+          <span class="ariana-cred">BCBA</span>
+          <span class="ariana-cred">M.Ed.</span>
+          <span class="ariana-cred">Founding Clinician</span>
+        </div>
+        <p class="ariana-bio">Ariana leads clinical oversight for Modern Village. She reviews AI strategy output for accuracy, supports families directly through live sessions, and helps onboard new certified providers — BCBAs, OTs, SLPs, and psychologists — to the Modern Village marketplace.</p>
+        <div class="ariana-stats">
+          <div class="ariana-stat"><div class="ariana-stat-val">200+</div><div class="ariana-stat-label">Families Served</div></div>
+          <div class="ariana-stat"><div class="ariana-stat-val">8 yrs</div><div class="ariana-stat-label">Experience</div></div>
+          <div class="ariana-stat"><div class="ariana-stat-val">Growing</div><div class="ariana-stat-label">Provider Roster</div></div>
+        </div>
+        <div style="margin-top:24px"><a class="hero-cta-primary" href="app.html" style="font-size:15px;padding:14px 28px">Browse All Providers <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a></div>
       </div>
     </div>
   </div>
@@ -392,7 +480,7 @@ a{text-decoration:none;color:inherit}
         <div class="price-features">
           <div class="price-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Parent community access</div>
           <div class="price-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>3 AI Coach messages/month</div>
-          <div class="price-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Book sessions with Ariana</div>
+          <div class="price-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Browse certified providers</div>
         </div>
         <a class="price-btn price-btn-secondary" href="app.html">Get Started</a>
       </div>
@@ -416,7 +504,7 @@ a{text-decoration:none;color:inherit}
         <div class="price-features">
           <div class="price-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>30-min check-in ($55)</div>
           <div class="price-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>60-min full session ($95)</div>
-          <div class="price-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Insurance billing coming soon</div>
+          <div class="price-feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Insurance billing available (CA SB 946 Parent Consultation)</div>
         </div>
         <a class="price-btn price-btn-secondary" href="app.html">Book a Session</a>
       </div>
