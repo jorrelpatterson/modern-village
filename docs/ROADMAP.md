@@ -190,6 +190,35 @@ Turns the app from a solo parenting tool into a real-world support network. Stro
 
 **Note:** Phase 2c is blocked until Ariana provides her note template. Phase 2a + 2b can start immediately.
 
+### Subscription Tiers (Deferred Decision)
+
+**Current state (2026-04-14):**
+- **Family Plan — $19.99/mo** — shared across co-parents via child_access. One parent pays, all co-parents with `access_level='full'` inherit Pro status. Handled in `loadProfile()`.
+- Free Plan — 3 AI coach messages total, community access always free.
+
+**Deferred: Second paid tier at $29.99/mo.** Decision made 2026-04-14 to NOT build a second tier yet. Architecture supports adding one later. Options to consider when tester feedback informs the decision:
+
+- **Family Plus ($29.99)** — session discounts (20% off), priority support, premium strategy library, early feature access
+- **Household ($29.99)** — unlimited children (vs 2-3 cap on Family)
+- **Care Team Plus ($29.99)** — unlimited caregivers/teachers, advanced coordination, Annual Village Report PDF
+- **Concierge ($29.99)** — 1 free 30-min BCBA consult/month, 24hr direct BCBA messaging, weekly BCBA-reviewed reports, priority crisis response — STRONGEST value prop per initial analysis
+
+**Architecture notes for when we build it:**
+- Add `subscription_tier` column to profiles ('family', 'household', 'concierge', etc.)
+- Stripe: create second product/price in dashboard
+- `loadProfile()` will need to return tier so features can gate on it
+- Paywall UI needs to show both tiers side-by-side
+- If Concierge: needs BCBA consult tracking (how many used this month) + priority queue in scheduling
+- Co-parent inheritance: higher tier grants higher access to all co-parents (one pays, all inherit)
+
+**When to revisit:** After tester cohort provides feedback on what feels "worth more." Specifically, ask:
+- Do you wish you had a monthly BCBA check-in built in?
+- Do you need more children tracked?
+- Do you need faster support?
+- Do you want more advanced reports?
+
+Decision = whichever answer has the most "yes" votes from testers.
+
 ### Phase 4
 | Feature | Description |
 |---------|-------------|
