@@ -378,6 +378,8 @@
         <select id="leadStatusFilter" onchange="loadLeads()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px"><option value="">All Status</option><option value="not_contacted">Not Contacted</option><option value="emailed">Emailed</option><option value="responded">Responded</option><option value="meeting">Meeting</option><option value="converted">Converted</option><option value="dead">Dead</option></select>
         <input id="leadSearch" placeholder="Search name, org, city..." oninput="loadLeads()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px;flex:1;min-width:150px">
         <button onclick="exportLeads()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--sage);background:white;color:var(--sage-dark);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600">Export CSV</button>
+        <input type="file" id="leadImportFile" accept=".csv" style="display:none" onchange="handleLeadImport(this)">
+        <button onclick="document.getElementById(\x27leadImportFile\x27).click()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--sage);background:var(--sage);color:white;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600">Upload CSV</button>
       </div>
       <div class="panel"><div class="panel-hdr"><div class="panel-title">Leads</div><span id="leadResultCount" style="font-size:12px;color:var(--warm-gray-light)"></span></div><div class="panel-body"><table class="tbl"><thead><tr><th>Name</th><th>Organization</th><th>Type</th><th>City</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody id="leadBody"></tbody></table></div></div>
 
@@ -1535,6 +1537,117 @@ function exportLeads(){
   a.href=URL.createObjectURL(blob);
   a.download='leads-'+new Date().toISOString().split('T')[0]+'.csv';
   a.click();
+}
+
+// ═══ CSV IMPORT ═══
+async function handleLeadImport(input){
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  var reader=new FileReader();
+  reader.onload=async function(e){
+    var csv=e.target.result;
+    var parsed=parseCSV(csv);
+    if(!parsed.length){alert('CSV appears to be empty');return}
+
+    var typePrompt='What type of leads are these? (district, provider, selpa, regional_center, grant, pediatrician)';
+    var leadType=prompt(typePrompt,'provider');
+    if(!leadType)return;
+
+    var sourcePrompt='Source name (e.g. "BACB Registry CA", "NPI Registry", etc.)';
+    var source=prompt(sourcePrompt,'BACB Registry');
+    if(!source)return;
+
+    if(!confirm('Import '+parsed.length+' leads as "'+leadType+'" from "'+source+'"?'))return;
+
+    var mapped=parsed.map(function(row){
+      var nameVal=row.Name||row.name||row['Full Name']||row.full_name||'';
+      var emailVal=row.Email||row.email||'';
+      var phoneVal=row.Phone||row.phone||'';
+      var orgVal=row.Organization||row.organization||row.Company||row.company||'';
+      var cityVal=row.City||row.city||'';
+      var stateVal=row.State||row.state||'';
+      var zipVal=row.Zip||row.zip||row.ZIP||'';
+      var addressVal=row.Address||row.address||'';
+      var credVal=row.Credential||row.credential||row['Certification Type']||row.certType||'';
+      var notesVal='';
+      if(row['Certification Number']||row.certNumber)notesVal+='Cert #: '+(row['Certification Number']||row.certNumber)+' ';
+      if(row.Expiration||row.expiration)notesVal+='Exp: '+(row.Expiration||row.expiration);
+
+      return {
+        source: source,
+        lead_type: leadType,
+        name: nameVal||null,
+        email: emailVal||null,
+        phone: phoneVal||null,
+        organization: orgVal||null,
+        city: cityVal||null,
+        state: stateVal||null,
+        zip: zipVal||null,
+        address: addressVal||null,
+        credential: credVal||null,
+        notes: notesVal.trim()||null,
+        raw_data: row,
+        status: 'new',
+        outreach_status: 'not_contacted'
+      };
+    });
+
+    var inserted=0;
+    for(var i=0;i<mapped.length;i+=100){
+      var batch=mapped.slice(i,i+100);
+      try{
+        var r=await sb.from('leads').insert(batch);
+        if(r.error){console.error('Batch insert error:',r.error);}
+        else inserted+=batch.length;
+      }catch(e){console.error('Import batch error:',e);}
+    }
+
+    alert('Imported '+inserted+' of '+mapped.length+' leads!');
+    loadLeads();
+  };
+  reader.readAsText(file);
+  input.value='';
+}
+
+function parseCSV(text){
+  var lines=text.split(/\r?\n/).filter(function(l){return l.trim()});
+  if(lines.length<2)return [];
+  var headers=parseCSVLine(lines[0]);
+  var rows=[];
+  for(var i=1;i<lines.length;i++){
+    var values=parseCSVLine(lines[i]);
+    if(values.length===0)continue;
+    var row={};
+    for(var j=0;j<headers.length;j++){
+      row[headers[j]]=(values[j]||'').trim();
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+function parseCSVLine(line){
+  var result=[];
+  var current='';
+  var inQuotes=false;
+  for(var i=0;i<line.length;i++){
+    var ch=line[i];
+    if(ch==='"'){
+      if(inQuotes&&line[i+1]==='"'){
+        current+='"';
+        i++;
+      }else{
+        inQuotes=!inQuotes;
+      }
+    }else if(ch===','&&!inQuotes){
+      result.push(current);
+      current='';
+    }else{
+      current+=ch;
+    }
+  }
+  result.push(current);
+  return result;
 }
 
 // ═══ MARKETING METRICS ═══
