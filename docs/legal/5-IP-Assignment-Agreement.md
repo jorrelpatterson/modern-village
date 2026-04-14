@@ -39,7 +39,7 @@ NOW, THEREFORE, for good and valuable consideration, the receipt and sufficiency
 
 - **"Assignor"** means Jorrel Patterson, individually.
 - **"Assignee"** means Modern Village Services LLC, a California limited liability company.
-- **"Effective Date"** means the date first written above.
+- **"Effective Date"** means the date on which this Agreement is effective upon execution by all parties whose signature is required below.
 - **"Transferred IP"** has the meaning set forth in Section 2.1.
 
 ---

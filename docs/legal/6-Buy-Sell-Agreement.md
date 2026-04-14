@@ -14,7 +14,7 @@ Last revised: 2026-04-14
 **Jorrel Patterson** ("Jorrel"),
 **Ariana Roberts** ("Ariana"),
 **Modern Village Services LLC** (the "MSO"), and
-**Modern Village PC** (the "PC")
+**Modern Village LLC** (the "Clinical LLC")
 
 **Effective Date:** [DATE]
 
@@ -22,11 +22,11 @@ Last revised: 2026-04-14
 
 ## RECITALS
 
-WHEREAS, Jorrel owns one hundred percent (100%) of the membership interests of the MSO and Ariana owns one hundred percent (100%) of the shares of the PC;
+WHEREAS, Jorrel owns one hundred percent (100%) of the membership interests of the MSO and Ariana is the sole member of the Clinical LLC, holding one hundred percent (100%) of the Clinical LLC's membership interest;
 
-WHEREAS, the MSO and the PC operate as a coordinated dual-entity structure pursuant to the Management Services Agreement and Pooling Agreement among the parties;
+WHEREAS, the MSO and the Clinical LLC operate as a coordinated dual-entity structure pursuant to the Management Services Agreement and Pooling Agreement among the parties;
 
-WHEREAS, the parties desire to establish orderly procedures for the purchase and sale of the MSO interests and PC shares upon the occurrence of certain triggering events — including death, disability, divorce, voluntary departure, and other events — in order to protect each party from unintended ownership changes and to preserve the continuity of the business; and
+WHEREAS, the parties desire to establish orderly procedures for the purchase and sale of the MSO membership interest and the Clinical LLC membership interest upon the occurrence of certain triggering events — including death, disability, divorce, voluntary departure, and other events — in order to protect each party from unintended ownership changes and to preserve the continuity of the business; and
 
 WHEREAS, the parties intend to fund the buy-out obligations in part through life insurance and structured payments.
 
@@ -39,13 +39,13 @@ NOW, THEREFORE, in consideration of the mutual covenants set forth herein, the p
 **1.1 Defined Terms.**
 
 - **"Affected Owner"** means the owner (Jorrel or Ariana) to whom a Triggering Event relates.
-- **"Affected Interest"** means (i) in the case of Jorrel, his membership interest in the MSO, and (ii) in the case of Ariana, her shares of the PC.
+- **"Affected Interest"** means (i) in the case of Jorrel, his membership interest in the MSO, and (ii) in the case of Ariana, her membership interest in the Clinical LLC.
 - **"Closing"** has the meaning set forth in Section 6.
 - **"Continuing Owner"** means the owner (Jorrel or Ariana) who is not the Affected Owner.
 - **"Disability"** has the meaning set forth in Section 4.3.
 - **"EBITDA"** means earnings before interest, taxes, depreciation, and amortization, determined in accordance with Section 5.
-- **"Effective Date"** means the date first written above.
-- **"Entity"** means the entity whose equity is subject to the Triggering Event (i.e., the MSO for Jorrel's interest or the PC for Ariana's shares).
+- **"Effective Date"** means the date on which this Agreement is effective upon execution by all parties whose signature is required below.
+- **"Entity"** means the entity whose equity is subject to the Triggering Event (i.e., the MSO for Jorrel's interest or the Clinical LLC for Ariana's membership interest).
 - **"Purchase Price"** has the meaning set forth in Section 5.1.
 - **"Triggering Event"** has the meaning set forth in Section 2.
 
@@ -61,11 +61,11 @@ NOW, THEREFORE, in consideration of the mutual covenants set forth herein, the p
 
 (c) **Divorce.** The entry of a final judgment or decree of divorce (or legal separation) that awards to a non-owner spouse any community property interest in the Affected Interest.
 
-(d) **Voluntary Departure.** The voluntary resignation or withdrawal of either Jorrel (from active management of the MSO) or Ariana (from active service as Chief Clinical Officer of the PC).
+(d) **Voluntary Departure.** The voluntary resignation or withdrawal of either Jorrel (from active management of the MSO) or Ariana (from active service as Chief Clinical Officer and Sole Manager of the Clinical LLC).
 
 (e) **Bankruptcy or Insolvency.** The filing of a voluntary or involuntary petition in bankruptcy by or against either Jorrel or Ariana, any general assignment for the benefit of creditors, or the attachment, levy, or judicial sale of the Affected Interest.
 
-(f) **Attempted Unauthorized Transfer.** Any attempted transfer, pledge, or encumbrance of the Affected Interest that is not permitted by this Agreement, the MSO Operating Agreement, or the PC Shareholder Agreement.
+(f) **Attempted Unauthorized Transfer.** Any attempted transfer, pledge, or encumbrance of the Affected Interest that is not permitted by this Agreement, the MSO Operating Agreement, or the Clinical LLC Operating Agreement.
 
 **2.2 Notice of Triggering Event.** The Affected Owner (or her or his legal representative, estate, or spouse, as applicable) shall give written notice of the Triggering Event to the Continuing Owner and to the Entity within thirty (30) days after the occurrence of such event.
 
@@ -75,7 +75,7 @@ NOW, THEREFORE, in consideration of the mutual covenants set forth herein, the p
 
 **3.1 Primary Structure: Cross-Purchase.** Upon a Triggering Event, the Continuing Owner shall have the right (and, in the case of death or Disability, the obligation) to purchase the Affected Interest from the Affected Owner (or his/her estate, spouse, or representative) at the Purchase Price determined under Section 5.
 
-**3.2 Alternative: Entity Redemption.** If cross-purchase is not feasible due to cash constraints, legal restrictions, or other reasons reasonably determined by the Continuing Owner, the Entity itself may redeem the Affected Interest at the Purchase Price. In the case of the PC, any entity redemption must comply with California professional corporation rules.
+**3.2 Alternative: Entity Redemption.** If cross-purchase is not feasible due to cash constraints, legal restrictions, or other reasons reasonably determined by the Continuing Owner, the Entity itself may redeem the Affected Interest at the Purchase Price. In the case of the Clinical LLC, any entity redemption must comply with the California Revised Uniform Limited Liability Company Act and the Clinical LLC Operating Agreement.
 
 **3.3 Rights vs. Obligations by Event Type.**
 
@@ -91,7 +91,7 @@ NOW, THEREFORE, in consideration of the mutual covenants set forth herein, the p
 
 (f) **Attempted Unauthorized Transfer.** The purported transferee shall acquire no rights; the Continuing Owner has the right to purchase the Affected Interest at the Purchase Price.
 
-**3.4 Compliance with Professional Corporation Rules.** Any purchase of PC shares must be made only by a Licensed Person permitted to own shares in a California professional corporation practicing behavior analysis. If Jorrel (as Continuing Owner) is not a Licensed Person, the PC shall redeem the shares or Jorrel shall designate a qualified purchaser acceptable to Ariana or her estate.
+**3.4 Compliance with Clinical Ownership Restrictions.** Although the Clinical LLC is a standard California limited liability company and not a professional corporation, the parties have elected in the Clinical LLC Operating Agreement to restrict the membership interest to a duly licensed BCBA (or similarly qualified clinician) in order to preserve clinical integrity. Accordingly, any purchase of the Clinical LLC membership interest must be made only by a Licensed Person qualified under the Clinical LLC Operating Agreement. If Jorrel (as Continuing Owner) is not a Licensed Person, the Clinical LLC shall redeem the membership interest or Jorrel shall designate a qualified purchaser acceptable to Ariana or her estate.
 
 ---
 
@@ -165,7 +165,7 @@ multiplied by the Affected Owner's percentage ownership in the Entity as of the 
 
 (f) **Security:** the promissory note shall be secured by the Affected Interest (held in escrow or subject to a lien) until fully paid.
 
-**6.4 Transfer Documents.** At Closing, the Affected Owner (or representative) shall deliver duly executed transfer documents (assignment, stock power, or equivalent), along with all certificates, keys, and records related to the Affected Interest.
+**6.4 Transfer Documents.** At Closing, the Affected Owner (or representative) shall deliver duly executed transfer documents (assignment of membership interest, membership certificate surrender, or equivalent), along with all certificates or capital account records, keys, and records related to the Affected Interest.
 
 **6.5 Releases.** At Closing, the parties shall exchange mutual releases of claims arising under this Agreement with respect to the Affected Interest, other than post-closing obligations under the promissory note.
 
@@ -205,9 +205,9 @@ multiplied by the Affected Owner's percentage ownership in the Entity as of the 
 
 ## ARTICLE 9 — TRANSFER RESTRICTIONS
 
-**9.1 No Transfers Outside This Agreement.** No Affected Interest may be transferred except in accordance with this Agreement, the MSO Operating Agreement, and the PC Shareholder Agreement, and any attempted transfer in violation of these agreements shall be null and void.
+**9.1 No Transfers Outside This Agreement.** No Affected Interest may be transferred except in accordance with this Agreement, the MSO Operating Agreement, and the Clinical LLC Operating Agreement, and any attempted transfer in violation of these agreements shall be null and void.
 
-**9.2 Right of First Refusal on Voluntary Sales.** If either Jorrel or Ariana receives a bona fide offer to purchase all or part of the Affected Interest during lifetime (and such sale is not otherwise prohibited by the Pooling Agreement or the PC Shareholder Agreement), the Continuing Owner shall have a right of first refusal for thirty (30) days to match the third-party offer, consistent with Section 8.4 of the Term Sheet.
+**9.2 Right of First Refusal on Voluntary Sales.** If either Jorrel or Ariana receives a bona fide offer to purchase all or part of the Affected Interest during lifetime (and such sale is not otherwise prohibited by the Pooling Agreement or the Clinical LLC Operating Agreement), the Continuing Owner shall have a right of first refusal for thirty (30) days to match the third-party offer, consistent with Section 8.4 of the Term Sheet.
 
 **9.3 Drag-Along and Tag-Along.** The drag-along and tag-along rights set forth in Sections 8.5 and 8.6 of the Term Sheet are hereby incorporated by reference and remain binding on the parties and their successors.
 
@@ -219,9 +219,9 @@ multiplied by the Affected Owner's percentage ownership in the Entity as of the 
 
 **10.2 Dispute Resolution.** Disputes arising out of this Agreement shall be resolved in accordance with the dispute resolution provisions of the Pooling Agreement.
 
-**10.3 Entire Agreement.** This Agreement, together with the Pooling Agreement, the MSO Operating Agreement, the PC Shareholder Agreement, the MSA, the IP Assignment, and the Commission Agreement, constitutes the entire agreement of the parties regarding its subject matter.
+**10.3 Entire Agreement.** This Agreement, together with the Pooling Agreement, the MSO Operating Agreement, the Clinical LLC Operating Agreement, the MSA, the IP Assignment, and the Commission Agreement, constitutes the entire agreement of the parties regarding its subject matter.
 
-**10.4 Amendment.** This Agreement may be amended only by a written instrument signed by all four parties (Jorrel, Ariana, the MSO, and the PC).
+**10.4 Amendment.** This Agreement may be amended only by a written instrument signed by all four parties (Jorrel, Ariana, the MSO, and the Clinical LLC).
 
 **10.5 Severability.** If any provision is held invalid, the remaining provisions shall remain in effect.
 
@@ -253,11 +253,11 @@ Title: Managing Member
 
 Date: _______________________________
 
-**MODERN VILLAGE PC**
+**MODERN VILLAGE LLC**
 
 By: _______________________________________
 Name: Ariana Roberts
-Title: President
+Title: Sole Member and Sole Manager
 
 Date: _______________________________
 
@@ -275,12 +275,12 @@ Date: _______________________________
 
 ## ATTORNEY REVIEW CHECKLIST
 
-- [ ] Review whether cross-purchase or entity redemption is more tax-efficient given the MSO/PC structure
+- [ ] Review whether cross-purchase or entity redemption is more tax-efficient given the MSO/Clinical LLC structure
 - [ ] Confirm that the 3x EBITDA multiplier is appropriate for an early-stage platform; consider floor/ceiling adjustments
 - [ ] Review IRS valuation challenges under IRC § 2703 (for estate tax purposes) and ensure formula satisfies safe harbor
 - [ ] Confirm CA community property implications and spousal consent enforceability
 - [ ] Review life insurance policy ownership structure for potential transfer-for-value issues under IRC § 101(a)(2)
-- [ ] Ensure the buy-sell mechanics comply with the Moscone-Knox Professional Corporation Act restrictions on PC ownership
+- [ ] Confirm that the contractual restriction limiting Clinical LLC ownership to a duly licensed BCBA is enforceable under California LLC law, and whether further protections (e.g., put/call rights upon license lapse) are advisable
 - [ ] Review whether an escrow or collateral arrangement is needed to secure the promissory note
 - [ ] Confirm the disability definition aligns with any disability insurance policy definitions
 - [ ] Review coordination with the Pooling Agreement (avoid double-counting or conflicts between buy-sell valuation and pooling proceeds)

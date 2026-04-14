@@ -21,9 +21,9 @@ Last revised: 2026-04-14
 
 ## RECITALS
 
-WHEREAS, Ariana serves as Chief Clinical Officer of Modern Village PC and, beyond her clinical role, contributes to the Modern Village business through business development, partner outreach, and capital-raising activities;
+WHEREAS, Ariana serves as Chief Clinical Officer and Sole Manager of Modern Village LLC (the "Clinical LLC") and, beyond her clinical role, contributes to the Modern Village business through business development, partner outreach, and capital-raising activities;
 
-WHEREAS, the MSO and Ariana desire to formalize the compensation Ariana will earn for such business development contributions, separate from her clinical income through the PC, as contemplated by Section 6 of the Modern Village Partnership Term Sheet dated 2026-04-14 (the "Term Sheet");
+WHEREAS, the MSO and Ariana desire to formalize the compensation Ariana will earn for such business development contributions, separate from her clinical income through the Clinical LLC, as contemplated by Section 6 of the Modern Village Partnership Term Sheet dated 2026-04-14 (the "Term Sheet");
 
 WHEREAS, the parties intend that commissions paid under this Agreement be paid to Ariana in her capacity as a principal and officer of the Modern Village business — not as an unaffiliated third-party broker or finder — so as to avoid unregistered broker-dealer concerns; and
 
@@ -41,7 +41,7 @@ NOW, THEREFORE, in consideration of the mutual covenants set forth herein, the p
 - **"Attribution Requirements"** has the meaning set forth in Section 3.1.
 - **"Bad Leaver"** has the meaning set forth in the Pooling Agreement.
 - **"Commission"** means any commission, finder's fee, or origination payment earned under Article 2.
-- **"Effective Date"** means the date first written above.
+- **"Effective Date"** means the date on which this Agreement is effective upon execution by all parties whose signature is required below.
 - **"Qualified Contract"** means a contract that meets the attribution and category requirements of this Agreement and has actually closed and begun generating revenue or funding.
 - **"Tail Period"** means the post-departure period during which earned Commissions continue to be paid under Section 6.
 - **"Term Sheet"** means the Modern Village Partnership Term Sheet dated 2026-04-14.
@@ -50,7 +50,7 @@ NOW, THEREFORE, in consideration of the mutual covenants set forth herein, the p
 
 ## ARTICLE 2 — COMMISSION CATEGORIES
 
-**2.1 School District Contracts.** Ariana shall be entitled to a Commission equal to **ten percent (10%) of the gross revenue** actually collected by the MSO (or the PC, as applicable) from a school district contract Ariana sources and closes, for a period of **twenty-four (24) months** beginning on the contract start date. No Commission is payable on revenue collected after the end of the 24-month period, regardless of contract length.
+**2.1 School District Contracts.** Ariana shall be entitled to a Commission equal to **ten percent (10%) of the gross revenue** actually collected by the MSO (or the Clinical LLC, as applicable) from a school district contract Ariana sources and closes, for a period of **twenty-four (24) months** beginning on the contract start date. No Commission is payable on revenue collected after the end of the 24-month period, regardless of contract length.
 
 **2.2 Regional Center Contracts.** Ariana shall be entitled to a Commission equal to **ten percent (10%) of the gross revenue** actually collected from a Regional Center contract Ariana sources and closes, for a period of **twenty-four (24) months** beginning on the contract start date, on the same terms as Section 2.1.
 
@@ -98,7 +98,7 @@ NOW, THEREFORE, in consideration of the mutual covenants set forth herein, the p
 
 ## ARTICLE 4 — SECURITIES LAW AND COMPLIANCE
 
-**4.1 Principal / Officer Capacity.** The parties acknowledge that the finder's fee in Section 2.5 is paid to Ariana in her capacity as a principal, officer, and substantial contributor to the Modern Village business (via her role at the PC and her economic interest under the Pooling Agreement), and not as an unaffiliated broker or finder. The parties intend that this structure avoid characterization of Ariana as an unregistered broker-dealer under Section 15 of the Securities Exchange Act of 1934 or the California Corporate Securities Law.
+**4.1 Principal / Officer Capacity.** The parties acknowledge that the finder's fee in Section 2.5 is paid to Ariana in her capacity as a principal, officer, and substantial contributor to the Modern Village business (via her role at the Clinical LLC and her economic interest under the Pooling Agreement), and not as an unaffiliated broker or finder. The parties intend that this structure avoid characterization of Ariana as an unregistered broker-dealer under Section 15 of the Securities Exchange Act of 1934 or the California Corporate Securities Law.
 
 **4.2 No Public Solicitation.** Ariana shall not engage in general solicitation or general advertising of any MSO securities. All introductions shall be made to investors with whom Ariana has a pre-existing substantive relationship or who are reasonably believed to be accredited.
 
@@ -136,7 +136,7 @@ NOW, THEREFORE, in consideration of the mutual covenants set forth herein, the p
 
 **7.1 Term.** This Agreement is effective on the Effective Date and continues until the earlier of:
 
-(a) Ariana ceasing to hold her role as Chief Clinical Officer of the PC and the expiration of the Tail Period for all Qualified Contracts;
+(a) Ariana ceasing to hold her role as Chief Clinical Officer of the Clinical LLC and the expiration of the Tail Period for all Qualified Contracts;
 
 (b) mutual written termination by the parties; or
 
@@ -160,7 +160,7 @@ NOW, THEREFORE, in consideration of the mutual covenants set forth herein, the p
 
 **8.6 Assignment.** Neither party may assign this Agreement without the prior written consent of the other, except that the MSO may assign this Agreement to a successor in connection with a Liquidity Event.
 
-**8.7 No Employment Relationship.** Nothing in this Agreement creates an employer-employee relationship between the MSO and Ariana. Ariana's employment relationship, if any, is with the PC.
+**8.7 No Employment Relationship.** Nothing in this Agreement creates an employer-employee relationship between the MSO and Ariana. Ariana's employment relationship, if any, is with the Clinical LLC.
 
 **8.8 Counterparts.** This Agreement may be executed in counterparts, including by electronic signature.
 
@@ -196,6 +196,6 @@ Date: _______________________________
 - [ ] Confirm coordination with the Pooling Agreement Bad Leaver provisions
 - [ ] Review whether Ariana's commissions must be disclosed in investor offering materials as a use-of-proceeds item
 - [ ] Review whether the commission amounts should be subject to a cap per deal or aggregate cap per year
-- [ ] Confirm no conflict with the PC's ability to accept certain payors (some payors prohibit commission-based business development)
+- [ ] Confirm no conflict with the Clinical LLC's ability to accept certain payors (some payors prohibit commission-based business development)
 
 **NOT LEGAL ADVICE.** This document is a draft prepared for attorney review. Do not sign without independent legal counsel.

@@ -26,7 +26,7 @@ WHEREAS, Jorrel Patterson ("Jorrel" or the "Member") is the sole member of the C
 
 WHEREAS, the Company has been formed to own and operate all technology, platform, brand, intellectual property, marketing, business development, and non-clinical operations of the Modern Village business (the "Business"); and
 
-WHEREAS, the Company is entering into a Management Services Agreement with Modern Village PC (the "PC"), a related California professional corporation, to deliver non-clinical management services to the PC in accordance with California law.
+WHEREAS, the Company is entering into a Management Services Agreement with Modern Village LLC (the "Clinical LLC"), a related California limited liability company owned by a duly licensed Board Certified Behavior Analyst, to deliver non-clinical management services to the Clinical LLC in accordance with California law.
 
 NOW, THEREFORE, the Member adopts the following as the Operating Agreement of the Company:
 
@@ -43,12 +43,12 @@ NOW, THEREFORE, the Member adopts the following as the Operating Agreement of th
 - **"Code"** means the Internal Revenue Code of 1986, as amended.
 - **"Company"** means Modern Village Services LLC.
 - **"Distribution"** means any cash or property distributed to the Member.
-- **"Effective Date"** means the date first written above.
+- **"Effective Date"** means the date on which this Agreement is effective upon execution by all parties whose signature is required below.
 - **"Interest"** or **"Membership Interest"** means the ownership interest of the Member in the Company.
 - **"Managing Member"** means the Member acting in the capacity of the manager of the Company pursuant to Article 6.
 - **"Member"** means Jorrel Patterson, and any additional person later admitted pursuant to Article 9.
-- **"MSA"** means the Management Services Agreement between the Company and Modern Village PC dated as of the Effective Date.
-- **"PC"** means Modern Village PC, a California professional corporation.
+- **"MSA"** means the Management Services Agreement between the Company and Modern Village LLC dated as of the Effective Date.
+- **"Clinical LLC"** means Modern Village LLC, a California limited liability company already formed and wholly owned by Ariana Roberts, a duly licensed Board Certified Behavior Analyst.
 - **"Pooling Agreement"** means the Pooling Agreement between Jorrel Patterson and Ariana Roberts dated as of the Effective Date.
 - **"Reserved Matters"** has the meaning set forth in Section 6.3.
 
@@ -64,7 +64,7 @@ NOW, THEREFORE, the Member adopts the following as the Operating Agreement of th
 
 **2.4 Registered Agent.** The registered agent of the Company in California is [REGISTERED AGENT NAME AND ADDRESS].
 
-**2.5 Purpose.** The Company is formed to engage in any lawful business under the Act, and in particular to own and operate technology, intellectual property, marketing operations, and non-clinical business infrastructure supporting the Modern Village platform, and to provide management services to the PC pursuant to the MSA.
+**2.5 Purpose.** The Company is formed to engage in any lawful business under the Act, and in particular to own and operate technology, intellectual property, marketing operations, and non-clinical business infrastructure supporting the Modern Village platform, and to provide management services to the Clinical LLC pursuant to the MSA.
 
 **2.6 Term.** The Company shall have perpetual existence unless dissolved in accordance with Article 10 or the Act.
 
@@ -136,9 +136,9 @@ NOW, THEREFORE, the Member adopts the following as the Operating Agreement of th
 
 **6.3 Reserved Matters.** Notwithstanding the foregoing, the Managing Member acknowledges that under the Pooling Agreement with Ariana Roberts, the following "Reserved Matters" require the prior written consent of Ariana Roberts as a contractual matter (although Ariana Roberts is not a Member of the Company):
 
-(a) sale of the Company, the PC, or substantially all of the assets of either;
+(a) sale of the Company, the Clinical LLC, or substantially all of the assets of either;
 
-(b) dissolution of the Company or the PC;
+(b) dissolution of the Company or the Clinical LLC;
 
 (c) incurrence of debt by the Company exceeding one hundred thousand dollars ($100,000) in the aggregate;
 
@@ -253,7 +253,7 @@ The attorney reviewing this Agreement should examine, at minimum:
 - [ ] Whether the Company should elect S-corporation or C-corporation tax treatment
 - [ ] Whether any provisions must be reflected in the Articles of Organization or Statement of Information
 - [ ] Proper coordination of "Reserved Matters" as contractual obligations versus governance obligations given Ariana Roberts is not a Member
-- [ ] Compliance with the California Corporate Practice of Medicine doctrine and Medical Board of California guidance as applied to MSO/PC structures (note: for BCBA services, corporate practice rules are narrower than for physicians, but should be confirmed)
+- [ ] Compliance with the California Corporate Practice of Medicine doctrine and Medical Board of California guidance as applied to MSO/Clinical LLC structures (note: for BCBA services, corporate practice rules are narrower than for physicians, and the parties have elected to use an LLC rather than a Professional Corporation for the clinical entity — confirm this analysis)
 - [ ] Fair market value documentation supporting the management fee structure
 - [ ] Consistency with HIPAA Business Associate obligations
 - [ ] Whether the Company should obtain a California seller's permit, payroll tax account, and other state registrations
