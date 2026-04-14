@@ -227,7 +227,7 @@
     <div id="pgUsers" class="page">
       <div class="page-hdr"><div><h1>Users</h1><p>All registered families</p></div></div>
       <div class="stats" id="userStats"></div>
-      <div class="panel"><div class="panel-hdr"><div class="panel-title">All Users</div></div><div class="panel-body"><table class="tbl" id="userTable"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Child</th><th>Age</th><th>Diagnosis</th><th>Plan</th><th>Messages</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="userBody"></tbody></table></div></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><input id="userSearch" placeholder="Search by name or email..." style="flex:1;min-width:200px;padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px" oninput="filterUsers()"><select id="userRoleFilter" onchange="filterUsers()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px"><option value="">All Roles</option><option value="parent">Parent</option><option value="provider">Provider</option><option value="caregiver">Caregiver</option><option value="teacher">Teacher</option></select><select id="userPlanFilter" onchange="filterUsers()" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px"><option value="">All Plans</option><option value="pro">Pro</option><option value="free">Free</option></select></div><div class="panel"><div class="panel-hdr"><div class="panel-title">All Users</div></div><div class="panel-body"><table class="tbl" id="userTable"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Child</th><th>Age</th><th>Diagnosis</th><th>Plan</th><th>Messages</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="userBody"></tbody></table></div></div>
     </div>
 
     <!-- AI REVIEWS -->
@@ -718,9 +718,31 @@ async function loadUsers(){
     var childNames = kids.map(function(c){return c.name}).join(', ') || '\u2014';
     var childAges = kids.map(function(c){return c.age||''}).filter(function(a){return a}).join(', ') || '\u2014';
     var childDx = kids.map(function(c){return c.diagnosis?c.diagnosis.join(', '):''}).filter(function(d){return d}).join('; ') || '\u2014';
-    h+='<tr><td>'+(u.name?esc(u.name):'<span style="color:var(--warm-gray-light)">\u2014</span>')+'</td><td style="font-size:12px">'+esc(u.email||'\u2014')+'</td><td><span class="tag '+(u.role==='provider'?'tag-sage':u.role==='caregiver'?'tag-blue':u.role==='teacher'?'tag-free':'')+'">'+esc(u.role||'parent')+'</span></td><td>'+esc(childNames)+'</td><td>'+esc(childAges)+'</td><td>'+esc(childDx)+'</td><td><span class="tag '+(u.subscription_status==='pro'?'tag-sage':'tag-free')+'">'+(u.subscription_status==='pro'?'Pro':'Free')+'</span></td><td>'+(u.free_messages_used||0)+'</td><td>'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td>'+'<td><button style="padding:4px 10px;border-radius:6px;border:1px solid var(--sand);background:white;cursor:pointer;font-size:11px;font-family:inherit" onclick="resetUserPassword(\x27'+esc(u.email||'')+'\x27)">Reset PW</button></td></tr>';
+    var searchBlob=((u.name||'')+' '+(u.email||'')).toLowerCase();
+    h+='<tr data-role="'+esc(u.role||'parent')+'" data-plan="'+(u.subscription_status==='pro'?'pro':'free')+'" data-search="'+esc(searchBlob)+'"><td>'+(u.name?esc(u.name):'<span style="color:var(--warm-gray-light)">\u2014</span>')+'</td><td style="font-size:12px">'+esc(u.email||'\u2014')+'</td><td><span class="tag '+(u.role==='provider'?'tag-sage':u.role==='caregiver'?'tag-blue':u.role==='teacher'?'tag-free':'')+'">'+esc(u.role||'parent')+'</span></td><td>'+esc(childNames)+'</td><td>'+esc(childAges)+'</td><td>'+esc(childDx)+'</td><td><span class="tag '+(u.subscription_status==='pro'?'tag-sage':'tag-free')+'">'+(u.subscription_status==='pro'?'Pro':'Free')+'</span></td><td>'+(u.free_messages_used||0)+'</td><td>'+d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</td>'+'<td><button style="padding:4px 10px;border-radius:6px;border:1px solid var(--sand);background:white;cursor:pointer;font-size:11px;font-family:inherit" onclick="resetUserPassword(\x27'+esc(u.email||'')+'\x27)">Reset PW</button></td></tr>';
   });
   document.getElementById('userBody').innerHTML=h||'<tr><td colspan="10" class="empty">No users yet</td></tr>';
+  filterUsers();
+}
+
+function filterUsers(){
+  var searchEl=document.getElementById('userSearch');
+  if(!searchEl)return;
+  var search=(searchEl.value||'').toLowerCase();
+  var role=document.getElementById('userRoleFilter').value;
+  var plan=document.getElementById('userPlanFilter').value;
+  var rows=document.querySelectorAll('#userBody tr');
+  for(var i=0;i<rows.length;i++){
+    var row=rows[i];
+    var rowRole=row.dataset.role||'';
+    var rowPlan=row.dataset.plan||'';
+    var rowSearch=row.dataset.search||'';
+    var show=true;
+    if(role && rowRole!==role)show=false;
+    if(plan && rowPlan!==plan)show=false;
+    if(search && rowSearch.indexOf(search)<0)show=false;
+    row.style.display=show?'':'none';
+  }
 }
 
 
@@ -1642,7 +1664,7 @@ async function aiGenerateSequence(){
   var btn=document.getElementById('aiSeqBtn');
   btn.disabled=true;btn.textContent='Generating 9 emails... (this takes a moment)';
   var target=document.getElementById('campTarget').value;
-  var targetDesc=target==='district'?'school district special education coordinators':target==='provider'?'BCBAs and ABA therapy providers':target==='selpa'?'SELPA directors':'potential partners';
+  var targetDesc=target==='district'?'school district education specialists':target==='provider'?'BCBAs and ABA therapy providers':target==='selpa'?'SELPA directors':'potential partners';
 
   try{
     var session=await sb.auth.getSession();
@@ -1674,7 +1696,7 @@ async function aiGenerateVariants(){
   var btn=document.getElementById('aiGenBtn');
   btn.disabled=true;btn.textContent='Generating...';
   var target=document.getElementById('campTarget').value;
-  var targetDesc=target==='district'?'school district special education coordinators':target==='provider'?'BCBAs and ABA therapy providers':target==='selpa'?'SELPA directors':'potential partners';
+  var targetDesc=target==='district'?'school district education specialists':target==='provider'?'BCBAs and ABA therapy providers':target==='selpa'?'SELPA directors':'potential partners';
 
   try{
     var session=await sb.auth.getSession();

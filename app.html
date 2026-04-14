@@ -864,12 +864,12 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
 
           <div onclick="startWizard('prep')" style="background:white;border-radius:16px;padding:20px;border:1px solid var(--sand);margin-bottom:12px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:14px"><div style="width:48px;height:48px;border-radius:14px;background:var(--sky);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📋</div><div style="flex:1"><div style="font-weight:700;font-size:15px">Prep for a Meeting</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Get a personalized checklist, talking points, and questions to ask</div></div><div style="color:var(--warm-gray-light)">&rarr;</div></div>
 
-          <div onclick="startWizard('explain')" style="background:white;border-radius:16px;padding:20px;border:1px solid var(--sand);margin-bottom:12px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:14px"><div style="width:48px;height:48px;border-radius:14px;background:var(--lavender);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🔍</div><div style="flex:1"><div style="font-weight:700;font-size:15px">Explain IEP Text</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Paste confusing IEP language and get a plain-English translation</div></div><div style="color:var(--warm-gray-light)">&rarr;</div></div>
+          <div onclick="startWizard('explain')" style="background:white;border-radius:16px;padding:20px;border:1px solid var(--sand);margin-bottom:12px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:14px"><div style="width:48px;height:48px;border-radius:14px;background:var(--lavender);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🔍</div><div style="flex:1"><div style="font-weight:700;font-size:15px">Learn About IEPs</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Paste confusing IEP language and get a plain-English translation</div></div><div style="color:var(--warm-gray-light)">&rarr;</div></div>
 
           <div onclick="startWizard('rights')" style="background:white;border-radius:16px;padding:20px;border:1px solid var(--sand);margin-bottom:12px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:14px"><div style="width:48px;height:48px;border-radius:14px;background:var(--terracotta-light);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">⚖️</div><div style="flex:1"><div style="font-weight:700;font-size:15px">Know Your Rights</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Learn what IDEA protects and how to advocate for your child</div></div><div style="color:var(--warm-gray-light)">&rarr;</div></div>
 
           <div onclick="startWizard('goals')" style="background:white;border-radius:16px;padding:20px;border:1px solid var(--sand);margin-bottom:12px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:14px"><div style="width:48px;height:48px;border-radius:14px;background:rgba(232,200,74,0.15);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🎯</div><div style="flex:1"><div style="font-weight:700;font-size:15px">Suggest IEP Goals</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Get goal suggestions based on your child's needs and diagnosis</div></div><div style="color:var(--warm-gray-light)">&rarr;</div></div>
-          <div onclick="startWizard('analyze')" style="background:white;border-radius:16px;padding:20px;border:1px solid var(--sage);margin-bottom:12px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:14px"><div style="width:48px;height:48px;border-radius:14px;background:var(--sage-light);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📄</div><div style="flex:1"><div style="font-weight:700;font-size:15px">Upload & Analyze Your IEP</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Upload a PDF and get a plain-English breakdown of goals, services, and accommodations</div></div><div style="color:var(--warm-gray-light)">&rarr;</div></div>
+          <div onclick="startWizard('analyze')" style="background:white;border-radius:16px;padding:20px;border:1px solid var(--sage);margin-bottom:12px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:14px"><div style="width:48px;height:48px;border-radius:14px;background:var(--sage-light);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📄</div><div style="flex:1"><div style="font-weight:700;font-size:15px">Analyze My Child's IEP</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Upload a PDF and get a plain-English breakdown of goals, services, and accommodations</div></div><div style="color:var(--warm-gray-light)">&rarr;</div></div>
         </div>
 
         <!-- Wizard panels (hidden by default) -->
@@ -1034,7 +1034,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
           <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:16px">About You</div>
           <div style="margin-bottom:14px"><label class="fl">Your name</label><input id="profName" class="fi" placeholder="Your name"></div>
           <div style="display:flex;gap:12px;margin-bottom:14px">
-            <div style="flex:1"><label class="fl">Phone</label><input id="profPhone" class="fi" type="tel" placeholder="(555) 123-4567"></div>
+            <div style="flex:1"><label class="fl">Phone *</label><input id="profPhone" class="fi" type="tel" placeholder="(555) 123-4567" required></div>
             <div style="flex:1"><label class="fl">Zip code</label><input id="profZip" class="fi" placeholder="91766" maxlength="5"></div>
           </div>
           <div style="margin-bottom:14px"><label class="fl">Relationship to child</label><select id="profRelationship" class="fi"><option value="">Select</option><option>Mother</option><option>Father</option><option>Grandparent</option><option>Guardian</option><option>Foster Parent</option><option>Other</option></select></div>
@@ -3101,7 +3101,10 @@ async function loadEventsTab(){
   var el=document.getElementById('villEvents');
   el.innerHTML='<div style="text-align:center;padding:20px;color:var(--warm-gray-light)">Loading...</div>';
   await loadVillageProfile();
-  if(!villProfile){showVillageOptIn();return}
+  if(!villProfile){
+    el.innerHTML='<div class="vill-opt-in"><div style="font-size:40px;margin-bottom:12px">\uD83D\uDCC5</div><h3>Events & Meetups</h3><p style="font-size:14px;color:var(--warm-gray);max-width:300px;margin:0 auto">Join My Village to create and RSVP to local events</p><button class="btn btn-p" style="margin-top:16px" onclick="switchVillTab(\x27nearby\x27)">Set Up Profile</button></div>';
+    return;
+  }
   loadVillageEvents();
 }
 
@@ -4420,7 +4423,7 @@ var iepExtractedText='';
 
 function renderAnalyzeWizard(){
   iepExtractedText='';
-  var h='<div style="margin-bottom:20px"><div style="font-family:Fraunces,serif;font-size:22px;font-weight:800">Upload & Analyze Your IEP</div><div style="font-size:13px;color:var(--warm-gray);margin-top:4px">Upload a PDF — we\'ll extract goals, services, and accommodations in plain English</div></div>';
+  var h='<div style="margin-bottom:20px"><div style="font-family:Fraunces,serif;font-size:22px;font-weight:800">Analyze My Child\'s IEP</div><div style="font-size:13px;color:var(--warm-gray);margin-top:4px">Upload a PDF — we\'ll extract goals, services, and accommodations in plain English</div></div>';
   h+='<div class="iep-upload-zone" id="iepDropZone" onclick="document.getElementById(\'iepFileInput\').click()" ondragover="event.preventDefault();this.classList.add(\'dragover\')" ondragleave="this.classList.remove(\'dragover\')" ondrop="event.preventDefault();this.classList.remove(\'dragover\');handleIepFile(event.dataTransfer.files[0])">';
   h+='<div style="font-size:40px;margin-bottom:12px">📄</div>';
   h+='<div style="font-weight:700;font-size:16px;margin-bottom:4px">Tap to choose a PDF</div>';
@@ -5299,8 +5302,11 @@ async function loadCareTeam(childId){
   var h='';
   for(var i=0;i<members.length;i++){
     var m=members[i];
-    var pr=await sb.from('profiles').select('name,email').eq('id',m.user_id).single();
-    var name=pr.data?pr.data.name||pr.data.email:'Unknown';
+    var pr=await sb.from('profiles').select('name,email').eq('id',m.user_id).maybeSingle();
+    var name='Team Member';
+    if(pr.data){
+      name=pr.data.name||(pr.data.email?pr.data.email.split('@')[0]:'Team Member');
+    }
     var roleBadge=m.role==='co-parent'?'Co-Parent':m.role==='caregiver'?'Caregiver':m.role==='provider'?'Provider':'Teacher';
     var badgeColor=m.role==='co-parent'?'var(--sage-light)':m.role==='caregiver'?'var(--lavender)':m.role==='provider'?'var(--blush)':'var(--sky)';
     var d=new Date(m.granted_at).toLocaleDateString('en-US',{month:'short',day:'numeric'});
@@ -6903,11 +6909,13 @@ async function toggleEmailMarketing(val){
 }
 async function saveProfile(){
   var name = document.getElementById('profName').value.trim();
+  var phoneVal = document.getElementById('profPhone').value.trim();
+  if(!phoneVal){showToast('Phone number is required');return}
 
   var updateData = {
     name: name || null,
     parent_relationship: document.getElementById('profRelationship').value || null,
-    phone: document.getElementById('profPhone').value.trim() || null,
+    phone: phoneVal,
     zip_code: document.getElementById('profZip').value.trim() || null,
     insurance_provider: document.getElementById('profInsurance').value || null,
     goals: profSelectedGoals.length ? profSelectedGoals : null,
