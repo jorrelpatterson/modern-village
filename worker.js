@@ -814,6 +814,26 @@ async function runDailyTasks(env) {
         await new Promise(r => setTimeout(r, 300));
       }
     }
+
+    // Reset path for users who completed step 3 and later reactivated.
+    // Without this, last_re_engage_step=3 users are never selected by the main loop and
+    // would be stranded forever, contradicting the plan's reset-on-activity semantics.
+    try {
+      const sevenDaysForReset = new Date();
+      sevenDaysForReset.setDate(sevenDaysForReset.getDate() - 7);
+      const completedRes = await fetch(supaUrl + '/rest/v1/profiles?role=eq.parent&last_re_engage_step=eq.3&select=id,last_re_engage_sent_at', { headers });
+      const completed = await completedRes.json();
+      for (const u of (completed || [])) {
+        const recentLogsRes = await fetch(supaUrl + '/rest/v1/behavior_logs?user_id=eq.' + u.id + '&logged_at=gte.' + sevenDaysForReset.toISOString() + '&select=id&limit=1', { headers });
+        const recentLogs = await recentLogsRes.json();
+        if (recentLogs && recentLogs.length > 0) {
+          await fetch(supaUrl + '/rest/v1/profiles?id=eq.' + u.id, {
+            method: 'PATCH', headers,
+            body: JSON.stringify({ last_re_engage_step: 0, last_re_engage_sent_at: null })
+          });
+        }
+      }
+    } catch (e) { console.error('Re-engage step-3 reset error:', e); }
   } catch (e) { console.error('Re-engagement error:', e); }
 
   // -- SCREENER LEAD AUTO-ENROLL: Send Day 0 email + create lead for sequence enrollment --
