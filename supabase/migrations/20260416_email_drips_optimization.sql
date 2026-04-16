@@ -32,9 +32,8 @@ CREATE INDEX IF NOT EXISTS idx_sends_step ON public.campaign_sends(campaign_id, 
 CREATE INDEX IF NOT EXISTS idx_sends_email_lookup ON public.campaign_sends(email, created_at);
   -- for conversion attribution by email match
 
--- ─── leads: unsubscribe / bounce / send-time / conversion link ───
-ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS unsubscribed boolean DEFAULT false;
-ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS unsubscribe_token text;
+-- ─── leads: bounce / send-time / conversion link ───
+-- Note: unsubscribed + unsubscribe_token already added in 20260407_marketing_optin.sql
 ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS bounced boolean DEFAULT false;
 ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS best_open_hour smallint;
 ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS converted_at timestamptz;
@@ -42,7 +41,9 @@ ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS converted_user_id uuid REFEREN
 ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS cohort text;
   -- if NULL, lead.lead_type drives cohort selection at enroll time
 
--- Backfill unsubscribe_token for existing leads
+-- Backfill unsubscribe_token for existing leads.
+-- The prior migration (20260407_marketing_optin.sql) added the column with no default,
+-- so older rows inserted before that migration may still have NULL — fill them here.
 UPDATE public.leads SET unsubscribe_token = encode(gen_random_bytes(16), 'hex')
   WHERE unsubscribe_token IS NULL;
 
@@ -70,11 +71,24 @@ CREATE TABLE IF NOT EXISTS public.email_send_queue (
   UNIQUE(campaign_id, lead_id, sequence_step)
 );
 
+-- Guard against silent enum drift if a cron ever inserts a typo'd status.
+DO $$ BEGIN
+  ALTER TABLE public.email_send_queue
+    ADD CONSTRAINT email_send_queue_status_check
+    CHECK (status IN ('queued', 'sent', 'skipped'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 ALTER TABLE public.email_send_queue ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admins manage send queue" ON public.email_send_queue FOR ALL USING (public.is_admin());
 
+-- cohort-leading index: admin cohort dashboard / per-cohort drain queries
 CREATE INDEX IF NOT EXISTS idx_send_queue_due
   ON public.email_send_queue(cohort, scheduled_for, priority)
+  WHERE status = 'queued';
+-- campaign_id-leading index: Task 12 queue drain filters by campaign_id + status + scheduled_for
+CREATE INDEX IF NOT EXISTS idx_send_queue_due_by_campaign
+  ON public.email_send_queue(campaign_id, scheduled_for, priority)
   WHERE status = 'queued';
 CREATE INDEX IF NOT EXISTS idx_send_queue_lead
   ON public.email_send_queue(lead_id);
