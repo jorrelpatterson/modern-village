@@ -867,14 +867,17 @@ async function runDailyTasks(env) {
       const stepNum = i + 1;  // step 1 = Day 3, step 2 = Day 7, step 3 = Day 10 (Day 0 was step 0)
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - step.day);
-      const cutoffStart = cutoff.toISOString().split('T')[0] + 'T00:00:00';
       const cutoffEnd = cutoff.toISOString().split('T')[0] + 'T23:59:59';
 
-      const dueRes = await fetch(supaUrl + '/rest/v1/screener_leads?marketing_consent=eq.true&unsubscribed=eq.false&enrolled_in_sequence=eq.true&last_step_sent=eq.' + (stepNum - 1) + '&created_at=gte.' + cutoffStart + '&created_at=lte.' + cutoffEnd + '&select=id,email,parent_name,unsubscribe_token', { headers });
+      // Filter: created_at <= N days ago. No lower bound — if cron missed a day, a lead at
+      // last_step_sent=N-1 whose creation is older than N days still receives the email. The
+      // state machine (last_step_sent guard) prevents double-sends regardless of date range.
+      const dueRes = await fetch(supaUrl + '/rest/v1/screener_leads?marketing_consent=eq.true&unsubscribed=eq.false&enrolled_in_sequence=eq.true&last_step_sent=eq.' + (stepNum - 1) + '&created_at=lte.' + cutoffEnd + '&select=id,email,parent_name,unsubscribe_token', { headers });
       const dueLeads = await dueRes.json();
 
       for (const sl of (dueLeads || [])) {
         if (!sl.email) continue;
+        if (!sl.unsubscribe_token) continue;  // CAN-SPAM: require working unsubscribe link
         const unsubUrl = 'https://village-api.jorrelpatterson.workers.dev/unsubscribe?token=' + encodeURIComponent(sl.unsubscribe_token) + '&source=screener';
         const personalized = step.html_body.replace(/\{NAME\}/g, sl.parent_name || 'there');
 
