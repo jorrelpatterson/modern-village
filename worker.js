@@ -814,12 +814,99 @@ async function runDailyTasks(env) {
       // Mark as enrolled
       await fetch(supaUrl + '/rest/v1/screener_leads?id=eq.' + sl.id, {
         method: 'PATCH', headers,
-        body: JSON.stringify({ enrolled_in_sequence: true })
+        body: JSON.stringify({ enrolled_in_sequence: true, last_step_sent: 0, last_step_sent_at: new Date().toISOString() })
       });
 
       await new Promise(r => setTimeout(r, 500));
     }
   } catch (e) { console.error('Screener auto-enroll error:', e); }
+
+  // -- SCREENER FOLLOW-UP: Days 3, 7, 10 --
+  // Advance screener_leads through the 4-email sequence (Day 0 = on signup, handled above).
+  try {
+    const STEPS = [
+      // Day 3: reframe screener outcome into actionable next step
+      { day: 3, subject: 'What ABA actually looks like at home', heading: 'A glimpse of what works', html_body:
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">Hi {NAME}, when parents take the M-CHAT-R, the next question is usually: now what?</p>' +
+        '<div style="background:#FDF8F0;border-radius:12px;padding:20px;margin:16px 0;border-left:4px solid #7A9E7E">' +
+        '<p style="margin:0;color:#2D2D2D;font-size:15px;line-height:1.6">ABA at home isn\'t about clinical drills. It\'s small things: pairing a request with a visual, giving a 2-minute warning before transitions, noticing what triggers meltdowns and what calms them.</p>' +
+        '</div>' +
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6">Modern Village walks you through these one at a time, personalized to your child &mdash; whether or not you have a diagnosis yet.</p>' +
+        '<div style="text-align:center;margin:24px 0">' +
+        '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px">Try it free</a>' +
+        '</div>'
+      },
+      // Day 7: 3 strategies, value drop, soft CTA
+      { day: 7, subject: '3 strategies that work whether or not your child has a diagnosis', heading: 'Three things you can try this week', html_body:
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">Hi {NAME}, no platform sign-up needed &mdash; just three strategies that come up again and again from the BCBA-led families on Modern Village.</p>' +
+        '<div style="background:#FDF8F0;border-radius:12px;padding:20px;margin:16px 0;border-left:4px solid #7A9E7E">' +
+        '<p style="margin:0 0 12px;font-size:15px;color:#2D2D2D"><strong>1. First-Then language.</strong> "First shoes, then iPad." Reduces transition resistance by ~40% in most kids.</p>' +
+        '<p style="margin:0 0 12px;font-size:15px;color:#2D2D2D"><strong>2. Visual schedules.</strong> Pictures of the morning routine on the fridge. Removes the "what\'s next" anxiety.</p>' +
+        '<p style="margin:0;font-size:15px;color:#2D2D2D"><strong>3. Catch-them-being-good.</strong> Specific praise within 5 seconds. Builds the behaviors you want.</p>' +
+        '</div>' +
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6">If any of these resonate, the AI Coach in Modern Village will tailor the rest to your child.</p>' +
+        '<div style="text-align:center;margin:24px 0">' +
+        '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px">Open Modern Village</a>' +
+        '</div>'
+      },
+      // Day 10: final pitch with social proof
+      { day: 10, subject: 'Last reminder — your free strategies are waiting', heading: 'Before we stop reaching out', html_body:
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">Hi {NAME}, this is the last email in this series. We don\'t want to clutter your inbox.</p>' +
+        '<div style="background:#FDF8F0;border-radius:12px;padding:20px;margin:16px 0;border-left:4px solid #C4745A">' +
+        '<p style="margin:0;color:#2D2D2D;font-size:15px;line-height:1.6">Thousands of families &mdash; with and without diagnoses &mdash; use Modern Village daily for ABA-based strategies, behavior tracking, and a community that gets it.</p>' +
+        '</div>' +
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6">Your screening result is still on file and free strategies are still waiting whenever you\'re ready.</p>' +
+        '<div style="text-align:center;margin:24px 0">' +
+        '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px">Get Started Free</a>' +
+        '</div>'
+      }
+    ];
+
+    for (let i = 0; i < STEPS.length; i++) {
+      const step = STEPS[i];
+      const stepNum = i + 1;  // step 1 = Day 3, step 2 = Day 7, step 3 = Day 10 (Day 0 was step 0)
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - step.day);
+      const cutoffStart = cutoff.toISOString().split('T')[0] + 'T00:00:00';
+      const cutoffEnd = cutoff.toISOString().split('T')[0] + 'T23:59:59';
+
+      const dueRes = await fetch(supaUrl + '/rest/v1/screener_leads?marketing_consent=eq.true&unsubscribed=eq.false&enrolled_in_sequence=eq.true&last_step_sent=eq.' + (stepNum - 1) + '&created_at=gte.' + cutoffStart + '&created_at=lte.' + cutoffEnd + '&select=id,email,parent_name,unsubscribe_token', { headers });
+      const dueLeads = await dueRes.json();
+
+      for (const sl of (dueLeads || [])) {
+        if (!sl.email) continue;
+        const unsubUrl = 'https://village-api.jorrelpatterson.workers.dev/unsubscribe?token=' + encodeURIComponent(sl.unsubscribe_token) + '&source=screener';
+        const personalized = step.html_body.replace(/\{NAME\}/g, sl.parent_name || 'there');
+
+        const fullBody = (
+          '<h1 style="font-size:24px;font-weight:800;color:#2D2D2D;margin:0 0 8px">' + step.heading + ' &#127807;</h1>' +
+          personalized
+        );
+
+        try {
+          const sendR = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              from: 'Modern Village <hello@modernvillage.app>',
+              to: sl.email,
+              subject: step.subject,
+              html: emailWrapper(fullBody, unsubUrl),
+              tags: [{ name: 'sequence', value: 'screener' }, { name: 'step', value: String(stepNum) }]
+            })
+          });
+          if (sendR.ok) {
+            await fetch(supaUrl + '/rest/v1/screener_leads?id=eq.' + sl.id, {
+              method: 'PATCH', headers,
+              body: JSON.stringify({ last_step_sent: stepNum, last_step_sent_at: new Date().toISOString() })
+            });
+          }
+        } catch (e) { console.error('Screener step ' + stepNum + ' send error:', e); }
+
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
+  } catch (e) { console.error('Screener follow-up error:', e); }
 
   // -- WEEKLY DIGEST: Fridays only --
   try {
