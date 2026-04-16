@@ -716,64 +716,103 @@ async function runDailyTasks(env) {
 
   } catch (e) { console.error('Email drip error:', e); }
 
-  // -- RE-ENGAGEMENT: Users inactive 7+ days --
+  // -- RE-ENGAGEMENT: 3-email progressive sequence at days 7, 14, 21 --
+  // Triggers on profiles where there is no behavior_log activity within step.day,
+  // and last re-engage email was sent more than 7 days ago.
   try {
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const weekAgoIso = weekAgo.toISOString();
-
-    // Find users who haven't had any activity (no behavior logs or conversations) in 7 days
-    // Simple approach: check profiles created more than 14 days ago with no recent behavior logs
-    const twoWeeksAgo = new Date();
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-
-    const inactiveRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=lte.' + twoWeeksAgo.toISOString() + '&role=eq.parent&email_marketing_opted_in=eq.true&select=id,email,name,created_at', { headers });
-    const potentialInactive = await inactiveRes.json();
-
-    for (const u of (potentialInactive || [])) {
-      if (!u.email) continue;
-      const logRes = await fetch(supaUrl + '/rest/v1/behavior_logs?user_id=eq.' + u.id + '&logged_at=gte.' + weekAgoIso + '&select=id&limit=1', { headers });
-      const logs = await logRes.json();
-      if (logs && logs.length > 0) continue; // Active user, skip
-
-      // Only send once per 14 days -- stagger by days since creation
-      const daysSinceCreation = Math.floor((Date.now() - new Date(u.created_at || 0).getTime()) / 86400000);
-      if (daysSinceCreation % 14 !== 0) continue;
-
-      const reEngageBody = (
-        '<h1 style="font-size:24px;font-weight:800;color:#2D2D2D;margin:0 0 8px">Your village is here &#127807;</h1>' +
-        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">Hi ' + (u.name || 'there') + ', it\'s been a little while. No pressure &mdash; we know parenting is overwhelming.</p>' +
+    const RE_STEPS = [
+      // Step 1: gentle (no pressure)
+      { step: 1, inactive_days: 7, subject: "We noticed you've been quiet — anything we can help with?", heading: 'No pressure', html_body:
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">Hi {NAME}, we noticed you haven\'t logged in this week. Parenting is a lot &mdash; we\'re not here to add to it.</p>' +
         '<div style="background:#FDF8F0;border-radius:12px;padding:20px;margin:16px 0;border-left:4px solid #7A9E7E">' +
-        '<p style="margin:0;font-size:15px;color:#2D2D2D;line-height:1.6">Whenever you\'re ready, your AI Coach remembers everything about your child and is ready to help with whatever you\'re facing.</p>' +
-        '</div>' +
-        '<p style="color:#6B6560;font-size:15px;font-weight:600;margin:20px 0 12px">Quick wins you can do in 60 seconds:</p>' +
-        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">' +
-        '<div style="font-size:20px;flex-shrink:0">&#128221;</div>' +
-        '<div style="font-size:14px;color:#2D2D2D;line-height:1.5">Log today\'s biggest challenge</div>' +
-        '</div>' +
-        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">' +
-        '<div style="font-size:20px;flex-shrink:0">&#129302;</div>' +
-        '<div style="font-size:14px;color:#2D2D2D;line-height:1.5">Ask the coach for one new strategy</div>' +
-        '</div>' +
-        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:20px">' +
-        '<div style="font-size:20px;flex-shrink:0">&#9749;</div>' +
-        '<div style="font-size:14px;color:#2D2D2D;line-height:1.5">Do a daily check-in &mdash; how was today?</div>' +
+        '<p style="margin:0;font-size:15px;color:#2D2D2D">If something\'s on your mind, your AI Coach is one tap away. If you\'re just busy, that\'s totally fine. Your village will be here whenever you\'re ready.</p>' +
         '</div>' +
         '<div style="text-align:center;margin:24px 0">' +
-        '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px;margin:16px 0">Come Back to the Village</a>' +
+        '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px">Open Modern Village</a>' +
         '</div>'
-      );
+      },
+      // Step 2: value drop (one tip)
+      { step: 2, inactive_days: 14, subject: 'A pro tip you might have missed', heading: 'One tip from this week', html_body:
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">Hi {NAME}, here\'s one strategy parents in the village have been celebrating this week.</p>' +
+        '<div style="background:#FDF8F0;border-radius:12px;padding:20px;margin:16px 0;border-left:4px solid #C4745A">' +
+        '<p style="margin:0 0 8px;font-weight:700;color:#C4745A;font-size:13px;text-transform:uppercase;letter-spacing:0.5px">Try This Tonight</p>' +
+        '<p style="margin:0;color:#2D2D2D;font-size:15px;line-height:1.6">Set a 5-minute "transition timer" before bedtime. The timer (not you) tells them it\'s time to start getting ready. Removes you from the power struggle.</p>' +
+        '</div>' +
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6">Log how it goes &mdash; the AI Coach will adapt next week\'s suggestion based on what worked.</p>' +
+        '<div style="text-align:center;margin:24px 0">' +
+        '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px">Log a Behavior</a>' +
+        '</div>'
+      },
+      // Step 3: final touch, then stop
+      { step: 3, inactive_days: 21, subject: "We're holding your spot — come back when you're ready", heading: 'We\'ll stop reaching out', html_body:
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">Hi {NAME}, this is the last automatic email we\'ll send for now. Your account, your child\'s data, and your AI Coach are all preserved &mdash; come back whenever life slows down.</p>' +
+        '<div style="background:#FDF8F0;border-radius:12px;padding:20px;margin:16px 0;border-left:4px solid #7A9E7E">' +
+        '<p style="margin:0;font-size:15px;color:#2D2D2D">If you ever want to permanently delete your account, reply to this email and we\'ll handle it. Otherwise, we\'re here when you\'re ready.</p>' +
+        '</div>' +
+        '<div style="text-align:center;margin:24px 0">' +
+        '<a href="https://modernvillage.app/app.html" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px">Come Back to the Village</a>' +
+        '</div>'
+      }
+    ];
 
-      await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from: 'Modern Village <hello@modernvillage.app>',
-          to: u.email,
-          subject: 'We miss you \u2014 your coach is ready when you are',
-          html: emailWrapper(reEngageBody)
-        })
-      });
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    for (const rs of RE_STEPS) {
+      const inactiveCutoff = new Date();
+      inactiveCutoff.setDate(inactiveCutoff.getDate() - rs.inactive_days);
+      const inactiveCutoffIso = inactiveCutoff.toISOString();
+
+      // Find candidates: profiles at the previous step, last re-engage send > 7 days ago (or never)
+      const candRes = await fetch(supaUrl + '/rest/v1/profiles?role=eq.parent&email_marketing_opted_in=eq.true&last_re_engage_step=eq.' + (rs.step - 1) + '&select=id,email,name,last_re_engage_sent_at', { headers });
+      const candidates = await candRes.json();
+
+      for (const u of (candidates || [])) {
+        if (!u.email) continue;
+
+        // Throttle: don't send within 7 days of last re-engage email
+        if (u.last_re_engage_sent_at && new Date(u.last_re_engage_sent_at) > sevenDaysAgo) continue;
+
+        // Confirm inactive: no behavior_logs in last `inactive_days` days
+        const logsRes = await fetch(supaUrl + '/rest/v1/behavior_logs?user_id=eq.' + u.id + '&logged_at=gte.' + inactiveCutoffIso + '&select=id&limit=1', { headers });
+        const logs = await logsRes.json();
+        if (logs && logs.length > 0) {
+          // Active again — reset their re-engage step
+          await fetch(supaUrl + '/rest/v1/profiles?id=eq.' + u.id, {
+            method: 'PATCH', headers,
+            body: JSON.stringify({ last_re_engage_step: 0, last_re_engage_sent_at: null })
+          });
+          continue;
+        }
+
+        const personalized = rs.html_body.replace(/\{NAME\}/g, u.name || 'there');
+        const fullBody = (
+          '<h1 style="font-size:24px;font-weight:800;color:#2D2D2D;margin:0 0 8px">' + rs.heading + ' &#127807;</h1>' +
+          personalized
+        );
+
+        try {
+          const sendR = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              from: 'Modern Village <hello@modernvillage.app>',
+              to: u.email,
+              subject: rs.subject,
+              html: emailWrapper(fullBody),
+              tags: [{ name: 'sequence', value: 're_engage' }, { name: 'step', value: String(rs.step) }]
+            })
+          });
+          if (sendR.ok) {
+            await fetch(supaUrl + '/rest/v1/profiles?id=eq.' + u.id, {
+              method: 'PATCH', headers,
+              body: JSON.stringify({ last_re_engage_step: rs.step, last_re_engage_sent_at: new Date().toISOString() })
+            });
+          }
+        } catch (e) { console.error('Re-engage step ' + rs.step + ' send error:', e); }
+
+        await new Promise(r => setTimeout(r, 300));
+      }
     }
   } catch (e) { console.error('Re-engagement error:', e); }
 
