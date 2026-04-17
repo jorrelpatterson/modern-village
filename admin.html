@@ -439,6 +439,11 @@
         <div id="expSlotsContainer" style="padding:12px"></div>
       </details>
 
+      <details style="margin-top:16px;background:#fff;border-radius:12px;padding:12px;border:1px solid #eee">
+        <summary style="cursor:pointer;font-weight:700" onclick="loadApprovalQueue()">&#x270B; Challenger Approval Queue</summary>
+        <div id="approvalQueueContainer" style="padding:12px"></div>
+      </details>
+
       <div style="margin-top:24px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
           <h3 style="margin:0">Email Campaigns</h3>
@@ -1970,6 +1975,65 @@ async function toggleSlotStatus(slotId, currentStatus) {
   await sb.from('experiment_slots').update({ status: newStatus }).eq('id', slotId);
   showToast('Slot ' + newStatus);
   viewSlotDetail(slotId);
+}
+
+async function loadApprovalQueue() {
+  const c = document.getElementById('approvalQueueContainer');
+  c.innerHTML = '<div style="padding:20px;text-align:center;color:#999">Loading...</div>';
+  try {
+    const { data: pending } = await sb.from('experiment_variants').select('*').eq('status', 'pending_approval').order('created_at', { ascending: false });
+    if (!pending || !pending.length) { c.innerHTML = '<p style="color:#999">No pending challengers.</p>'; return; }
+
+    let html = '';
+    for (const p of pending) {
+      const { data: winnerRows } = await sb.from('experiment_variants').select('content').eq('slot_id', p.slot_id).eq('variant_key', p.generated_from_variant || '').limit(1);
+      const winnerContent = (winnerRows && winnerRows[0]) ? winnerRows[0].content : '(no winner on file)';
+
+      html += '<div style="border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:10px;background:#fafafa">' +
+        '<div style="font-weight:700">' + esc(p.slot_id) + ' &mdash; variant ' + esc(p.variant_key) + '</div>' +
+        '<div style="color:#999;font-size:11px">generated ' + esc(new Date(p.created_at).toLocaleString()) + ' from winner variant ' + esc(p.generated_from_variant || '?') + '</div>' +
+        '<div style="margin-top:8px"><strong>Current winner:</strong> <em>' + esc(winnerContent) + '</em></div>' +
+        '<div style="margin-top:4px"><strong>Proposed challenger:</strong> <em>' + esc(p.content) + '</em></div>' +
+        '<div style="margin-top:8px">' +
+          '<textarea id="edit_' + p.id + '" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;font-family:inherit" rows="2" placeholder="Optional: edit before approving">' + esc(p.content) + '</textarea>' +
+        '</div>' +
+        '<div style="margin-top:8px;display:flex;gap:8px">' +
+          '<button class="btn btn-sm btn-sage" onclick="approveChallenger(\'' + p.id + '\')">Approve</button>' +
+          '<button class="btn btn-sm btn-outline" onclick="rejectChallenger(\'' + p.id + '\')">Reject</button>' +
+        '</div>' +
+        '</div>';
+    }
+    c.innerHTML = html;
+  } catch (e) {
+    c.innerHTML = '<p style="color:red">Error: ' + esc(String(e)) + '</p>';
+  }
+}
+
+async function approveChallenger(variantId) {
+  const edited = document.getElementById('edit_' + variantId).value.trim();
+  const session = await sb.auth.getSession();
+  const token = session.data.session && session.data.session.access_token;
+  const r = await fetch('https://village-api.jorrelpatterson.workers.dev/experiment/approve', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ variant_id: variantId, action: 'approve', edited_content: edited })
+  });
+  const res = await r.json();
+  showToast(r.ok ? 'Approved' : 'Error: ' + (res.error || 'unknown'));
+  loadApprovalQueue();
+}
+
+async function rejectChallenger(variantId) {
+  if (!confirm('Reject this challenger?')) return;
+  const session = await sb.auth.getSession();
+  const token = session.data.session && session.data.session.access_token;
+  const r = await fetch('https://village-api.jorrelpatterson.workers.dev/experiment/approve', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ variant_id: variantId, action: 'reject' })
+  });
+  showToast(r.ok ? 'Rejected' : 'Error');
+  loadApprovalQueue();
 }
 
 async function bumpQueueItem(qId,cohort){
