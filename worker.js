@@ -1300,6 +1300,49 @@ async function runDailyTasks(env) {
     }
   } catch (e) { console.error('Cold queue drain error:', e); }
 
+  // ── BOUNCE RATE GUARD: auto-pause cold cohorts above 5% bounce in 24hr ──
+  try {
+    const dayAgo = new Date(); dayAgo.setHours(dayAgo.getHours() - 24);
+    const guardR = await fetch(supaUrl + '/rest/v1/campaigns?is_sequence=eq.true&status=eq.active&cohort=in.(bcba,district,rc)&select=id,cohort,name', { headers });
+    const guardCampaigns = await guardR.json();
+
+    for (const camp of (guardCampaigns || [])) {
+      // Pull last 24hr of sends + count bounces
+      const sR = await fetch(supaUrl + '/rest/v1/campaign_sends?campaign_id=eq.' + camp.id + '&created_at=gte.' + dayAgo.toISOString() + '&select=status', { headers });
+      const ss = await sR.json();
+      if (!ss || ss.length < 20) continue; // not enough volume to judge
+      const bounced = ss.filter(s => s.status === 'bounced').length;
+      const rate = bounced / ss.length;
+      if (rate < 0.05) continue;
+
+      // Auto-pause + log
+      await fetch(supaUrl + '/rest/v1/campaigns?id=eq.' + camp.id, {
+        method: 'PATCH', headers,
+        body: JSON.stringify({ auto_paused_at: new Date().toISOString(), status: 'paused' })
+      });
+      await fetch(supaUrl + '/rest/v1/email_optimization_logs', {
+        method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          campaign_id: camp.id,
+          action: 'auto_paused',
+          details: { reason: 'bounce_rate', rate: rate, bounced: bounced, total: ss.length, cohort: camp.cohort }
+        })
+      });
+
+      // Email Jorrel
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'Modern Village <hello@modernvillage.app>',
+          to: 'jorrelpatterson@gmail.com',
+          subject: 'ALERT: Cold campaign auto-paused — high bounce rate',
+          html: '<p>Campaign <strong>' + camp.name + '</strong> (cohort: ' + camp.cohort + ') was auto-paused.</p><p>Bounce rate: ' + Math.round(rate * 1000) / 10 + '% (' + bounced + ' / ' + ss.length + ' sends in last 24hr).</p><p>Resume in admin after investigating.</p>'
+        })
+      });
+    }
+  } catch (e) { console.error('Bounce guard error:', e); }
+
   // ── EMAIL SEQUENCES: Process daily sends (variant-aware, bandit-picked) ──
   try {
     const seqR = await fetch(supaUrl + '/rest/v1/campaigns?is_sequence=eq.true&status=eq.active&auto_paused_at=is.null&select=id,name,cohort,subdomain,sequence_steps,variant_stats', { headers });
