@@ -383,6 +383,47 @@
       </div>
       <div class="panel"><div class="panel-hdr"><div class="panel-title">Leads</div><span id="leadResultCount" style="font-size:12px;color:var(--warm-gray-light)"></span></div><div class="panel-body"><table class="tbl"><thead><tr><th>Name</th><th>Organization</th><th>Type</th><th>City</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody id="leadBody"></tbody></table></div></div>
 
+      <details style="margin-top:24px;background:#fff;border-radius:12px;padding:12px;border:1px solid #eee">
+        <summary style="cursor:pointer;font-weight:700">Cohort Dashboard</summary>
+        <div style="padding:12px">
+          <select id="cohortDashSelect" onchange="loadCohortDash(this.value)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px">
+            <option value="">Pick a cohort...</option>
+            <option value="bcba">BCBA</option>
+            <option value="district">District</option>
+            <option value="rc">Regional Center</option>
+            <option value="screener">Screener</option>
+            <option value="re_engage">Re-engagement</option>
+            <option value="parent_welcome">Parent Welcome</option>
+          </select>
+          <div id="cohortDashStats"></div>
+        </div>
+      </details>
+
+      <details style="margin-top:16px;background:#fff;border-radius:12px;padding:12px;border:1px solid #eee" ontoggle="if(this.open)loadOptLog()">
+        <summary style="cursor:pointer;font-weight:700">Optimization Log</summary>
+        <div id="optLogList" style="padding:12px"></div>
+      </details>
+
+      <details style="margin-top:16px;background:#fff;border-radius:12px;padding:12px;border:1px solid #eee">
+        <summary style="cursor:pointer;font-weight:700">Lead Queue Manager</summary>
+        <div style="padding:12px">
+          <select id="queueCohortSelect" onchange="loadQueueManager(this.value)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--sand);font-family:inherit;font-size:13px">
+            <option value="">Pick a cohort...</option>
+            <option value="bcba">BCBA</option>
+            <option value="district">District</option>
+            <option value="rc">Regional Center</option>
+            <option value="screener">Screener</option>
+            <option value="re_engage">Re-engagement</option>
+            <option value="parent_welcome">Parent Welcome</option>
+          </select>
+          <div id="queueMgrControls" style="display:none;margin:12px 0;gap:8px">
+            <button class="btn btn-sm btn-outline" onclick="pauseCohort(document.getElementById('queueCohortSelect').value)">Pause cohort</button>
+            <button class="btn btn-sm btn-outline" onclick="resumeCohort(document.getElementById('queueCohortSelect').value)">Resume cohort</button>
+          </div>
+          <div id="queueMgrList"></div>
+        </div>
+      </details>
+
       <div style="margin-top:24px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
           <h3 style="margin:0">Email Campaigns</h3>
@@ -1687,6 +1728,140 @@ async function loadMarketing(){
 
 
 // ═══ EMAIL CAMPAIGNS ═══
+async function loadCohortDash(cohort){
+  var stats=document.getElementById('cohortDashStats');
+  if(!cohort){stats.innerHTML='';return}
+  stats.innerHTML='<div style="padding:20px;text-align:center;color:#999">Loading...</div>';
+  try{
+    var cr=await sb.from('campaigns').select('id,name,status,daily_cap,variant_stats,auto_paused_at,is_sequence').eq('cohort',cohort);
+    var camps=cr.data||[];
+    if(!camps.length){stats.innerHTML='<p style="color:#999;padding:12px">No campaigns for cohort "'+esc(cohort)+'" yet.</p>';return}
+    var campIds=camps.map(function(c){return c.id});
+    var qd=await sb.from('email_send_queue').select('*',{count:'exact',head:true}).eq('cohort',cohort).eq('status','queued');
+    var qDepth=qd.count||0;
+    var todayStart=new Date();todayStart.setUTCHours(0,0,0,0);
+    var st=await sb.from('email_send_queue').select('*',{count:'exact',head:true}).eq('cohort',cohort).eq('status','sent').gte('sent_at',todayStart.toISOString());
+    var sentToday=st.count||0;
+    var dayAgo=new Date();dayAgo.setHours(dayAgo.getHours()-24);
+    var sr=await sb.from('campaign_sends').select('status,replied_at,converted_at').in('campaign_id',campIds).gte('created_at',dayAgo.toISOString());
+    var sends=sr.data||[];
+    var total=0,bounced=0,opened=0,clicked=0,replied=0,converted=0;
+    sends.forEach(function(s){
+      total++;
+      if(s.status==='bounced')bounced++;
+      if(s.status==='opened'||s.status==='clicked'||s.status==='replied')opened++;
+      if(s.status==='clicked')clicked++;
+      if(s.replied_at)replied++;
+      if(s.converted_at)converted++;
+    });
+    var paused=camps.find(function(c){return c.auto_paused_at});
+    var cap=camps[0].daily_cap||0;
+    var pct=function(n){return total?(Math.round(n/total*1000)/10)+'%':'—'};
+    var html='';
+    if(paused)html+='<div style="background:#fee;border-left:4px solid red;padding:10px;margin:10px 0">Auto-paused at '+esc(paused.auto_paused_at)+' ('+esc(paused.name)+')</div>';
+    html+='<h4 style="margin:12px 0 6px">'+esc(camps.map(function(c){return c.name}).join(', '))+'</h4>';
+    html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0">';
+    html+='<div style="background:#f5f5f5;padding:10px;border-radius:8px"><strong>Queue depth</strong><br>'+qDepth+'</div>';
+    html+='<div style="background:#f5f5f5;padding:10px;border-radius:8px"><strong>Today / Cap</strong><br>'+sentToday+' / '+cap+'</div>';
+    html+='<div style="background:#f5f5f5;padding:10px;border-radius:8px"><strong>24hr bounce</strong><br>'+pct(bounced)+'</div>';
+    html+='<div style="background:#f5f5f5;padding:10px;border-radius:8px"><strong>24hr open</strong><br>'+pct(opened)+'</div>';
+    html+='<div style="background:#f5f5f5;padding:10px;border-radius:8px"><strong>Clicks</strong><br>'+clicked+'</div>';
+    html+='<div style="background:#f5f5f5;padding:10px;border-radius:8px"><strong>Replies</strong><br>'+replied+'</div>';
+    html+='<div style="background:#f5f5f5;padding:10px;border-radius:8px"><strong>Conversions</strong><br>'+converted+'</div>';
+    html+='<div style="background:#f5f5f5;padding:10px;border-radius:8px"><strong>Total 24hr sends</strong><br>'+total+'</div>';
+    html+='</div>';
+    html+='<h4 style="margin:12px 0 6px">Bandit state (variant_stats)</h4>';
+    html+='<pre style="background:#f5f5f5;padding:12px;border-radius:8px;overflow-x:auto;font-size:11px">'+esc(camps.map(function(c){return c.name+':\n'+JSON.stringify(c.variant_stats||{},null,2)}).join('\n\n'))+'</pre>';
+    stats.innerHTML=html;
+  }catch(e){
+    stats.innerHTML='<p style="color:red">Error loading: '+esc(String(e))+'</p>';
+    console.error(e);
+  }
+}
+
+async function loadOptLog(){
+  var list=document.getElementById('optLogList');
+  list.innerHTML='<div style="padding:20px;text-align:center;color:#999">Loading...</div>';
+  try{
+    var lr=await sb.from('email_optimization_logs').select('id,campaign_id,action,details,created_at').order('created_at',{ascending:false}).limit(50);
+    var logs=lr.data||[];
+    if(!logs.length){list.innerHTML='<p style="color:#999">No optimization events yet. This populates after a variant wins by 90%+ with 50+ sends.</p>';return}
+    var campIds=[];
+    logs.forEach(function(l){if(campIds.indexOf(l.campaign_id)===-1)campIds.push(l.campaign_id)});
+    var cr=await sb.from('campaigns').select('id,name').in('id',campIds);
+    var nameMap={};
+    (cr.data||[]).forEach(function(c){nameMap[c.id]=c.name});
+    list.innerHTML=logs.map(function(l){
+      var badge=l.action==='winner_picked'?'background:#dfd':l.action==='new_variant_generated'?'background:#ddf':l.action==='auto_paused'?'background:#fdd':'background:#eee';
+      return '<div style="padding:10px;border-bottom:1px solid #eee">'+
+        '<span style="'+badge+';padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">'+esc(l.action)+'</span> '+
+        '<strong>'+esc(nameMap[l.campaign_id]||l.campaign_id)+'</strong>'+
+        '<span style="float:right;color:#999;font-size:12px">'+esc(l.created_at)+'</span>'+
+        '<pre style="margin:6px 0 0;background:#f5f5f5;padding:8px;border-radius:6px;font-size:11px;overflow-x:auto">'+esc(JSON.stringify(l.details,null,2))+'</pre>'+
+        '</div>';
+    }).join('');
+  }catch(e){
+    list.innerHTML='<p style="color:red">Error: '+esc(String(e))+'</p>';
+    console.error(e);
+  }
+}
+
+async function loadQueueManager(cohort){
+  if(!cohort){
+    document.getElementById('queueMgrControls').style.display='none';
+    document.getElementById('queueMgrList').innerHTML='';
+    return;
+  }
+  document.getElementById('queueMgrControls').style.display='flex';
+  var list=document.getElementById('queueMgrList');
+  list.innerHTML='<div style="padding:20px;text-align:center;color:#999">Loading...</div>';
+  try{
+    var qr=await sb.from('email_send_queue').select('id,lead_id,scheduled_for,priority,sequence_step').eq('cohort',cohort).eq('status','queued').order('priority').order('scheduled_for').limit(100);
+    var q=qr.data||[];
+    if(!q.length){list.innerHTML='<p style="color:#999;padding:8px">Queue is empty for this cohort.</p>';return}
+    var html='<table style="width:100%;font-size:12px"><tr><th style="text-align:left;padding:6px">Lead</th><th style="text-align:left;padding:6px">Step</th><th style="text-align:left;padding:6px">Scheduled</th><th style="text-align:left;padding:6px">Priority</th><th></th></tr>';
+    html+=q.map(function(item){
+      var lid=item.lead_id?String(item.lead_id).substring(0,8)+'…':'—';
+      return '<tr style="border-top:1px solid #eee">'+
+        '<td style="padding:6px">'+esc(lid)+'</td>'+
+        '<td style="padding:6px">'+(item.sequence_step==null?'—':item.sequence_step)+'</td>'+
+        '<td style="padding:6px">'+esc(item.scheduled_for||'')+'</td>'+
+        '<td style="padding:6px">'+(item.priority==null?'—':item.priority)+'</td>'+
+        '<td style="padding:6px"><button class="btn btn-sm btn-outline" onclick="bumpQueueItem(\''+esc(item.id)+'\',\''+esc(cohort)+'\')">Bump to top</button></td>'+
+        '</tr>';
+    }).join('');
+    html+='</table>';
+    list.innerHTML=html;
+  }catch(e){
+    list.innerHTML='<p style="color:red">Error: '+esc(String(e))+'</p>';
+    console.error(e);
+  }
+}
+
+async function bumpQueueItem(qId,cohort){
+  await sb.from('email_send_queue').update({priority:1}).eq('id',qId);
+  showToast('Bumped to top');
+  loadQueueManager(cohort);
+}
+
+async function pauseCohort(cohort){
+  if(!cohort){showToast('Pick a cohort first');return}
+  if(!confirm('Pause all '+cohort+' sequence campaigns?'))return;
+  await sb.from('campaigns').update({status:'paused'}).eq('cohort',cohort).eq('is_sequence',true);
+  showToast('Cohort '+cohort+' paused');
+  loadCohortDash(cohort);
+  loadCampaigns();
+}
+
+async function resumeCohort(cohort){
+  if(!cohort){showToast('Pick a cohort first');return}
+  if(!confirm('Resume all '+cohort+' sequence campaigns?'))return;
+  await sb.from('campaigns').update({status:'active',auto_paused_at:null}).eq('cohort',cohort).eq('is_sequence',true);
+  showToast('Cohort '+cohort+' resumed');
+  loadCohortDash(cohort);
+  loadCampaigns();
+}
+
 async function loadCampaigns(){
   var r=await sb.from('campaigns').select('*').order('created_at',{ascending:false});
   var camps=r.data||[];
