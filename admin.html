@@ -1712,12 +1712,16 @@ async function loadCampaigns(){
       h+='<div><strong>'+(c.total_bounced||0)+'</strong> bounced</div>';
       h+='</div>';
     }
+    if(c.is_sequence){
+      h+='<div style="margin-top:10px"><button class="btn btn-sm btn-outline" onclick="editCampaign(\''+c.id+'\')">Edit Sequence</button></div>';
+    }
     h+='</div>';
   });
   el.innerHTML=h;
 }
 
 function showCampaignComposer(){
+  editingCampaignId=null;
   campaignMode='blast';
   sequenceStepsData=[];
   document.getElementById('campName').value='';
@@ -1732,10 +1736,52 @@ function showCampaignComposer(){
   document.getElementById('sequenceSteps').innerHTML='';
   document.getElementById('campaignComposer').style.display='flex';
 }
-function closeCampaignComposer(){document.getElementById('campaignComposer').style.display='none'}
+function closeCampaignComposer(){editingCampaignId=null;document.getElementById('campaignComposer').style.display='none'}
 
 var campaignMode='blast';
 var sequenceStepsData=[];
+var editingCampaignId=null;
+
+function normalizeStep(s,i){
+  if(s&&s.variants&&s.variants.length){
+    return {
+      day: s.day||0,
+      angle: s.angle||('Email '+(i+1)),
+      subject_a: (s.variants[0]&&s.variants[0].subject)||'',
+      subject_b: (s.variants[1]&&s.variants[1].subject)||'',
+      body: (s.variants[0]&&s.variants[0].body_html)||''
+    };
+  }
+  return {
+    day: (s&&s.day)||0,
+    angle: (s&&s.angle)||('Email '+(i+1)),
+    subject_a: (s&&s.subject_a)||'',
+    subject_b: (s&&s.subject_b)||'',
+    body: (s&&s.body)||''
+  };
+}
+
+async function editCampaign(campaignId){
+  var r=await sb.from('campaigns').select('*').eq('id',campaignId).single();
+  if(r.error||!r.data){showToast('Campaign not found');return}
+  var c=r.data;
+  if(!c.is_sequence){showToast('Only sequence campaigns can be edited here');return}
+
+  editingCampaignId=campaignId;
+  campaignMode='sequence';
+  document.getElementById('campName').value=c.name||'';
+  var targetSel=document.getElementById('campTarget');
+  if(targetSel&&c.lead_filter&&c.lead_filter.type)targetSel.value=c.lead_filter.type;
+
+  sequenceStepsData=(c.sequence_steps||[]).map(normalizeStep);
+  renderSequenceSteps();
+
+  document.getElementById('blastFields').style.display='none';
+  document.getElementById('sequenceFields').style.display='block';
+  document.getElementById('modeBlast').className='btn btn-sm btn-outline';
+  document.getElementById('modeSequence').className='btn btn-sm btn-sage';
+  document.getElementById('campaignComposer').style.display='flex';
+}
 
 function setCampaignMode(mode){
   campaignMode=mode;
@@ -1761,6 +1807,8 @@ function renderSequenceSteps(){
     {day:35,angle:'Breakup Email'}
   ];
   if(!sequenceStepsData.length)sequenceStepsData=defaults.map(function(d){return{day:d.day,angle:d.angle,subject_a:'',subject_b:'',body:''}});
+  // Normalize any new-format steps (with variants[]) into display fields
+  sequenceStepsData=sequenceStepsData.map(function(s,i){return (s&&s.variants)?normalizeStep(s,i):s;});
   var h='';
   sequenceStepsData.forEach(function(s,i){
     h+='<div style="padding:14px;background:#f9f9f9;border-radius:12px;margin-bottom:10px;border-left:4px solid var(--sage)">';
@@ -1854,17 +1902,35 @@ async function saveCampaign(activate){
     // Validate at least first step has content
     if(!sequenceStepsData[0].subject_a||!sequenceStepsData[0].body){showToast('Fill in at least the first email');return}
 
-    var campData={name:name,subject_a:sequenceStepsData[0].subject_a,subject_b:sequenceStepsData[0].subject_b||null,body_html:emailWrapper(sequenceStepsData[0].body),is_sequence:true,sequence_steps:sequenceStepsData,lead_filter:{type:target},status:activate?'active':'draft'};
-    var r=await sb.from('campaigns').insert(campData).select().single();
-    if(r.error){showToast('Error saving');return}
+    // Convert to new variants[] format for save (worker.js reads either format)
+    var stepsOut=sequenceStepsData.map(function(s,i){
+      var vars=[{id:'a',subject:s.subject_a,body_html:s.body}];
+      if(s.subject_b)vars.push({id:'b',subject:s.subject_b,body_html:s.body});
+      return {step:i,day:s.day,angle:s.angle,variants:vars};
+    });
 
-    if(activate&&r.data){
-      // Enroll leads
-      await enrollLeadsInSequence(r.data.id,target);
+    var campData={name:name,subject_a:sequenceStepsData[0].subject_a,subject_b:sequenceStepsData[0].subject_b||null,body_html:emailWrapper(sequenceStepsData[0].body),is_sequence:true,sequence_steps:stepsOut,lead_filter:{type:target},status:activate?'active':'draft'};
+
+    if(editingCampaignId){
+      // UPDATE existing — preserve cohort, subdomain, daily_cap, variant_stats by not setting them
+      var ur=await sb.from('campaigns').update(campData).eq('id',editingCampaignId).select().single();
+      if(ur.error){showToast('Error saving');return}
+      editingCampaignId=null;
+      closeCampaignComposer();
+      showToast(activate?'Sequence activated!':'Sequence saved.');
+      loadCampaigns();
+    } else {
+      var r=await sb.from('campaigns').insert(campData).select().single();
+      if(r.error){showToast('Error saving');return}
+
+      if(activate&&r.data){
+        // Enroll leads
+        await enrollLeadsInSequence(r.data.id,target);
+      }
+      closeCampaignComposer();
+      showToast(activate?'Sequence activated! Emails will send daily.':'Sequence saved as draft.');
+      loadCampaigns();
     }
-    closeCampaignComposer();
-    showToast(activate?'Sequence activated! Emails will send daily.':'Sequence saved as draft.');
-    loadCampaigns();
   } else {
     // Original blast logic
     var subA=document.getElementById('campSubjectA').value.trim();
