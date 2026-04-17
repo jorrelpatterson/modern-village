@@ -27,7 +27,8 @@
       "Healthcare attorney review of 7 partnership contracts (~$2-4K flat fee) — gates Modern Village Services LLC formation + Stripe transfer",
       "Feature branch feat/email-drips-optimization not yet merged to main (acceptable for now; both drips + autoresearch live on this branch)"
     ],
-    "next_action": "Apply the 2 autoresearch migrations to Supabase, set Meta Pixel ID, deploy worker.js. Then the landing_headline experiment starts collecting data immediately. In parallel: send Ariana the BCBA editing ask + scope PC Billing Phase 2a+2b.",
+    "next_action": "Jorrel is STARTING A NEW THREAD for iOS Capacitor wrap. Handoff doc: docs/superpowers/HANDOFF-2026-04-17-ios-capacitor.md. Outside the Capacitor work: apply 2 autoresearch migrations + set Meta Pixel ID + deploy worker.js (~10min), send Ariana BCBA editing ask, scope PC Billing Phase 2a+2b as separate builds. Email drips + autoresearch framework are both CODE COMPLETE on branch feat/email-drips-optimization (49 commits ahead of main).",
+    "active_thread_focus": "iOS Capacitor wrap — starting fresh session",
     "last_session": "2026-04-17",
     "completed_today_part_2": [
       "Marketing AutoResearch Framework — 18 of 18 plan tasks complete. Tag autoresearch-live.",

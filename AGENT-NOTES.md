@@ -4,6 +4,10 @@
 
 ---
 
+## 🚧 NEW SESSION STARTING: iOS Capacitor Wrap (2026-04-17 evening)
+
+If you are a new agent picking up this project for the iOS Capacitor build, read [docs/superpowers/HANDOFF-2026-04-17-ios-capacitor.md](docs/superpowers/HANDOFF-2026-04-17-ios-capacitor.md) FIRST. It contains everything needed to bootstrap: current platform state, locked architectural decisions (web-only Stripe, no IAP, vanilla HTML stays, Capacitor not React Native), priorities (push notifications P0), the first brainstorming question to ask (bundle strategy), and parallel work that shouldn't be blocked.
+
 ## Active builds (2026-04-17)
 
 ### Email Drips + Optimization Build — LIVE in production
