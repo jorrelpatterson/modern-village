@@ -1,0 +1,6 @@
+name = "village-api"
+main = "worker.js"
+compatibility_date = "2026-04-17"
+
+[triggers]
+crons = ["0 3 * * *"]
