@@ -1981,7 +1981,92 @@ async function runDailyTasks(env) {
           })
         });
 
-        // Challenger generation happens in a follow-on block (AR-09) — for clean task decomposition
+        // Generate challenger via Claude
+        let newVariantContent = null;
+        try {
+          const prompt = slot.challenger_prompt
+            .replace(/\{\{winner\}\}/g, winnerVariant.content)
+            .replace(/\{\{win_probability\}\}/g, Math.round(winProbability * 100));
+
+          const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'claude-sonnet-4-20250514',
+              max_tokens: 300,
+              messages: [{ role: 'user', content: prompt }]
+            })
+          });
+          const aiData = await aiRes.json();
+          const aiText = (aiData.content && aiData.content[0] ? aiData.content[0].text : '').trim().replace(/^["']|["']$/g, '');
+          if (aiText) newVariantContent = aiText;
+        } catch (aiErr) {
+          console.error('Challenger gen error for slot ' + slot.id + ':', aiErr);
+        }
+
+        if (!newVariantContent) continue;
+
+        // Allocate next variant key (a, b, c, ... aa, ab if overflow)
+        const allVariantsRes = await fetch(supaUrl + '/rest/v1/experiment_variants?slot_id=eq.' + encodeURIComponent(slot.id) + '&select=variant_key', { headers });
+        const allVariants = await allVariantsRes.json();
+        const usedKeys = new Set((allVariants || []).map(v => v.variant_key));
+        let newKey = null;
+        for (const ch of 'abcdefghijklmnopqrstuvwxyz') {
+          if (!usedKeys.has(ch)) { newKey = ch; break; }
+        }
+        if (!newKey) {
+          for (const c1 of 'abcdefghijklmnopqrstuvwxyz') {
+            for (const c2 of 'abcdefghijklmnopqrstuvwxyz') {
+              if (!usedKeys.has(c1 + c2)) { newKey = c1 + c2; break; }
+            }
+            if (newKey) break;
+          }
+        }
+        if (!newKey) continue;
+
+        const isAutoDeploy = slot.deploy_mode === 'auto';
+
+        // Insert new variant
+        await fetch(supaUrl + '/rest/v1/experiment_variants', {
+          method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            slot_id: slot.id,
+            variant_key: newKey,
+            content: newVariantContent,
+            generated_by: 'claude',
+            generated_from_variant: winnerKey,
+            status: isAutoDeploy ? 'active' : 'pending_approval',
+            activated_at: isAutoDeploy ? new Date().toISOString() : null
+          })
+        });
+
+        // Log the generation event
+        await fetch(supaUrl + '/rest/v1/experiment_events', {
+          method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            slot_id: slot.id,
+            variant_key: newKey,
+            event_type: isAutoDeploy ? 'challenger_generated' : 'challenger_pending_approval',
+            event_data: { winner: winnerKey, win_probability: winProbability, new_content: newVariantContent, replaced_losers: isAutoDeploy ? losers : [] }
+          })
+        });
+
+        // If auto-deploy: retire losers + reset posteriors
+        if (isAutoDeploy) {
+          for (const loserKey of losers) {
+            await fetch(supaUrl + '/rest/v1/experiment_variants?slot_id=eq.' + encodeURIComponent(slot.id) + '&variant_key=eq.' + encodeURIComponent(loserKey), {
+              method: 'PATCH', headers,
+              body: JSON.stringify({ status: 'retired', retired_at: new Date().toISOString() })
+            });
+          }
+
+          // Rebuild variant_stats: keep winner's, drop losers', init new variant
+          const rebuiltStats = { [winnerKey]: newStats[winnerKey], [newKey]: { alpha: 1, beta: 1, sends: 0 } };
+          await fetch(supaUrl + '/rest/v1/experiment_slots?id=eq.' + encodeURIComponent(slot.id), {
+            method: 'PATCH', headers,
+            body: JSON.stringify({ variant_stats: rebuiltStats })
+          });
+        }
       } catch (slotErr) {
         console.error('Experiment slot ' + slot.id + ' optimization error:', slotErr);
       }
