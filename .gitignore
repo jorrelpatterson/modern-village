@@ -3,3 +3,33 @@ node_modules
 # macOS resource forks
 ._*
 .DS_Store
+
+# Node / npm
+package-lock.json.backup
+
+# iOS Capacitor artifacts
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
+ios/App/build/
+ios/DerivedData/
+ios/App/output/
+
+# Android Capacitor artifacts (Phase 1)
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/captures/
+android/.idea/
+android/app/release/
+
+# Superpowers brainstorming sessions
+.superpowers/
+
+# Orphan experiments (Next.js leftovers, stashed but may re-appear)
+.next/
+next-env.d.ts
+app/(auth)/
+app/(dashboard)/

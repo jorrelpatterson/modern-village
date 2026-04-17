@@ -1,0 +1,17 @@
+{
+  "name": "modern-village",
+  "version": "1.0.0",
+  "description": "Modern Village iOS + Android Capacitor wrap",
+  "private": true,
+  "scripts": {
+    "cap": "cap"
+  },
+  "dependencies": {
+    "@capacitor/cli": "^8.3.1",
+    "@capacitor/core": "^8.3.1",
+    "@capacitor/ios": "^8.3.1"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "appId": "app.modernvillage.ios",
+  "appName": "Modern Village",
+  "webDir": "www",
+  "server": {
+    "url": "https://modernvillage.app",
+    "cleartext": false,
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "limitsNavigationsToAppBoundDomains": false
+  }
+}
