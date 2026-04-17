@@ -4,37 +4,42 @@
 
 ---
 
-## 🚧 Active work in progress: Email Drips + Optimization Build
+## Email Drips + Optimization Build — LIVE in production (2026-04-17)
 
-**10 of 20 tasks done. PAUSED at Phase 3 checkpoint.**
+**18 of 20 tasks done. Parent drips + optimization layer DEPLOYED.** Cold sequences seeded as drafts awaiting Ariana's copy edits.
 
-### If you (the agent) are being asked "what's next" or to continue work on Modern Village:
+### Status summary
 
-1. **First, check what branch this workspace is on:**
-   ```bash
-   git branch --show-current
-   ```
+- **Worker version live:** `7743ef11-3a13-4208-afc9-86540c12f2ff` at `village-api.jorrelpatterson.workers.dev`
+- **Cron:** 3am UTC daily
+- **Branch:** `feat/email-drips-optimization` — NOT yet merged to main (open question: merge now or after Task 19 E2E)
+- **Tags:** `drips-deployed` (current), `drips-phase-5-done` (pre-deploy), `drips-phase-3-done`, `drips-phase-2-done`, `drips-phase-1-done`
 
-2. **If not on `feat/email-drips-optimization`, ask the user whether they want to:**
-   - **Resume the email drips build** → checkout `feat/email-drips-optimization`, read `docs/superpowers/plans/2026-04-16-email-drips-STATUS.md`, continue from Task 11
-   - **Switch priorities** → see `docs/ROADMAP.md` and the build queue memory for other work (PC billing, iOS Capacitor wrap, etc.)
+### If you (the agent) are being asked "what's next" on Modern Village:
 
-3. **If resuming, follow the STATUS doc's "Pick-up instructions" section exactly:**
-   - Re-invoke `superpowers:subagent-driven-development` via the Skill tool
-   - Dispatch Task 11 per the plan at `docs/superpowers/plans/2026-04-16-email-drips-and-optimization.md`
-   - Remember the path-sandbox rule: subagent tool calls that use absolute paths starting with `/Volumes/` will fail with EACCES — always pass relative paths in subagent prompts
+**Check build queue memory first** (`project_build_queue.md`) — the top of stack is up-to-date.
 
-### Resume document
+Current priorities:
+1. Email drips build — essentially DONE except Ariana editing BCBA copy (not an agent task) and a final E2E smoke once she activates (Task 19, gated)
+2. PC Billing Phase 2a+2b (Parent Consultation, CPT 97156) — biggest revenue lever, unblocked
+3. iOS Capacitor wrap + push notifications — Apple dev account acquired 2026-04-16
+4. My Village map view + local resources
 
-[docs/superpowers/plans/2026-04-16-email-drips-STATUS.md](docs/superpowers/plans/2026-04-16-email-drips-STATUS.md) — has the full task status, commit SHAs, deferred follow-ups, out-of-repo state (DNS/deploy/Resend inbound still pending), testing workflow reference, and rollback commands.
+### For the email drips build specifically
 
-### Git state at pause
+[docs/superpowers/plans/2026-04-16-email-drips-STATUS.md](docs/superpowers/plans/2026-04-16-email-drips-STATUS.md) has the full state, commit SHAs, deferred follow-ups, and resume instructions.
 
-- Branch: `feat/email-drips-optimization`
-- Latest tag: `drips-phase-3-done`
-- 15 commits ahead of `main`
-- worker.js changes NOT yet deployed to Cloudflare
-- Supabase migration `20260416_email_drips_optimization.sql` IS applied to live DB
+**If Ariana has edited BCBA copy and user wants to run Task 19:** the STATUS doc's "If resuming AFTER Ariana has edited" section has the exact steps.
+
+**Deferred follow-ups to schedule later** (tracked in STATUS doc): HTML escape user-provided names in email bodies, upgrade Claude model ID from `claude-sonnet-4-20250514` to `claude-sonnet-4-6`, add List-Unsubscribe header for Gmail/Yahoo compliance.
+
+### Path-sandbox rule for any subagent dispatches
+
+Absolute paths starting with `/Volumes/` fail with EACCES. Always pass relative paths in subagent prompts. Include this header on every subagent dispatch:
+```
+## Path rules
+Working directory: `/Volumes/Alexandria/AI Projects/modern-village`. Use RELATIVE paths only — absolute paths starting with `/Volumes/` fail with EACCES.
+```
 
 ---
 

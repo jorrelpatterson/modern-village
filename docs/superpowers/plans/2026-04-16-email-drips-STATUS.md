@@ -1,26 +1,46 @@
 # Email Drips + Optimization — Session Resume Status
 
-**Last updated:** 2026-04-16 (end of Phase 5)
+**Last updated:** 2026-04-17 (parent drips + optimization LIVE in production, cold sequences in draft awaiting Ariana)
 **Branch:** `feat/email-drips-optimization`
+**Tag:** `drips-deployed` (production deploy) | `drips-phase-5-done` (prior, pre-deploy)
+**Deployed worker version:** `7743ef11-3a13-4208-afc9-86540c12f2ff`
 **Plan:** [2026-04-16-email-drips-and-optimization.md](2026-04-16-email-drips-and-optimization.md)
 **Spec:** [../specs/2026-04-16-email-drips-and-optimization-design.md](../specs/2026-04-16-email-drips-and-optimization-design.md)
 
 ---
 
-## Progress: 15 of 20 tasks done (75%)
+## Progress: 18 of 20 tasks done (90%) — LIVE IN PRODUCTION
 
 ```
 Phase 1: Foundation              [✓✓]           Tag: drips-phase-1-done
 Phase 2: Parent drips            [✓✓]           Tag: drips-phase-2-done
 Phase 3: Optimization foundation [✓✓✓✓✓✓]      Tag: drips-phase-3-done
-Phase 5: Cold B2B sequences      [✓✓✓✓✓]        Tag: drips-phase-5-done  ← YOU ARE HERE
-Phase 6: Admin UX                [···]
-Phase 7: Verification + docs     [··]
+Phase 5: Cold B2B sequences      [✓✓✓✓✓]        Tag: drips-phase-5-done
+Phase 6: Admin UX                [✓✓✓]          (Tasks 16 + 17/18 batched)
+Phase 7: Verification + docs     [··]           ← Task 19 gated on Ariana, Task 20 in progress
+                                                Tag: drips-deployed (2026-04-17)
 ```
 
 Note: no Phase 4 — Phase 3 IS "optimization foundation," Phase 5 follows.
 
 ---
+
+## What's live in production RIGHT NOW (as of 2026-04-17 deploy)
+
+- Worker cron fires at 3am UTC daily
+- All 4 parent-facing sequences: Screener Day 0/3/7/10, Welcome Day 1/3/7, Re-engage Day 7/14/21, Weekly Digest Fridays
+- Reply tracking via `/webhook/resend-inbound` (Resend inbound webhook configured)
+- Conversion attribution for signups/bookings/Pro upgrades
+- Thompson sampling bandit + 90% Bayesian auto-promote (waiting for 50+ sends/variant)
+- Send-time learning (daily rollup of `leads.best_open_hour`)
+- Bounce-rate auto-pause (5% in 24hr)
+- Admin UX: Edit Sequence button + Cohort Dashboard + Optimization Log + Lead Queue Manager
+- Resend subdomains verified: `bcba.outreach`, `district.outreach`, `rc.outreach`
+
+## What's NOT yet live
+
+- **Cold B2B sequences (BCBA/District/RC)** are seeded as `status='draft'` with placeholder subjects `[DRAFT BCBA #NA]`. Ariana must edit copy in admin → flip status to active → auto-enroll trigger + queue drainer start sending.
+- **Task 19 (E2E smoke)** is gated on activation. Not actionable until Ariana edits.
 
 ## How to resume in a new session
 
@@ -35,19 +55,20 @@ cat docs/superpowers/plans/2026-04-16-email-drips-and-optimization.md
 
 ```bash
 git checkout feat/email-drips-optimization
-git log --oneline drips-phase-5-done..HEAD     # should show NOTHING if we stopped cleanly here
-git log --oneline main..HEAD | wc -l           # should show 20 commits on branch
+git log --oneline drips-deployed..HEAD     # should show NOTHING (deploy is current HEAD)
+git log --oneline main..HEAD | wc -l       # ~22 commits on branch
 ```
 
-### 3. Start at Task 16
+### 3. If resuming AFTER Ariana has edited BCBA copy
 
-Phase 5 landed 2026-04-16. Next up is Task 16 (sequence editor with variants) in `admin.html`. See the plan for exact spec.
-
-Before dispatching Task 16, complete these out-of-repo actions:
-- Apply migrations `20260416_auto_enroll_trigger.sql` and `20260416_seed_cold_campaigns.sql` to Supabase
-- Set Resend subdomain DNS for bcba.outreach / district.outreach / rc.outreach
-- Set wrangler secrets: SENDER_BCBA, SENDER_DISTRICT, SENDER_RC, SENDER_TRANSACTIONAL
-- `wrangler deploy` to push the branch's worker.js changes
+Do Task 19 (E2E smoke with test cohort):
+1. Verify the BCBA Cold Sequence now has real subjects (no `[DRAFT...]` prefix) in admin
+2. Set `status='active'` on the BCBA campaign
+3. Seed 10 test leads with `lead_type='bcba'` and `email LIKE 'jorrelpatterson+bcba%@gmail.com'` — auto-enroll trigger will enqueue them
+4. Wait for next 3am cron OR manually trigger via wrangler dev + curl
+5. Verify emails arrive from `team@bcba.outreach.modernvillage.app`
+6. Verify `campaign_sends` rows have correct tags (cohort=bcba, step=0, variant=a)
+7. Reply to one email → verify `campaign_sends.replied_at` gets set via the inbound webhook
 
 Then re-invoke the subagent-driven-development skill and dispatch Task 16.
 

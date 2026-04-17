@@ -160,14 +160,36 @@ At $19.99/mo = $93K/year just from pediatrician referrals
 
 ## 5. EMAIL DRIP SEQUENCES
 
-Four sequences, 13 emails total. All HIPAA-compliant (no PHI in emails).
+All sequences wired with continual optimization as of 2026-04-17. HIPAA-compliant (no PHI in emails). Worker deployed version `7743ef11`. Cron fires daily at 3am UTC.
 
-### Sequence 1: Screener Lead → Subscriber (4 emails over 10 days)
-### Sequence 2: New Subscriber Welcome (3 emails over 5 days)
-### Sequence 3: Re-Engagement for Inactive Users (3 emails over 21 days)
-### Sequence 4: Weekly Digest (every Friday)
+### Parent-facing (LIVE):
+- **Sequence 1: Screener Lead → Subscriber** (4 emails: Day 0/3/7/10) — for leads who completed M-CHAT-R, state advances via `screener_leads.last_step_sent`
+- **Sequence 2: New Subscriber Welcome** (3 emails: Day 1/3/7) — for new parent signups
+- **Sequence 3: Re-Engagement** (3 emails: Day 7/14/21 inactive) — progressive gentle → tip → final; resets to step 0 on activity; step-3 reset for permanently-lapsed users
+- **Sequence 4: Weekly Digest** (Fridays) — all opted-in parents, summary stats + top community post
 
-Full email copy in `modern-village-email-sequences.docx`.
+### Cold B2B (DRAFT, awaiting activation):
+- **BCBA Cold Sequence** (9 emails over 45 days) — from `bcba.outreach.modernvillage.app`. Placeholder subjects `[DRAFT BCBA #NA]` — Ariana edits in admin, then flip to active.
+- **District Cold Sequence** (9 emails over 45 days) — from `district.outreach.modernvillage.app`
+- **Regional Center Cold Sequence** (9 emails over 45 days) — from `rc.outreach.modernvillage.app`
+- Cadence per sequence: Day 0, 3, 7, 10, 14, 21, 28, 35, 45
+- Warmup pacing: 50/day (week 1) → 100 → 250 → 500 (week 4+)
+- Auto-pause if 24hr bounce rate > 5%
+
+### Continual Optimization Layer (LIVE):
+- **Reply tracking** — `/webhook/resend-inbound` matches replies via In-Reply-To → `campaign_sends.replied_at`. Weighted 10x opens.
+- **Conversion attribution** — daily cron matches new signups / bookings / Pro upgrades to the most recent `campaign_sends` within 60 days. Weighted 100x opens.
+- **Reward function:** `1×opens + 5×clicks + 10×replies + 100×conversions`
+- **Thompson sampling bandit** — picks variants per-step via Beta(alpha, beta) posteriors. First 5 sends/variant are uniform-random (cold-start).
+- **Auto-promote winners** — 90% Bayesian win probability via 1000 Thompson samples, min 50 sends/variant. Winner keeps posterior, loser rotated out, AI-generated challenger rotated in.
+- **Per-step + per-cohort scope** — BCBA step 3 optimizes against BCBA step 3 only.
+- **Send-time learning** — `leads.best_open_hour` daily rollup from opens (min 3 opens per lead).
+- **Bounce-rate guard** — auto-pauses cohort and emails admin if 24hr bounce > 5%.
+
+### Auto-enrollment trigger (armed, idle until cold campaigns activate)
+Postgres `AFTER INSERT` trigger on `leads`: new leads with cohort=bcba/district/rc auto-enqueue a Day 0 send into `email_send_queue`. Daily drainer respects `campaigns.daily_cap` (default 50). Admin can bump priority or pause cohort.
+
+Full email copy (parent-facing) in `modern-village-email-sequences.docx`. Cold B2B drafts editable in admin → Edit Sequence.
 
 ---
 
