@@ -424,6 +424,16 @@
         </div>
       </details>
 
+      <div id="slotDetailModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:40px">
+        <div style="background:#fff;border-radius:12px;padding:20px;max-width:900px;width:100%;max-height:90vh;overflow-y:auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 id="slotDetailTitle" style="margin:0">Slot Detail</h2>
+            <button class="btn btn-sm btn-outline" onclick="closeSlotDetail()">Close</button>
+          </div>
+          <div id="slotDetailBody"></div>
+        </div>
+      </div>
+
       <details style="margin-top:16px;background:#fff;border-radius:12px;padding:12px;border:1px solid #eee">
         <summary style="cursor:pointer;font-weight:700" onclick="loadExperimentSlots()">&#x1F9EA; Experiment Slots (Marketing AutoResearch)</summary>
         <div id="expSlotsContainer" style="padding:12px"></div>
@@ -1885,6 +1895,81 @@ async function loadExperimentSlots() {
     c.innerHTML = '<p style="color:red">Error: ' + esc(String(e)) + '</p>';
     console.error(e);
   }
+}
+
+function closeSlotDetail() {
+  document.getElementById('slotDetailModal').style.display = 'none';
+}
+
+async function viewSlotDetail(slotId) {
+  document.getElementById('slotDetailModal').style.display = 'flex';
+  const title = document.getElementById('slotDetailTitle');
+  const body = document.getElementById('slotDetailBody');
+  title.textContent = slotId;
+  body.innerHTML = '<div style="padding:20px;text-align:center;color:#999">Loading...</div>';
+
+  try {
+    const { data: slotData } = await sb.from('experiment_slots').select('*').eq('id', slotId).single();
+    const { data: variants } = await sb.from('experiment_variants').select('*').eq('slot_id', slotId).order('created_at');
+    const { data: recentEvents } = await sb.from('experiment_events').select('*').eq('slot_id', slotId).order('created_at', { ascending: false }).limit(50);
+
+    const stats = slotData.variant_stats || {};
+
+    let html = '<h3>Config</h3>';
+    html += '<pre style="background:#f5f5f5;padding:12px;border-radius:8px;font-size:11px;overflow-x:auto">' + esc(JSON.stringify({
+      description: slotData.description,
+      field_type: slotData.field_type,
+      deploy_mode: slotData.deploy_mode,
+      reward_metric: slotData.reward_metric,
+      min_sends_per_variant: slotData.min_sends_per_variant,
+      confidence_threshold: slotData.confidence_threshold,
+      status: slotData.status
+    }, null, 2)) + '</pre>';
+
+    html += '<h3 style="margin-top:16px">Variants</h3>';
+    html += '<table style="width:100%;font-size:12px"><tr><th>Key</th><th>Status</th><th>Source</th><th>Content</th><th>&alpha;</th><th>&beta;</th><th>Sends</th></tr>';
+    for (const v of (variants || [])) {
+      const st = stats[v.variant_key] || {};
+      html += '<tr style="border-top:1px solid #eee">' +
+        '<td style="padding:6px"><strong>' + esc(v.variant_key) + '</strong></td>' +
+        '<td style="padding:6px">' + esc(v.status) + '</td>' +
+        '<td style="padding:6px">' + esc(v.generated_by) + (v.generated_from_variant ? ' (from ' + esc(v.generated_from_variant) + ')' : '') + '</td>' +
+        '<td style="padding:6px;max-width:300px"><em>' + esc(v.content) + '</em></td>' +
+        '<td style="padding:6px">' + (st.alpha || 1).toFixed(2) + '</td>' +
+        '<td style="padding:6px">' + (st.beta || 1).toFixed(2) + '</td>' +
+        '<td style="padding:6px">' + (st.sends || 0) + '</td>' +
+        '</tr>';
+    }
+    html += '</table>';
+
+    html += '<h3 style="margin-top:16px">Recent 50 events</h3>';
+    html += '<table style="width:100%;font-size:11px"><tr><th>When</th><th>Type</th><th>Variant</th><th>Data</th></tr>';
+    for (const e of (recentEvents || [])) {
+      html += '<tr style="border-top:1px solid #eee">' +
+        '<td style="padding:4px">' + esc(new Date(e.created_at).toLocaleString()) + '</td>' +
+        '<td style="padding:4px">' + esc(e.event_type) + '</td>' +
+        '<td style="padding:4px">' + esc(e.variant_key || '\u2014') + '</td>' +
+        '<td style="padding:4px;font-family:monospace;max-width:400px">' + esc(JSON.stringify(e.event_data || {})) + '</td>' +
+        '</tr>';
+    }
+    html += '</table>';
+
+    html += '<div style="margin-top:16px;display:flex;gap:8px">';
+    html += '<button class="btn btn-sm btn-outline" onclick="toggleSlotStatus(\'' + esc(slotId) + '\',\'' + esc(slotData.status) + '\')">' + (slotData.status === 'paused' ? 'Resume' : 'Pause') + ' slot</button>';
+    html += '</div>';
+
+    body.innerHTML = html;
+  } catch (e) {
+    body.innerHTML = '<p style="color:red">Error: ' + esc(String(e)) + '</p>';
+  }
+}
+
+async function toggleSlotStatus(slotId, currentStatus) {
+  const newStatus = currentStatus === 'paused' ? 'active' : 'paused';
+  if (!confirm(newStatus === 'paused' ? 'Pause slot ' + slotId + '?' : 'Resume slot ' + slotId + '?')) return;
+  await sb.from('experiment_slots').update({ status: newStatus }).eq('id', slotId);
+  showToast('Slot ' + newStatus);
+  viewSlotDetail(slotId);
 }
 
 async function bumpQueueItem(qId,cohort){
