@@ -1,122 +1,45 @@
-# Medical Billing Module — Agent Notes
+# Agent Notes — READ FIRST
 
-**Built overnight on branch: `medical-billing`**
-**Date: 2026-04-06/07**
-**Status: Complete — ready for review and merge**
+**Last updated:** 2026-04-16
 
 ---
 
-## What Was Built
+## 🚧 Active work in progress: Email Drips + Optimization Build
 
-### 1. SQL Migration (`supabase/migrations/20260407_medical_billing.sql`)
-- **`claims` table** — tracks insurance claims per session note (provider_id, child_id, payer_name, payer_id, cpt_code, units, amount, status, submitted_at, paid_at, paid_amount, denied_reason)
-- **`payer_enrollments` table** — tracks which insurance companies a BCBA is credentialed with (payer_name, payer_id, enrollment_status, credentialed_at)
-- RLS policies: providers see/manage their own claims and payers. Admins can view all claims.
-- Indexes on provider_id, status, session_note_id
+**10 of 20 tasks done. PAUSED at Phase 3 checkpoint.**
 
-### 2. Billing Tab in Client Detail (`app.html`)
-Added a "Billing" sub-tab alongside Behavior Logs, Session Notes, Care Notes, Insights. Shows:
-- **Summary cards** — 4 stats: Pending (count + $), Submitted (count + $), Paid (count + $), Denied (count + $)
-- **Aging report** — visual bar showing 0-30 day / 31-60 day / 61-90+ day claim distribution
-- **Claims list** — each claim shows payer, CPT code, units, amount, status badge, date
-- **Status dropdown** — update claim status inline (pending → submitted → paid / denied)
-- **Denial reason** — text input appears when claim is denied
-- **Paid amount** — number input appears when claim is paid (for partial payments)
+### If you (the agent) are being asked "what's next" or to continue work on Modern Village:
 
-### 3. Generate Claim from Session Notes
-Added a "Generate Claim" button on each session note card. When clicked:
-- Checks if a claim already exists for that session (prevents duplicates)
-- Pulls the provider's default payer from payer_enrollments
-- Calculates units from session duration (duration / 15, rounded up)
-- Defaults amount to $30/unit (editable later)
-- Creates the claim in `pending` status
+1. **First, check what branch this workspace is on:**
+   ```bash
+   git branch --show-current
+   ```
 
-### 4. Billing Dashboard (all clients)
-New sidebar item "Billing Dashboard" for providers. Shows:
-- Total revenue, outstanding amount, total claims, denied count
-- Aging report across all clients
-- Recent 20 claims with status badges
+2. **If not on `feat/email-drips-optimization`, ask the user whether they want to:**
+   - **Resume the email drips build** → checkout `feat/email-drips-optimization`, read `docs/superpowers/plans/2026-04-16-email-drips-STATUS.md`, continue from Task 11
+   - **Switch priorities** → see `docs/ROADMAP.md` and the build queue memory for other work (PC billing, iOS Capacitor wrap, etc.)
 
-### 5. Payer Management
-New sidebar item "My Payers" for providers. Shows:
-- List of enrolled insurance payers with status (active/pending/inactive)
-- Add new payer form (name + payer ID)
-- Update enrollment status dropdown
-- Remove payer button
+3. **If resuming, follow the STATUS doc's "Pick-up instructions" section exactly:**
+   - Re-invoke `superpowers:subagent-driven-development` via the Skill tool
+   - Dispatch Task 11 per the plan at `docs/superpowers/plans/2026-04-16-email-drips-and-optimization.md`
+   - Remember the path-sandbox rule: subagent tool calls that use absolute paths starting with `/Volumes/` will fail with EACCES — always pass relative paths in subagent prompts
 
-### 6. CSS
-Added billing-specific CSS: .billing-summary, .billing-stat, .claim-card, .claim-status-*, .aging-bar, .aging-segment, .payer-card
+### Resume document
+
+[docs/superpowers/plans/2026-04-16-email-drips-STATUS.md](docs/superpowers/plans/2026-04-16-email-drips-STATUS.md) — has the full task status, commit SHAs, deferred follow-ups, out-of-repo state (DNS/deploy/Resend inbound still pending), testing workflow reference, and rollback commands.
+
+### Git state at pause
+
+- Branch: `feat/email-drips-optimization`
+- Latest tag: `drips-phase-3-done`
+- 15 commits ahead of `main`
+- worker.js changes NOT yet deployed to Cloudflare
+- Supabase migration `20260416_email_drips_optimization.sql` IS applied to live DB
 
 ---
 
-## What You Need to Do
+## Prior completed builds (historical reference — safe to ignore unless specifically asked)
 
-1. **Review the branch:** `git diff main..medical-billing` (or just read the commits)
-2. **If it looks good, merge:** `git checkout main && git merge medical-billing`
-3. **Run the SQL migration** in Supabase SQL editor: `supabase/migrations/20260407_medical_billing.sql`
-4. **Push to main:** `git push origin main`
-5. **Test as provider:** Log in as testprovider@modernvillage.app, open a client, create a session note, generate a claim
+### Medical Billing Module (2026-04-06/07, branch `medical-billing` — merged)
 
----
-
-## Design Decisions Made
-
-- **Claims are generated from session notes** (not created independently) — this ensures every claim has clinical documentation backing it
-- **Default rate is $30/unit** — this is a placeholder. In production, rates should come from the payer enrollment or a rate schedule
-- **Payer defaults to first active enrollment** — if provider has multiple payers, they'd need to select per-client (future enhancement)
-- **No automated claim submission** — claims are tracked manually (pending → submitted → paid). Electronic claim submission (EDI 837) is a future phase requiring clearinghouse integration
-
----
-
-## Potential Issues
-
-- **Quote escaping:** All onclick handlers use `\\x27` as required. Syntax check passed clean.
-- **The `confirm()` call in deletePayer** — works but is not styled. Could replace with a custom modal later.
-- **No payer selection per claim** — currently uses first active payer. If a provider works with multiple insurance companies, they'd need a payer dropdown when generating claims. Flagging for future enhancement.
-
----
-
-## Files Changed
-- `app.html` — 280 lines added (CSS + HTML + JS)
-- `supabase/migrations/20260407_medical_billing.sql` — 83 lines (new file)
-
-## Commits (on medical-billing branch)
-1. `87d0d7f` — SQL migration for claims and payer_enrollments tables
-2. `0dc57ac` — Billing tab in provider client detail
-3. `c843572` — Billing dashboard + payer management
-
----
-
-## Additional Builds (overnight continuation)
-
-### 6. Admin Billing Overview Tab (`admin.html`)
-New "Billing Overview" tab in admin sidebar showing:
-- Total revenue, outstanding amount, total claims, denial rate
-- Claims by status bar chart (pending/submitted/paid/denied)
-- Revenue by provider bar chart (with provider names)
-- Recent 30 claims table (provider, payer, CPT, units, amount, status, date)
-
-### 7. Client Card Billing Stats (`app.html`)
-Provider client list cards now show:
-- "$X paid" in green (total revenue from this client)
-- "$X pending" in blue (outstanding claims)
-- Replaces the old "draft/pending" session note badges with actual dollar amounts
-
-### 8. Claim CSV Export (`app.html`)
-- "Export CSV" button on the Billing Dashboard
-- Downloads all claims as CSV: payer, CPT, units, amount, paid amount, status, denial reason, dates
-- `exportClaims()` function added
-
-## Updated Commit Log (all on medical-billing branch)
-1. `87d0d7f` — SQL migration for claims and payer_enrollments tables
-2. `0dc57ac` — Billing tab in provider client detail
-3. `c843572` — Billing dashboard + payer management
-4. `4743ddd` — Agent notes
-5. `a7ffb16` — Admin billing overview tab
-6. `1874a34` — Client card billing stats + claim export
-
-## Total Changes
-- `app.html` — ~300 lines added
-- `admin.html` — ~77 lines added
-- `supabase/migrations/20260407_medical_billing.sql` — 83 lines (new)
-- `AGENT-NOTES.md` — this file
+SQL migration + Billing tab in client detail with 4 summary cards (Pending/Submitted/Paid/Denied) and aging reports. Claims and payer_enrollments tables with RLS. See commit history for details.
