@@ -1,0 +1,42 @@
+{
+  "id": "modern-village",
+  "name": "Modern Village",
+  "type": "saas",
+  "owner": "jorrel",
+  "status": "active",
+  "urls": {
+    "production": "https://modernvillage.app",
+    "repo": "",
+    "admin": "https://modernvillage.app/admin.html"
+  },
+  "metrics": {
+    "stripe": true,
+    "supabase": true,
+    "vercel": true
+  },
+  "current": {
+    "blockers": [
+      "Resend subdomain DNS setup (bcba.outreach / district.outreach / rc.outreach) — blocks cold sequence activation",
+      "Wrangler secrets not yet set: SENDER_BCBA, SENDER_DISTRICT, SENDER_RC, SENDER_TRANSACTIONAL",
+      "Two migrations not yet applied to live Supabase: 20260416_auto_enroll_trigger.sql, 20260416_seed_cold_campaigns.sql",
+      "worker.js not yet deployed via wrangler — Phases 2 + 3 + 5 code sits in branch only",
+      "HIPAA BAAs pending with Resend + Anthropic (Supabase signed)",
+      "Uncommitted work on branch unrelated to email drips: README.md + 9 HTMLs modified, 50+ untracked files in _reference/ and app/"
+    ],
+    "next_action": "Apply the two 2026-04-16 migrations to Supabase, set Resend DNS + wrangler secrets, deploy worker.js, then resume Task 16 (sequence editor with variants in admin.html) on branch feat/email-drips-optimization",
+    "last_session": "2026-04-16",
+    "completed_today": [
+      "Task 11: variant-aware sequence processor (worker.js) — commits e26f070 + be00cc7",
+      "Task 12: cold send queue processor with daily warmup cap — commit fe462de",
+      "Task 13: Postgres auto-enroll trigger migration — commit 08f19ad",
+      "Task 14: bounce-rate guard auto-pauses cold cohorts >5% — commit e3c8fbe",
+      "Task 15: seed BCBA/District/RC cold sequences as drafts — commit 95899a1"
+    ]
+  },
+  "setup": {
+    "complete": false,
+    "missing": ["CLAUDE.md (CLAUDE 2.md exists but filename suggests exFAT rename artifact)"],
+    "next_setup_action": "Resolve CLAUDE 2.md vs CLAUDE.md filename — either rename to CLAUDE.md or confirm existing is canonical"
+  },
+  "roadmap": "docs/ROADMAP.md"
+}

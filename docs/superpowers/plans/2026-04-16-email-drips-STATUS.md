@@ -1,19 +1,19 @@
 # Email Drips + Optimization — Session Resume Status
 
-**Last updated:** 2026-04-16 (end of Phase 3)
+**Last updated:** 2026-04-16 (end of Phase 5)
 **Branch:** `feat/email-drips-optimization`
 **Plan:** [2026-04-16-email-drips-and-optimization.md](2026-04-16-email-drips-and-optimization.md)
 **Spec:** [../specs/2026-04-16-email-drips-and-optimization-design.md](../specs/2026-04-16-email-drips-and-optimization-design.md)
 
 ---
 
-## Progress: 10 of 20 tasks done (50%)
+## Progress: 15 of 20 tasks done (75%)
 
 ```
 Phase 1: Foundation              [✓✓]           Tag: drips-phase-1-done
 Phase 2: Parent drips            [✓✓]           Tag: drips-phase-2-done
-Phase 3: Optimization foundation [✓✓✓✓✓✓]      Tag: drips-phase-3-done  ← YOU ARE HERE
-Phase 5: Cold B2B sequences      [··········]
+Phase 3: Optimization foundation [✓✓✓✓✓✓]      Tag: drips-phase-3-done
+Phase 5: Cold B2B sequences      [✓✓✓✓✓]        Tag: drips-phase-5-done  ← YOU ARE HERE
 Phase 6: Admin UX                [···]
 Phase 7: Verification + docs     [··]
 ```
@@ -35,15 +35,21 @@ cat docs/superpowers/plans/2026-04-16-email-drips-and-optimization.md
 
 ```bash
 git checkout feat/email-drips-optimization
-git log --oneline drips-phase-3-done..HEAD     # should show NOTHING if we stopped cleanly here
-git log --oneline main..HEAD | wc -l           # should show 14 commits
+git log --oneline drips-phase-5-done..HEAD     # should show NOTHING if we stopped cleanly here
+git log --oneline main..HEAD | wc -l           # should show 20 commits on branch
 ```
 
-### 3. Start at Task 11
+### 3. Start at Task 16
 
-Plan Task 11 is at [the plan doc around line 1200](2026-04-16-email-drips-and-optimization.md#task-11-update-sequence-step-format-variants-array-backward-compat).
+Phase 5 landed 2026-04-16. Next up is Task 16 (sequence editor with variants) in `admin.html`. See the plan for exact spec.
 
-Re-invoke the subagent-driven-development skill via the Skill tool, then dispatch Task 11 following the plan's exact spec.
+Before dispatching Task 16, complete these out-of-repo actions:
+- Apply migrations `20260416_auto_enroll_trigger.sql` and `20260416_seed_cold_campaigns.sql` to Supabase
+- Set Resend subdomain DNS for bcba.outreach / district.outreach / rc.outreach
+- Set wrangler secrets: SENDER_BCBA, SENDER_DISTRICT, SENDER_RC, SENDER_TRANSACTIONAL
+- `wrangler deploy` to push the branch's worker.js changes
+
+Then re-invoke the subagent-driven-development skill and dispatch Task 16.
 
 ### 4. Apply this path rule to every subagent dispatch
 
@@ -86,17 +92,17 @@ Every subagent dispatch in this build has included this header. Don't forget it.
 
 ---
 
+### Phase 5: Cold B2B sequences (tag `drips-phase-5-done`)
+
+| Task | Commit | Summary |
+|------|--------|---------|
+| 11. Variant-aware sequence processor | `e26f070` + fallback `be00cc7` | Replaced worker.js sequence processor with bandit-picked variant selection + cohort-aware sender + `{NAME}` uppercase personalization + unsubscribed/bounced guard + campaign_sends tags (campaign/cohort/step/variant). Fallback patch extends backward-compat to legacy `{subject_a, subject_b, body}` shape so pre-Task-11 campaigns don't silently stall. |
+| 12. Cold send queue processor | `fe462de` | Drains `email_send_queue` per cohort, respects `campaigns.daily_cap` (default 50), creates `sequence_enrollments` idempotently. Actual send happens in the unified sequence processor (variant + tracking in one place). |
+| 13. Auto-enroll trigger | `08f19ad` | New migration `20260416_auto_enroll_trigger.sql`. Postgres AFTER INSERT trigger on `leads` auto-enqueues Day 0 for cold cohorts. Skips unsubscribed/bounced/no-email/no-active-campaign. |
+| 14. Bounce auto-pause guard | `e3c8fbe` | Daily cron checks last 24hr bounce rate per cold campaign. >5% (min 20 sends) → auto-pause, log to `email_optimization_logs`, email Jorrel. |
+| 15. Seed cold campaigns | `95899a1` | New migration `20260416_seed_cold_campaigns.sql`. Inserts BCBA/District/RC 9-step draft campaigns with placeholder `[DRAFT — edit in admin]` subjects. Per-cohort subdomain set. |
+
 ## What's NOT yet done
-
-### Phase 5: Cold B2B sequences (Tasks 11-15)
-
-| Task | What it does |
-|------|-------------|
-| 11. Variant-aware sequence processor | Updates worker.js:881-960 to pick variant via bandit, support per-step `variants[]` array (with backward compat to legacy `subject`/`html` single-variant format) |
-| 12. Cold send queue processor | New cron block that drains `email_send_queue` per-cohort respecting `daily_cap`, creates `sequence_enrollments` idempotently |
-| 13. Auto-enroll trigger | Postgres trigger on `leads` INSERT — when new lead has cohort, auto-enqueue Day 0 in `email_send_queue` |
-| 14. Bounce-rate guard | Auto-pauses cohort if 24hr bounce rate > 5%, logs, emails Jorrel |
-| 15. Seed cold campaigns | Migration loads BCBA/District/RC as `status='draft'` 9-step sequences with placeholder `[DRAFT — edit in admin]` subjects |
 
 ### Phase 6: Admin UX (Tasks 16-18)
 
@@ -183,4 +189,4 @@ wrangler rollback
 
 Paste this into a new session after `git checkout feat/email-drips-optimization`:
 
-> I'm resuming the email drips + optimization build at the Phase 3 checkpoint (tag `drips-phase-3-done`). Status doc: `docs/superpowers/plans/2026-04-16-email-drips-STATUS.md`. Plan: `docs/superpowers/plans/2026-04-16-email-drips-and-optimization.md`. We're 10 of 20 tasks done. Next up: Task 11 (variant-aware sequence processor) kicking off Phase 5. Use the subagent-driven-development skill. Remember the path rule: sandbox blocks absolute paths starting with `/Volumes/`, always use relative paths in subagent prompts.
+> I'm resuming the email drips + optimization build at the Phase 5 checkpoint (tag `drips-phase-5-done`). Status doc: `docs/superpowers/plans/2026-04-16-email-drips-STATUS.md`. Plan: `docs/superpowers/plans/2026-04-16-email-drips-and-optimization.md`. We're 15 of 20 tasks done. Phase 5 backend is code-complete but not deployed — before touching code, apply the two 2026-04-16 migrations to Supabase, set Resend DNS + wrangler secrets (SENDER_BCBA, SENDER_DISTRICT, SENDER_RC, SENDER_TRANSACTIONAL), and `wrangler deploy`. Then dispatch Task 16 (sequence editor with variants in admin.html). Use the subagent-driven-development skill. Remember the path rule: sandbox blocks absolute paths starting with `/Volumes/`, always use relative paths in subagent prompts.
