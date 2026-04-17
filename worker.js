@@ -158,6 +158,16 @@ function pickVariant(variantStats) {
   return pickVariantThompson(variantStats);
 }
 
+function pickSender(env, cohort, subdomain) {
+  // If campaign has explicit subdomain, build from-address from it
+  if (subdomain) return 'Modern Village <team@' + subdomain + '>';
+  // Otherwise fall back to cohort-mapped secrets
+  if (cohort === 'bcba') return env.SENDER_BCBA || 'Modern Village BCBA Network <team@bcba.outreach.modernvillage.app>';
+  if (cohort === 'district') return env.SENDER_DISTRICT || 'Modern Village for Districts <team@district.outreach.modernvillage.app>';
+  if (cohort === 'rc') return env.SENDER_RC || 'Modern Village for Regional Centers <team@rc.outreach.modernvillage.app>';
+  return env.SENDER_TRANSACTIONAL || 'Modern Village <hello@modernvillage.app>';
+}
+
 // ═══ BANDIT REWARD + POSTERIOR UPDATE ═══
 
 // Reward from a single send event.
@@ -1241,83 +1251,120 @@ async function runDailyTasks(env) {
     }
   } catch (e) { console.error('Weekly digest error:', e); }
 
-  // ── EMAIL SEQUENCES: Process daily sends ──
+  // ── EMAIL SEQUENCES: Process daily sends (variant-aware, bandit-picked) ──
   try {
-    // Get all active sequence campaigns
-    const seqR = await fetch(supaUrl + '/rest/v1/campaigns?is_sequence=eq.true&status=eq.active&select=id,sequence_steps', { headers });
+    const seqR = await fetch(supaUrl + '/rest/v1/campaigns?is_sequence=eq.true&status=eq.active&auto_paused_at=is.null&select=id,name,cohort,subdomain,sequence_steps,variant_stats', { headers });
     const sequences = await seqR.json();
 
     for (const seq of (sequences || [])) {
       const steps = seq.sequence_steps || [];
       if (!steps.length) continue;
 
-      // Get active enrollments (not completed, not unsubscribed)
+      // Active enrollments (not completed, not unsubscribed)
       const enrollR = await fetch(supaUrl + '/rest/v1/sequence_enrollments?campaign_id=eq.' + seq.id + '&completed=eq.false&unsubscribed=eq.false&select=id,lead_id,current_step,enrolled_at,last_sent_at', { headers });
       const enrollments = await enrollR.json();
 
       for (const enr of (enrollments || [])) {
         const step = steps[enr.current_step];
         if (!step) {
-          // Completed all steps
           await fetch(supaUrl + '/rest/v1/sequence_enrollments?id=eq.' + enr.id, { method: 'PATCH', headers, body: JSON.stringify({ completed: true }) });
           continue;
         }
 
-        // Check if it's time to send this step
+        // Time gate
         const enrollDate = new Date(enr.enrolled_at);
         const daysSinceEnroll = Math.floor((Date.now() - enrollDate.getTime()) / 86400000);
-        if (daysSinceEnroll < step.day) continue; // Not time yet
+        if (daysSinceEnroll < step.day) continue;
 
-        // Check we haven't already sent today
+        // Skip if already sent today
         if (enr.last_sent_at) {
           const lastSent = new Date(enr.last_sent_at);
-          const today = new Date();
-          if (lastSent.toISOString().split('T')[0] === today.toISOString().split('T')[0]) continue;
+          if (lastSent.toISOString().split('T')[0] === new Date().toISOString().split('T')[0]) continue;
         }
 
-        // Get lead email
-        const leadR = await fetch(supaUrl + '/rest/v1/leads?id=eq.' + enr.lead_id + '&select=email,name,first_name', { headers });
+        // Get lead + bail if unsubscribed/bounced
+        const leadR = await fetch(supaUrl + '/rest/v1/leads?id=eq.' + enr.lead_id + '&select=id,email,name,first_name,unsubscribed,bounced,unsubscribe_token,best_open_hour', { headers });
         const leads = await leadR.json();
-        if (!leads.length || !leads[0].email) continue;
+        if (!leads.length || !leads[0].email || leads[0].unsubscribed || leads[0].bounced) {
+          await fetch(supaUrl + '/rest/v1/sequence_enrollments?id=eq.' + enr.id, { method: 'PATCH', headers, body: JSON.stringify({ unsubscribed: true }) });
+          continue;
+        }
         const lead = leads[0];
 
-        // A/B test subject
-        const variant = Math.random() < 0.5 ? 'a' : 'b';
-        const subject = variant === 'b' && step.subject_b ? step.subject_b : step.subject_a;
-        const body = emailWrapper(step.body.replace(/\{name\}/g, lead.name || lead.first_name || 'there'));
+        // Pick variant (bandit if multiple, else 'a' or legacy single)
+        const variants = step.variants || (step.subject ? [{ id: 'a', subject: step.subject, body_html: step.html }] : null);
+        if (!variants || !variants.length) continue;
 
-        // Send
-        const sendResult = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            from: 'Modern Village <hello@modernvillage.app>',
-            to: lead.email,
-            subject: subject.replace(/\{name\}/g, lead.name || lead.first_name || 'there'),
-            html: body,
-            tags: [{ name: 'campaign', value: seq.id }, { name: 'step', value: String(enr.current_step) }]
-          })
-        });
-        const sendData = await sendResult.json();
-
-        // Record the send
-        if (sendData.id) {
-          await fetch(supaUrl + '/rest/v1/campaign_sends', {
-            method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
-            body: JSON.stringify({ campaign_id: seq.id, lead_id: enr.lead_id, resend_id: sendData.id, email: lead.email, variant: variant })
-          });
-
-          // Advance to next step
-          const nextStep = enr.current_step + 1;
-          const isComplete = nextStep >= steps.length;
-          await fetch(supaUrl + '/rest/v1/sequence_enrollments?id=eq.' + enr.id, {
-            method: 'PATCH', headers,
-            body: JSON.stringify({ current_step: nextStep, last_sent_at: new Date().toISOString(), completed: isComplete })
-          });
+        const stepKey = 'step_' + enr.current_step;
+        const stepStats = (seq.variant_stats && seq.variant_stats[stepKey]) || {};
+        // Ensure every variant has a posterior
+        for (const v of variants) {
+          if (!stepStats[v.id]) stepStats[v.id] = { alpha: 1, beta: 1, sends: 0 };
         }
+        const chosenId = pickVariant(stepStats);
+        const chosen = variants.find(v => v.id === chosenId) || variants[0];
 
-        // Rate limit
-        await new Promise(r => setTimeout(r, 500));
+        // Pick sender by subdomain (cohort-aware)
+        const sender = pickSender(env, seq.cohort, seq.subdomain);
+
+        // Personalize
+        const name = lead.first_name || lead.name || 'there';
+        const unsubUrl = 'https://village-api.jorrelpatterson.workers.dev/unsubscribe?token=' + encodeURIComponent(lead.unsubscribe_token || '') + '&source=lead';
+        const subject = (chosen.subject || '').replace(/\{NAME\}/g, name);
+        const body = (chosen.body_html || '').replace(/\{NAME\}/g, name);
+
+        try {
+          const sendR = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              from: sender,
+              to: lead.email,
+              subject: subject,
+              html: emailWrapper(body, unsubUrl),
+              tags: [
+                { name: 'campaign', value: seq.id },
+                { name: 'cohort', value: seq.cohort || 'unknown' },
+                { name: 'step', value: String(enr.current_step) },
+                { name: 'variant', value: chosenId }
+              ]
+            })
+          });
+          const sendData = await sendR.json();
+
+          if (sendR.ok && sendData.id) {
+            const now = new Date();
+            // Record send
+            await fetch(supaUrl + '/rest/v1/campaign_sends', {
+              method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
+              body: JSON.stringify({
+                campaign_id: seq.id,
+                lead_id: lead.id,
+                resend_id: sendData.id,
+                email: lead.email,
+                variant: chosenId,
+                sequence_step: enr.current_step,
+                sent_hour: now.getUTCHours(),
+                status: 'sent'
+              })
+            });
+            // Bump variant send count immediately for cold-start gating
+            stepStats[chosenId].sends = (stepStats[chosenId].sends || 0) + 1;
+            const newVarStats = seq.variant_stats || {};
+            newVarStats[stepKey] = stepStats;
+            await fetch(supaUrl + '/rest/v1/campaigns?id=eq.' + seq.id, {
+              method: 'PATCH', headers,
+              body: JSON.stringify({ variant_stats: newVarStats })
+            });
+            // Advance enrollment
+            await fetch(supaUrl + '/rest/v1/sequence_enrollments?id=eq.' + enr.id, {
+              method: 'PATCH', headers,
+              body: JSON.stringify({ current_step: enr.current_step + 1, last_sent_at: now.toISOString() })
+            });
+          }
+        } catch (e) { console.error('Sequence send error:', e); }
+
+        await new Promise(r => setTimeout(r, 300));
       }
     }
   } catch (e) { console.error('Sequence processing error:', e); }
