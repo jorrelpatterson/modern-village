@@ -452,6 +452,78 @@ export default {
       return new Response('{"ok":true}', { headers: h });
     }
 
+    // ═══ POST /experiment/approve — admin approves a pending_approval variant ═══
+    if (url.pathname === '/experiment/approve' && request.method === 'POST') {
+      if (!user || !user.id) return new Response('{"error":"unauthorized"}', { status: 401, headers: h });
+      const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' };
+      // Verify admin
+      const adminCheck = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&is_admin=eq.true&select=id', { headers: supaH });
+      const adminRows = await adminCheck.json();
+      if (!adminRows || !adminRows.length) return new Response('{"error":"not admin"}', { status: 403, headers: h });
+
+      const reqBody = body || await request.json().catch(() => ({}));
+      const { variant_id, action, edited_content } = reqBody;
+      if (!variant_id || !['approve', 'reject'].includes(action)) {
+        return new Response('{"error":"missing or invalid variant_id/action"}', { status: 400, headers: h });
+      }
+
+      // Load the variant
+      const vRes = await fetch(env.SUPABASE_URL + '/rest/v1/experiment_variants?id=eq.' + variant_id + '&select=*', { headers: supaH });
+      const variants = await vRes.json();
+      if (!variants || !variants.length) return new Response('{"error":"variant not found"}', { status: 404, headers: h });
+      const v = variants[0];
+      if (v.status !== 'pending_approval') return new Response('{"error":"variant not pending approval"}', { status: 400, headers: h });
+
+      if (action === 'reject') {
+        await fetch(env.SUPABASE_URL + '/rest/v1/experiment_variants?id=eq.' + variant_id, {
+          method: 'PATCH', headers: supaH,
+          body: JSON.stringify({ status: 'retired', retired_at: new Date().toISOString() })
+        });
+        await fetch(env.SUPABASE_URL + '/rest/v1/experiment_events', {
+          method: 'POST', headers: { ...supaH, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ slot_id: v.slot_id, variant_key: v.variant_key, event_type: 'challenger_rejected', event_data: { by: user.id } })
+        });
+        return new Response('{"ok":true,"action":"rejected"}', { headers: h });
+      }
+
+      // Approve path: optionally accept edited content, activate variant, retire losers, reset posteriors
+      const finalContent = (edited_content && edited_content.trim()) ? edited_content.trim() : v.content;
+
+      await fetch(env.SUPABASE_URL + '/rest/v1/experiment_variants?id=eq.' + variant_id, {
+        method: 'PATCH', headers: supaH,
+        body: JSON.stringify({ status: 'active', activated_at: new Date().toISOString(), content: finalContent })
+      });
+
+      // Retire all other active variants for this slot EXCEPT the winner (generated_from_variant)
+      const activeOthersRes = await fetch(env.SUPABASE_URL + '/rest/v1/experiment_variants?slot_id=eq.' + encodeURIComponent(v.slot_id) + '&status=eq.active&variant_key=neq.' + encodeURIComponent(v.variant_key) + '&variant_key=neq.' + encodeURIComponent(v.generated_from_variant || '') + '&select=variant_key', { headers: supaH });
+      const activeOthers = await activeOthersRes.json();
+      for (const other of (activeOthers || [])) {
+        await fetch(env.SUPABASE_URL + '/rest/v1/experiment_variants?slot_id=eq.' + encodeURIComponent(v.slot_id) + '&variant_key=eq.' + encodeURIComponent(other.variant_key), {
+          method: 'PATCH', headers: supaH,
+          body: JSON.stringify({ status: 'retired', retired_at: new Date().toISOString() })
+        });
+      }
+
+      // Reset posteriors: keep winner (generated_from_variant), add new variant
+      const slotRes = await fetch(env.SUPABASE_URL + '/rest/v1/experiment_slots?id=eq.' + encodeURIComponent(v.slot_id) + '&select=variant_stats', { headers: supaH });
+      const slots = await slotRes.json();
+      const existingStats = (slots && slots[0] && slots[0].variant_stats) || {};
+      const winnerStats = existingStats[v.generated_from_variant] || { alpha: 1, beta: 1, sends: 0 };
+      const newStats = { [v.variant_key]: { alpha: 1, beta: 1, sends: 0 } };
+      if (v.generated_from_variant) newStats[v.generated_from_variant] = winnerStats;
+      await fetch(env.SUPABASE_URL + '/rest/v1/experiment_slots?id=eq.' + encodeURIComponent(v.slot_id), {
+        method: 'PATCH', headers: supaH,
+        body: JSON.stringify({ variant_stats: newStats })
+      });
+
+      await fetch(env.SUPABASE_URL + '/rest/v1/experiment_events', {
+        method: 'POST', headers: { ...supaH, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ slot_id: v.slot_id, variant_key: v.variant_key, event_type: 'challenger_approved', event_data: { by: user.id, edited: finalContent !== v.content } })
+      });
+
+      return new Response('{"ok":true,"action":"approved","variant_key":"' + v.variant_key + '"}', { headers: h });
+    }
+
     // === FEEDBACK NOTIFICATION ===
     if (url.pathname === '/feedback-notify') {
       try {
