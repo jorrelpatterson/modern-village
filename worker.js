@@ -890,20 +890,22 @@ async function runDailyTasks(env) {
   } catch (e) { console.error('Re-engagement error:', e); }
 
   // -- ATTRIBUTION BACKFILL: link new signups + bookings + subscribes to recent campaign_sends --
-  try {
-    const yest = new Date();
-    yest.setDate(yest.getDate() - 1);
-    const yestStart = yest.toISOString().split('T')[0] + 'T00:00:00';
-    const yestEnd = yest.toISOString().split('T')[0] + 'T23:59:59';
+  const yest = new Date();
+  yest.setDate(yest.getDate() - 1);
+  const yestStart = yest.toISOString().split('T')[0] + 'T00:00:00';
+  const yestEnd = yest.toISOString().split('T')[0] + 'T23:59:59';
 
-    // Yesterday's new signups
+  // Yesterday's new signups
+  try {
     const newProfilesRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=gte.' + yestStart + '&created_at=lte.' + yestEnd + '&select=id,email', { headers });
     const newProfiles = await newProfilesRes.json();
     for (const p of (newProfiles || [])) {
       await attributeConversion(env, p.email, 'signup', p.id);
     }
+  } catch (e) { console.error('Attribution signups error:', e); }
 
-    // Yesterday's new bookings
+  // Yesterday's new bookings
+  try {
     const newBookRes = await fetch(supaUrl + '/rest/v1/bookings?created_at=gte.' + yestStart + '&created_at=lte.' + yestEnd + '&select=id,user_id', { headers });
     const newBookings = await newBookRes.json();
     for (const b of (newBookings || [])) {
@@ -913,15 +915,16 @@ async function runDailyTasks(env) {
         await attributeConversion(env, prof[0].email, 'booking', b.user_id);
       }
     }
+  } catch (e) { console.error('Attribution bookings error:', e); }
 
-    // Yesterday's new Pro subscribers
-    // Note: profiles has no subscription_started_at column, using updated_at as a proxy.
+  // Yesterday's new Pro subscribers — uses updated_at as a proxy (no dedicated subscription_started_at column yet)
+  try {
     const newProRes = await fetch(supaUrl + '/rest/v1/profiles?subscription_status=eq.pro&updated_at=gte.' + yestStart + '&updated_at=lte.' + yestEnd + '&select=id,email', { headers });
     const newPro = await newProRes.json();
     for (const p of (newPro || [])) {
       await attributeConversion(env, p.email, 'subscribed', p.id);
     }
-  } catch (e) { console.error('Attribution backfill error:', e); }
+  } catch (e) { console.error('Attribution subscribes error:', e); }
 
   // -- SCREENER LEAD AUTO-ENROLL: Send Day 0 email + create lead for sequence enrollment --
   try {
