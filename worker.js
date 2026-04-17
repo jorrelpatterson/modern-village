@@ -366,6 +366,45 @@ export default {
       return new Response(JSON.stringify({ variant_key: chosenKey, content: chosen.content }), { headers: h });
     }
 
+    // ═══ POST /experiment/event — outcome tracking ═══
+    if (url.pathname === '/experiment/event' && request.method === 'POST') {
+      const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' };
+      const eventBody = body || await request.json().catch(() => ({}));
+      const { session_id, slot_id, event_type, event_data, user_id } = eventBody;
+      if (!session_id || !slot_id || !event_type) {
+        return new Response('{"error":"missing session_id, slot_id, or event_type"}', { status: 400, headers: h });
+      }
+
+      // Look up variant_key from assignment
+      const assignRes = await fetch(env.SUPABASE_URL + '/rest/v1/experiment_assignments?session_id=eq.' + encodeURIComponent(session_id) + '&slot_id=eq.' + encodeURIComponent(slot_id) + '&select=variant_key,user_id', { headers: supaH });
+      const assigns = await assignRes.json();
+      const variant_key = (assigns && assigns[0]) ? assigns[0].variant_key : null;
+
+      // If user_id provided and assignment.user_id is null, link it
+      if (user_id && assigns && assigns[0] && !assigns[0].user_id) {
+        await fetch(env.SUPABASE_URL + '/rest/v1/experiment_assignments?session_id=eq.' + encodeURIComponent(session_id) + '&slot_id=eq.' + encodeURIComponent(slot_id), {
+          method: 'PATCH', headers: supaH,
+          body: JSON.stringify({ user_id: user_id })
+        });
+      }
+
+      // Insert event
+      await fetch(env.SUPABASE_URL + '/rest/v1/experiment_events', {
+        method: 'POST',
+        headers: { ...supaH, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          slot_id: slot_id,
+          variant_key: variant_key,
+          session_id: session_id,
+          user_id: user_id || (assigns && assigns[0] ? assigns[0].user_id : null),
+          event_type: event_type,
+          event_data: event_data || null
+        })
+      });
+
+      return new Response('{"ok":true}', { headers: h });
+    }
+
     // === FEEDBACK NOTIFICATION ===
     if (url.pathname === '/feedback-notify') {
       try {
