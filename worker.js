@@ -1894,4 +1894,97 @@ async function runDailyTasks(env) {
       });
     }
   } catch (e) { console.error('Email optimization error:', e); }
+
+  // ── AUTORESEARCH: Experiment Slots Optimizer (landing pages, paywall, ads, etc) ──
+  try {
+    const slotsRes = await fetch(supaUrl + '/rest/v1/experiment_slots?status=eq.active&select=id,description,reward_metric,challenger_prompt,min_sends_per_variant,confidence_threshold,variant_stats,deploy_mode,last_optimized_at', { headers });
+    const slots = await slotsRes.json();
+
+    for (const slot of (slots || [])) {
+      try {
+        // Pull active variants for this slot
+        const varRes = await fetch(supaUrl + '/rest/v1/experiment_variants?slot_id=eq.' + encodeURIComponent(slot.id) + '&status=eq.active&select=variant_key,content', { headers });
+        const variants = await varRes.json();
+        if (!variants || variants.length < 2) continue;
+
+        // Pull events since last_optimized_at (or 30 days ago if never)
+        const sinceIso = slot.last_optimized_at || new Date(Date.now() - 30 * 86400000).toISOString();
+        const evtRes = await fetch(supaUrl + '/rest/v1/experiment_events?slot_id=eq.' + encodeURIComponent(slot.id) + '&created_at=gte.' + sinceIso + '&variant_key=not.is.null&select=variant_key,event_type', { headers });
+        const events = await evtRes.json();
+
+        // Group events by variant
+        const eventsByVariant = {};
+        for (const v of variants) eventsByVariant[v.variant_key] = [];
+        for (const e of (events || [])) {
+          if (eventsByVariant[e.variant_key]) eventsByVariant[e.variant_key].push(e);
+        }
+
+        // Compute posterior per variant
+        const newStats = { ...(slot.variant_stats || {}) };
+        const minSends = slot.min_sends_per_variant || 50;
+        let allEnough = true;
+        for (const v of variants) {
+          const existing = newStats[v.variant_key] || { alpha: 1, beta: 1, sends: 0 };
+          const sendCount = existing.sends || 0;  // sends counter bumped per assignment in /experiment/variant
+          const posterior = posteriorFromEvents(eventsByVariant[v.variant_key], slot.reward_metric, sendCount);
+          newStats[v.variant_key] = posterior;
+          if (sendCount < minSends) allEnough = false;
+        }
+
+        // Persist updated stats
+        await fetch(supaUrl + '/rest/v1/experiment_slots?id=eq.' + encodeURIComponent(slot.id), {
+          method: 'PATCH', headers,
+          body: JSON.stringify({ variant_stats: newStats, last_optimized_at: new Date().toISOString() })
+        });
+
+        if (!allEnough) continue;
+
+        // Sample 1000× from each posterior, count wins
+        const N_SAMPLES = 1000;
+        const activeKeys = variants.map(v => v.variant_key);
+        const wins = {};
+        for (const k of activeKeys) wins[k] = 0;
+        for (let i = 0; i < N_SAMPLES; i++) {
+          let bestK = activeKeys[0], bestS = -1;
+          for (const k of activeKeys) {
+            const s = sampleBeta(newStats[k].alpha, newStats[k].beta);
+            if (s > bestS) { bestS = s; bestK = k; }
+          }
+          wins[bestK]++;
+        }
+
+        // Find winner at threshold
+        const threshold = slot.confidence_threshold || 0.90;
+        let winnerKey = null;
+        for (const k of activeKeys) {
+          if (wins[k] / N_SAMPLES > threshold) { winnerKey = k; break; }
+        }
+        if (!winnerKey) continue;
+
+        // Has this optimization cycle already been run? (idempotency — 7-day window)
+        const recentLogRes = await fetch(supaUrl + '/rest/v1/experiment_events?slot_id=eq.' + encodeURIComponent(slot.id) + '&event_type=eq.winner_picked&created_at=gte.' + new Date(Date.now() - 7 * 86400000).toISOString() + '&select=id&limit=1', { headers });
+        const recentLog = await recentLogRes.json();
+        if (recentLog && recentLog.length) continue;  // already optimized this slot in last 7 days
+
+        const winnerVariant = variants.find(v => v.variant_key === winnerKey);
+        const losers = activeKeys.filter(k => k !== winnerKey);
+        const winProbability = wins[winnerKey] / N_SAMPLES;
+
+        // Log winner_picked event
+        await fetch(supaUrl + '/rest/v1/experiment_events', {
+          method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            slot_id: slot.id,
+            variant_key: winnerKey,
+            event_type: 'winner_picked',
+            event_data: { losers: losers, win_probability: winProbability, winner_content: winnerVariant.content }
+          })
+        });
+
+        // Challenger generation happens in a follow-on block (AR-09) — for clean task decomposition
+      } catch (slotErr) {
+        console.error('Experiment slot ' + slot.id + ' optimization error:', slotErr);
+      }
+    }
+  } catch (e) { console.error('Experiment slots optimizer error:', e); }
 }
