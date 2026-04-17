@@ -438,3 +438,84 @@ VALUES ('DISTRICT_ID', 'YOUR_USER_ID');
 3. **Try breaking things** — empty fields, special characters, rapid tapping
 4. **Check loading states** — slow network? Does it show spinners or hang?
 5. **Note what's confusing** — if you have to think about what to tap next, that's a UX issue
+
+---
+
+## 11. EMAIL DRIPS — Phase Checkpoint Testing (before deploy)
+
+Use this workflow to safely test new email cron blocks against your own inbox before deploying `worker.js` to Cloudflare. Works because `wrangler dev` runs the worker locally — Cloudflare's scheduled handler never fires, you control which Supabase rows exist, so only your seeded test rows produce emails.
+
+### Pre-flight: check who else would be emailed right now
+
+Run in Supabase SQL Editor to see if any real data would trigger on next cron:
+
+```sql
+-- Screener D3/7/10 candidates
+SELECT email, last_step_sent, created_at FROM screener_leads
+  WHERE marketing_consent = true AND unsubscribed = false AND enrolled_in_sequence = true
+  AND last_step_sent < 3 AND created_at <= now() - interval '3 days';
+
+-- Re-engage Day 7+ candidates
+SELECT p.email, p.last_re_engage_step FROM profiles p
+  WHERE p.role = 'parent' AND p.email_marketing_opted_in = true
+  AND p.last_re_engage_step < 3
+  AND NOT EXISTS (SELECT 1 FROM behavior_logs bl WHERE bl.user_id = p.id AND bl.logged_at > now() - interval '7 days');
+```
+
+If rows return that you're not ready to email: pause them with
+`UPDATE screener_leads SET enrolled_in_sequence = false WHERE email IN (...);` — reversible.
+
+### Seed test rows
+
+```sql
+-- Screener Days 3/7/10
+INSERT INTO screener_leads (email, parent_name, marketing_consent, enrolled_in_sequence, unsubscribed, last_step_sent, unsubscribe_token, score, risk_level, created_at) VALUES
+  ('jorrelpatterson+d3@gmail.com', 'Test', true, true, false, 0, encode(gen_random_bytes(16),'hex'), 5, 'medium', now() - interval '3 days'),
+  ('jorrelpatterson+d7@gmail.com', 'Test', true, true, false, 1, encode(gen_random_bytes(16),'hex'), 5, 'medium', now() - interval '7 days'),
+  ('jorrelpatterson+d10@gmail.com', 'Test', true, true, false, 2, encode(gen_random_bytes(16),'hex'), 5, 'medium', now() - interval '10 days');
+
+-- Re-engage (requires an existing profile; use/create one)
+UPDATE profiles SET last_re_engage_step = 0, last_re_engage_sent_at = null
+  WHERE email = 'jorrelpatterson+inactive@gmail.com';
+DELETE FROM behavior_logs WHERE user_id = (SELECT id FROM profiles WHERE email = 'jorrelpatterson+inactive@gmail.com');
+```
+
+### Run the cron locally
+
+```bash
+npx wrangler dev --test-scheduled
+# in another terminal:
+curl "http://localhost:8787/__scheduled?cron=0+3+*+*+*"
+```
+
+Check inbox: expect 3 screener emails + 1 re-engage email. Click the unsubscribe link on one and confirm the endpoint responds.
+
+### Verify state advanced in Supabase
+
+```sql
+SELECT email, last_step_sent, last_step_sent_at FROM screener_leads WHERE email LIKE 'jorrelpatterson+d%';
+-- Each should show last_step_sent incremented by 1
+
+SELECT email, last_re_engage_step, last_re_engage_sent_at FROM profiles WHERE email = 'jorrelpatterson+inactive@gmail.com';
+-- Should show last_re_engage_step = 1
+```
+
+### Clean up + deploy
+
+```sql
+DELETE FROM screener_leads WHERE email LIKE 'jorrelpatterson+d%';
+UPDATE profiles SET last_re_engage_step = 0, last_re_engage_sent_at = null WHERE email = 'jorrelpatterson+inactive@gmail.com';
+-- Un-pause any real leads paused in pre-flight
+```
+
+```bash
+wrangler deploy
+```
+
+### Rollback if something goes wrong after deploy
+
+```bash
+wrangler rollback   # reverts the worker to the previous deployed version
+```
+
+Use this pattern at every phase checkpoint (drips-phase-N-done tags in git) where new email-send code lands in `worker.js`.
