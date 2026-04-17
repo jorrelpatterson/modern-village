@@ -1251,6 +1251,55 @@ async function runDailyTasks(env) {
     }
   } catch (e) { console.error('Weekly digest error:', e); }
 
+  // ── COLD SEND QUEUE: drain warmup-aware, per-cohort ──
+  try {
+    // For each active cold campaign, pull up to daily_cap items from queue
+    const coldR = await fetch(supaUrl + '/rest/v1/campaigns?is_sequence=eq.true&status=eq.active&auto_paused_at=is.null&cohort=in.(bcba,district,rc)&select=id,cohort,daily_cap,subdomain', { headers });
+    const coldCampaigns = await coldR.json();
+
+    for (const camp of (coldCampaigns || [])) {
+      const cap = camp.daily_cap || 50;
+
+      // Count today's sends for this campaign
+      const todayStart = new Date(); todayStart.setUTCHours(0, 0, 0, 0);
+      const sentTodayR = await fetch(supaUrl + '/rest/v1/email_send_queue?campaign_id=eq.' + camp.id + '&status=eq.sent&sent_at=gte.' + todayStart.toISOString() + '&select=id', { headers: { ...headers, 'Prefer': 'count=exact' } });
+      await sentTodayR.json(); // realize body
+      const sentToday = parseInt(sentTodayR.headers.get('content-range')?.split('/')[1] || '0');
+      const remaining = Math.max(0, cap - sentToday);
+      if (remaining === 0) continue;
+
+      // Pull next N due items
+      const dueR = await fetch(supaUrl + '/rest/v1/email_send_queue?campaign_id=eq.' + camp.id + '&status=eq.queued&scheduled_for=lte.' + new Date().toISOString() + '&order=priority.asc,scheduled_for.asc&limit=' + remaining + '&select=id,lead_id,sequence_step', { headers });
+      const due = await dueR.json();
+
+      for (const q of (due || [])) {
+        // Ensure an enrollment row exists at the right step (idempotent)
+        const enrCheck = await fetch(supaUrl + '/rest/v1/sequence_enrollments?campaign_id=eq.' + camp.id + '&lead_id=eq.' + q.lead_id + '&select=id,current_step,unsubscribed,completed', { headers });
+        const enrs = await enrCheck.json();
+        if (!enrs.length) {
+          await fetch(supaUrl + '/rest/v1/sequence_enrollments', {
+            method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ campaign_id: camp.id, lead_id: q.lead_id, current_step: q.sequence_step, enrolled_at: new Date().toISOString() })
+          });
+        } else if (enrs[0].unsubscribed || enrs[0].completed) {
+          await fetch(supaUrl + '/rest/v1/email_send_queue?id=eq.' + q.id, {
+            method: 'PATCH', headers,
+            body: JSON.stringify({ status: 'skipped', skipped_reason: 'lead_unsubscribed_or_completed' })
+          });
+          continue;
+        }
+
+        // Mark the queue row as sent — actual send happens in the sequence processor block
+        // because the sequence processor handles bandit picking, personalization, and tracking.
+        // This separation keeps queue logic and send logic decoupled.
+        await fetch(supaUrl + '/rest/v1/email_send_queue?id=eq.' + q.id, {
+          method: 'PATCH', headers,
+          body: JSON.stringify({ status: 'sent', sent_at: new Date().toISOString() })
+        });
+      }
+    }
+  } catch (e) { console.error('Cold queue drain error:', e); }
+
   // ── EMAIL SEQUENCES: Process daily sends (variant-aware, bandit-picked) ──
   try {
     const seqR = await fetch(supaUrl + '/rest/v1/campaigns?is_sequence=eq.true&status=eq.active&auto_paused_at=is.null&select=id,name,cohort,subdomain,sequence_steps,variant_stats', { headers });
