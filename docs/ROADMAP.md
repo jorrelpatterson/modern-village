@@ -254,7 +254,7 @@ Decision = whichever answer has the most "yes" votes from testers.
 - [ ] Post screener link in autism parent Facebook groups (free traffic)
 - [ ] Post screener on Reddit (r/Autism, r/AutismParenting, r/beyondthebump)
 - [ ] Email autism bloggers to link to screener (backlink building)
-- [ ] Implement email drip sequences in code (re-engagement, weekly digest) — sequences already written in docs
+- [~] **Email drip + optimization build IN PROGRESS** — 10 of 20 tasks done through Phase 3 (optimization foundation) on branch `feat/email-drips-optimization` at tag `drips-phase-3-done`. Parent drips (screener D3/7/10 + re-engage 7/14/21) and optimization layer (reply webhook, conversion attribution, Thompson bandit, send-time learning, auto-promote winners) are coded but not yet deployed. Remaining: Phase 5 cold B2B sequences (Tasks 11-15), Phase 6 admin UX (16-18), Phase 7 E2E + docs (19-20). See [docs/superpowers/plans/2026-04-16-email-drips-STATUS.md](superpowers/plans/2026-04-16-email-drips-STATUS.md) for resume instructions.
 - [ ] **Pediatrician QR flyers** — print screener QR flyers, drop at 40 SoCal city pediatrician offices. 300 offices x conversion = ~390 subs/yr ($93K). See `docs/SUPPLEMENTARY.md` §4.
 - [ ] **Podcast outreach** — pitch Ariana as guest on 10 autism/ADHD parenting podcasts (scraper found 50-100)
 - [ ] **Influencer partnerships** — $5/subscriber affiliate deal with 5-20 Instagram/TikTok creators (5K-50K followers)
