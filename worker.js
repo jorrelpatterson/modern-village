@@ -1292,7 +1292,9 @@ async function runDailyTasks(env) {
         const lead = leads[0];
 
         // Pick variant (bandit if multiple, else 'a' or legacy single)
-        const variants = step.variants || (step.subject ? [{ id: 'a', subject: step.subject, body_html: step.html }] : null);
+        const variants = step.variants
+          || (step.subject ? [{ id: 'a', subject: step.subject, body_html: step.html }] : null)
+          || (step.subject_a ? [{ id: 'a', subject: step.subject_a, body_html: step.body }] : null);
         if (!variants || !variants.length) continue;
 
         const stepKey = 'step_' + enr.current_step;
