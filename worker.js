@@ -124,6 +124,33 @@ export default {
       return new Response('{"ok":true}', { headers: h });
     }
 
+    // ═══ RESEND INBOUND WEBHOOK (reply tracking — no auth required) ═══
+    if (url.pathname === '/webhook/resend-inbound') {
+      const event = body || await request.json().catch(() => ({}));
+      // Resend inbound payload includes parsed email headers.
+      // Match the reply to its original send via the In-Reply-To header (format: "<resend-id@resend.email>").
+      const headers_in = event.headers || {};
+      const inReplyTo = headers_in['in-reply-to'] || headers_in['In-Reply-To'] || '';
+      const m = inReplyTo.match(/<([a-f0-9-]+)@/i);
+      if (!m) return new Response('{"ok":true,"matched":false}', { headers: h });
+      const originalResendId = m[1];
+      const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+
+      const sendRes = await fetch(env.SUPABASE_URL + '/rest/v1/campaign_sends?resend_id=eq.' + originalResendId + '&select=id,campaign_id,lead_id', { headers: supaH });
+      const sends = await sendRes.json();
+      if (!sends || !sends.length) return new Response('{"ok":true,"matched":false}', { headers: h });
+
+      const send = sends[0];
+      const now = new Date().toISOString();
+
+      await fetch(env.SUPABASE_URL + '/rest/v1/campaign_sends?id=eq.' + send.id, {
+        method: 'PATCH', headers: supaH,
+        body: JSON.stringify({ status: 'replied', replied_at: now })
+      });
+
+      return new Response('{"ok":true,"matched":true,"send_id":"' + send.id + '"}', { headers: h });
+    }
+
     // === FEEDBACK NOTIFICATION ===
     if (url.pathname === '/feedback-notify') {
       try {
