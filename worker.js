@@ -405,6 +405,30 @@ export default {
       return new Response('{"ok":true}', { headers: h });
     }
 
+    // ═══ POST /experiment/link-session — stamp user_id on all session assignments + events ═══
+    if (url.pathname === '/experiment/link-session' && request.method === 'POST') {
+      const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' };
+      const linkBody = body || await request.json().catch(() => ({}));
+      const { session_id, user_id } = linkBody;
+      if (!session_id || !user_id) {
+        return new Response('{"error":"missing session_id or user_id"}', { status: 400, headers: h });
+      }
+
+      // Update all assignments for this session
+      await fetch(env.SUPABASE_URL + '/rest/v1/experiment_assignments?session_id=eq.' + encodeURIComponent(session_id) + '&user_id=is.null', {
+        method: 'PATCH', headers: supaH,
+        body: JSON.stringify({ user_id: user_id })
+      });
+
+      // Update all events for this session
+      await fetch(env.SUPABASE_URL + '/rest/v1/experiment_events?session_id=eq.' + encodeURIComponent(session_id) + '&user_id=is.null', {
+        method: 'PATCH', headers: supaH,
+        body: JSON.stringify({ user_id: user_id })
+      });
+
+      return new Response('{"ok":true}', { headers: h });
+    }
+
     // === FEEDBACK NOTIFICATION ===
     if (url.pathname === '/feedback-notify') {
       try {
