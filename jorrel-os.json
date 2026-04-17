@@ -19,14 +19,31 @@
   },
   "current": {
     "blockers": [
-      "Ariana editing BCBA cold sequence copy in admin (9 emails with placeholder [DRAFT ...] subjects) — gates Task 19 E2E smoke + cold B2B revenue",
+      "Apply 2 autoresearch migrations to Supabase: 20260417_experiment_framework.sql + 20260417_seed_landing_headline.sql",
+      "Create Meta Pixel in Meta Business Manager, replace REPLACE_WITH_REAL_PIXEL_ID in 4 HTML files (index/screener/app/blog)",
+      "Deploy worker.js (includes all 4 experiment endpoints + nightly optimizer cron)",
+      "Ariana editing BCBA cold sequence copy in admin (9 emails with placeholder [DRAFT ...] subjects) — gates drips Task 19 E2E + cold B2B revenue",
       "HIPAA BAAs pending with Resend + Anthropic (Supabase signed)",
       "Healthcare attorney review of 7 partnership contracts (~$2-4K flat fee) — gates Modern Village Services LLC formation + Stripe transfer",
-      "Feature branch feat/email-drips-optimization not yet merged to main (acceptable — wait for Task 19 E2E, or merge now since drips are production-stable)",
-      "Uncommitted legacy work on branch: README.md + 9 HTMLs modified, 50+ untracked files in _reference/ and app/"
+      "Feature branch feat/email-drips-optimization not yet merged to main (acceptable for now; both drips + autoresearch live on this branch)"
     ],
-    "next_action": "Send Ariana the BCBA editing ask (point her at admin → Campaigns → BCBA Cold Sequence → Edit Sequence). After she edits + you activate: run Task 19 E2E smoke. In parallel: scope PC Billing Phase 2a+2b as next build (biggest $ lever remaining — insurance billing for 6 payers).",
+    "next_action": "Apply the 2 autoresearch migrations to Supabase, set Meta Pixel ID, deploy worker.js. Then the landing_headline experiment starts collecting data immediately. In parallel: send Ariana the BCBA editing ask + scope PC Billing Phase 2a+2b.",
     "last_session": "2026-04-17",
+    "completed_today_part_2": [
+      "Marketing AutoResearch Framework — 18 of 18 plan tasks complete. Tag autoresearch-live.",
+      "AR-01: Schema migration (4 tables: experiment_slots, experiment_variants, experiment_assignments, experiment_events) — commit 250830b",
+      "AR-02: lib/experiment.js frontend helper — commit 28f4d6b",
+      "AR-03: Meta Pixel loader + integrate into 4 HTML files — commit 78e0f6d",
+      "AR-04 through AR-06: 3 worker endpoints (GET /experiment/variant, POST /experiment/event, POST /experiment/link-session) — commits 99eef31, f00e40b, 72c0fbe",
+      "AR-07: rewardFromEvent + posteriorFromEvents helpers — commit 2bab9d1",
+      "AR-08 + AR-09: nightly optimizer cron with winner detection + Claude challenger + auto-deploy — commits e4db1d8, f995f11",
+      "AR-10: POST /experiment/approve endpoint for admin approval queue — commit c02a0c4",
+      "AR-11: Seed landing_headline slot + 3 initial variants — commit 5ab8633",
+      "AR-12: Wire landing_headline into screener.html — commit ee6c1da",
+      "AR-13: marketing-experiments.md repo-root config — commit 282864c",
+      "AR-14 through AR-17: 4 admin UX sections (Slots Dashboard + Detail View + Approval Queue + Attribution Sources) — commits c393d7d, 2f52dac, b367646, 955075c",
+      "Tagged autoresearch-live at end of build"
+    ],
     "completed_today": [
       "Task 16: admin sequence editor with edit button + variants[] format — commit 6cbee70",
       "Task 17+18 batched: cohort dashboard + optimization log viewer + lead queue manager — commit d552df2",

@@ -92,9 +92,18 @@ Companion to [MARKETING-PLAYBOOK.md](MARKETING-PLAYBOOK.md) (channels + personas
 
 ---
 
-## Attribution & Tracking (NEEDS BUILD)
+## Attribution & Tracking (LIVE as of 2026-04-17)
 
-You currently have ZERO funnel visibility. This is the #1 gap.
+Meta Pixel + UTM capture shipped as part of the Marketing AutoResearch Framework. Every page load captures UTM on first visit (localStorage), every conversion event is tracked via `/experiment/event`, attribution chain survives session-to-user link on signup via `/experiment/link-session`. Admin → Attribution Sources dashboard shows per-channel conversion funnels for last 30 days.
+
+See [docs/superpowers/specs/2026-04-17-marketing-autoresearch-framework-design.md](superpowers/specs/2026-04-17-marketing-autoresearch-framework-design.md) for full implementation.
+
+**What Jorrel still needs to do to complete attribution setup:**
+1. Create Meta Pixel in Meta Business Manager, paste pixel ID into `window.META_PIXEL_ID = '...'` snippet in index.html / screener.html / app.html / blog.html (one find-replace of `REPLACE_WITH_REAL_PIXEL_ID`)
+2. Apply migrations to Supabase: `20260417_experiment_framework.sql` + `20260417_seed_landing_headline.sql`
+3. Deploy worker.js
+
+Historical reference (the original UTM scheme I drafted before the framework was built):
 
 ### UTM parameter scheme
 

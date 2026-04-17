@@ -4,9 +4,15 @@
 
 ---
 
-## Email Drips + Optimization Build — LIVE in production (2026-04-17)
+## Active builds (2026-04-17)
+
+### Email Drips + Optimization Build — LIVE in production
 
 **18 of 20 tasks done. Parent drips + optimization layer DEPLOYED.** Cold sequences seeded as drafts awaiting Ariana's copy edits.
+
+### Marketing AutoResearch Framework — CODE COMPLETE, pending deploy
+
+**18 of 18 plan tasks done. Tag `autoresearch-live`.** Generalized experimentation framework (4 new Supabase tables + 4 worker endpoints + nightly optimizer cron + lib/experiment.js + Meta Pixel + UTM + `marketing-experiments.md` + admin UX). First slot `landing_headline` seeded and wired into screener.html with 3 variants. Pending: Jorrel sets Pixel ID, applies 2 migrations (`20260417_experiment_framework.sql` + `20260417_seed_landing_headline.sql`), deploys worker.js. Spec at [docs/superpowers/specs/2026-04-17-marketing-autoresearch-framework-design.md](docs/superpowers/specs/2026-04-17-marketing-autoresearch-framework-design.md). Plan at [docs/superpowers/plans/2026-04-17-marketing-autoresearch-framework.md](docs/superpowers/plans/2026-04-17-marketing-autoresearch-framework.md).
 
 ### Status summary
 
