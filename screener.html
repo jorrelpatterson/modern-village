@@ -167,7 +167,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--charco
 <!-- HERO -->
 <div class="hero" id="heroSection">
   <div class="hero-badge">Free &bull; Clinically Validated &bull; 5 Minutes</div>
-  <h1>Does my toddler show signs of <em>autism?</em></h1>
+  <h1 id="landingHeadline">Does my toddler show signs of <em>autism?</em></h1>
   <p>The M-CHAT-R is the most widely used autism screening tool in the world. It's recommended by the American Academy of Pediatrics for all children at 18 and 24 months. Take it now — free, private, and instant.</p>
 </div>
 
@@ -413,6 +413,10 @@ function showResults(){
   document.getElementById('resultsSection').classList.add('open');
   window.scrollTo(0,0);
 
+  // Autoresearch: fire screener_complete event for experiment tracking
+  var riskLevel = score<=2 ? 'low' : score<=7 ? 'medium' : 'high';
+  window.dispatchEvent(new CustomEvent('mv-screener-complete', { detail: { score: score, risk_level: riskLevel } }));
+
   var risk,riskClass,riskText,desc;
   if(score<=2){
     risk='Low Risk';riskClass='result-low';
@@ -448,6 +452,48 @@ function showResults(){
   }
   document.getElementById('nextSteps').innerHTML=steps;
 }
+</script>
+
+<script>
+// Autoresearch: landing_headline slot — dynamically replace H1 based on bandit variant
+(async function() {
+  try {
+    if (!window.mvExperiment) return;
+    const v = await window.mvExperiment.getVariant('landing_headline');
+    if (v && v.content) {
+      const el = document.getElementById('landingHeadline');
+      if (el) el.textContent = v.content;
+    }
+  } catch (e) {}
+})();
+
+// Fire click event when visitor engages with the primary CTA (attempt multiple selectors)
+(function() {
+  const tryAttach = () => {
+    const btn = document.getElementById('startBtn')
+      || document.querySelector('button[type="submit"]')
+      || document.querySelector('.cta')
+      || document.querySelector('button.btn-primary')
+      || document.querySelector('button');
+    if (btn && window.mvExperiment) {
+      btn.addEventListener('click', function() {
+        window.mvExperiment.trackEvent('landing_headline', 'click');
+      });
+    }
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryAttach);
+  } else {
+    tryAttach();
+  }
+})();
+
+// Fire screener_complete event via custom event dispatched from existing completion handler
+window.addEventListener('mv-screener-complete', function(ev) {
+  if (window.mvExperiment) {
+    window.mvExperiment.trackEvent('landing_headline', 'screener_complete', ev.detail || null);
+  }
+});
 </script>
 </body>
 </html>
