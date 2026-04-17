@@ -7,36 +7,59 @@
   "urls": {
     "production": "https://modernvillage.app",
     "repo": "",
-    "admin": "https://modernvillage.app/admin.html"
+    "admin": "https://modernvillage.app/admin.html",
+    "worker": "https://village-api.jorrelpatterson.workers.dev"
   },
   "metrics": {
     "stripe": true,
     "supabase": true,
-    "vercel": true
+    "vercel": true,
+    "cloudflare_worker": true,
+    "resend": true
   },
   "current": {
     "blockers": [
-      "Resend subdomain DNS setup (bcba.outreach / district.outreach / rc.outreach) — blocks cold sequence activation",
-      "Wrangler secrets not yet set: SENDER_BCBA, SENDER_DISTRICT, SENDER_RC, SENDER_TRANSACTIONAL",
-      "Two migrations not yet applied to live Supabase: 20260416_auto_enroll_trigger.sql, 20260416_seed_cold_campaigns.sql",
-      "worker.js not yet deployed via wrangler — Phases 2 + 3 + 5 code sits in branch only",
+      "Ariana editing BCBA cold sequence copy in admin (9 emails with placeholder [DRAFT ...] subjects) — gates Task 19 E2E smoke + cold B2B revenue",
       "HIPAA BAAs pending with Resend + Anthropic (Supabase signed)",
-      "Uncommitted work on branch unrelated to email drips: README.md + 9 HTMLs modified, 50+ untracked files in _reference/ and app/"
+      "Healthcare attorney review of 7 partnership contracts (~$2-4K flat fee) — gates Modern Village Services LLC formation + Stripe transfer",
+      "Feature branch feat/email-drips-optimization not yet merged to main (acceptable — wait for Task 19 E2E, or merge now since drips are production-stable)",
+      "Uncommitted legacy work on branch: README.md + 9 HTMLs modified, 50+ untracked files in _reference/ and app/"
     ],
-    "next_action": "Apply the two 2026-04-16 migrations to Supabase, set Resend DNS + wrangler secrets, deploy worker.js, then resume Task 16 (sequence editor with variants in admin.html) on branch feat/email-drips-optimization",
-    "last_session": "2026-04-16",
+    "next_action": "Send Ariana the BCBA editing ask (point her at admin → Campaigns → BCBA Cold Sequence → Edit Sequence). After she edits + you activate: run Task 19 E2E smoke. In parallel: scope PC Billing Phase 2a+2b as next build (biggest $ lever remaining — insurance billing for 6 payers).",
+    "last_session": "2026-04-17",
     "completed_today": [
-      "Task 11: variant-aware sequence processor (worker.js) — commits e26f070 + be00cc7",
-      "Task 12: cold send queue processor with daily warmup cap — commit fe462de",
-      "Task 13: Postgres auto-enroll trigger migration — commit 08f19ad",
-      "Task 14: bounce-rate guard auto-pauses cold cohorts >5% — commit e3c8fbe",
-      "Task 15: seed BCBA/District/RC cold sequences as drafts — commit 95899a1"
+      "Task 16: admin sequence editor with edit button + variants[] format — commit 6cbee70",
+      "Task 17+18 batched: cohort dashboard + optimization log viewer + lead queue manager — commit d552df2",
+      "Task 20: final docs pass (ROADMAP, SUPPLEMENTARY §5, STATUS, AGENT-NOTES, memory) — commit ac82fff",
+      "Step 1: Resend DNS verified for bcba.outreach / district.outreach / rc.outreach",
+      "Step 2: Applied migrations 20260416_auto_enroll_trigger.sql + 20260416_seed_cold_campaigns.sql to live Supabase",
+      "Step 4: Deployed worker.js to Cloudflare — version 7743ef11-3a13-4208-afc9-86540c12f2ff. Parent drips + optimization layer LIVE at 3am UTC daily cron.",
+      "Step 4b: Resend inbound webhook configured → /webhook/resend-inbound endpoint verified responding",
+      "End-to-end test run locally via wrangler dev — 4 expected test emails delivered, screener state advanced (d3→1, d7→2, d10→3), re-engage state advanced (0→1). Caught a bug: my pause strategy was wrong (setting enrolled_in_sequence=false re-triggers Day 0) — fixed by using unsubscribed=true instead. All leaked emails went to Jorrel himself, no real users affected.",
+      "Added wrangler.toml config (was missing — commit 752a823)",
+      "Tagged milestones: drips-deployed, drips-complete"
     ]
+  },
+  "build_state": {
+    "branch": "feat/email-drips-optimization",
+    "latest_tag": "drips-complete",
+    "deployed_worker_version": "7743ef11-3a13-4208-afc9-86540c12f2ff",
+    "commits_ahead_of_main": "~25",
+    "email_drips_build_progress": "19/20 — Task 19 E2E gated on Ariana activating cold sequences"
   },
   "setup": {
     "complete": false,
     "missing": ["CLAUDE.md (CLAUDE 2.md exists but filename suggests exFAT rename artifact)"],
     "next_setup_action": "Resolve CLAUDE 2.md vs CLAUDE.md filename — either rename to CLAUDE.md or confirm existing is canonical"
   },
-  "roadmap": "docs/ROADMAP.md"
+  "roadmap": "docs/ROADMAP.md",
+  "deferred_followups": [
+    "HTML-escape {NAME} substitutions across email body blocks (cross-cutting XSS concern, low probability)",
+    "Upgrade Claude model ID from claude-sonnet-4-20250514 to claude-sonnet-4-6 across worker.js (2 call sites)",
+    "Add List-Unsubscribe header to Resend marketing sends (Gmail/Yahoo bulk-sender compliance)",
+    "UTC vs local day boundaries in cron date math (minor, US product)",
+    "Add profiles.subscription_started_at column (attribution currently uses updated_at as proxy)",
+    "N+1 query in re-engagement loop (fine at current scale, rewrite at 10K+ parents)",
+    "Activity-reset race in re-engagement (negligible impact)"
+  ]
 }
