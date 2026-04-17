@@ -202,6 +202,29 @@ function posteriorFromSends(sends) {
   };
 }
 
+// Compute reward for a single event given the slot's reward_metric weights.
+// reward_metric is a flat object: { "view": 0, "click": 1, "screener_complete": 5, "pro_subscribe": 100 }
+function rewardFromEvent(event, rewardMetric) {
+  const w = rewardMetric[event.event_type];
+  return (typeof w === 'number') ? w : 0;
+}
+
+// Compute Beta posterior (alpha, beta, sends) for a variant from its events.
+// Events are weighted by reward_metric; normalized to [0,1] by max possible reward per view.
+function posteriorFromEvents(events, rewardMetric, sendCount) {
+  // Max reward per view = sum of absolute weights (upper bound assuming one of each event type)
+  const maxReward = Object.values(rewardMetric || {}).reduce((a, b) => a + Math.abs(b), 0) || 1;
+  let totalReward = 0;
+  for (const e of events) totalReward += rewardFromEvent(e, rewardMetric);
+  const effective = Math.max(sendCount, 1);
+  const normAvg = Math.max(0, Math.min(1, (totalReward / effective) / maxReward));
+  return {
+    alpha: 1 + normAvg * effective,
+    beta: 1 + (1 - normAvg) * effective,
+    sends: sendCount
+  };
+}
+
 export default {
   async fetch(request, env) {
     const h = getCors(request);
