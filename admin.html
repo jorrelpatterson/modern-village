@@ -444,6 +444,11 @@
         <div id="approvalQueueContainer" style="padding:12px"></div>
       </details>
 
+      <details style="margin-top:16px;background:#fff;border-radius:12px;padding:12px;border:1px solid #eee">
+        <summary style="cursor:pointer;font-weight:700" onclick="loadSources()">&#x1F4CA; Attribution Sources (last 30 days)</summary>
+        <div id="sourcesContainer" style="padding:12px"></div>
+      </details>
+
       <div style="margin-top:24px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
           <h3 style="margin:0">Email Campaigns</h3>
@@ -2034,6 +2039,71 @@ async function rejectChallenger(variantId) {
   });
   showToast(r.ok ? 'Rejected' : 'Error');
   loadApprovalQueue();
+}
+
+async function loadSources() {
+  const c = document.getElementById('sourcesContainer');
+  c.innerHTML = '<div style="padding:20px;text-align:center;color:#999">Loading...</div>';
+  try {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+
+    const { data: assigns } = await sb.from('experiment_assignments')
+      .select('session_id,initial_utm,user_id')
+      .gte('assigned_at', thirtyDaysAgo);
+
+    // Group by utm_source
+    const bySource = {};
+    for (const a of (assigns || [])) {
+      const src = (a.initial_utm && a.initial_utm.source) || 'direct';
+      if (!bySource[src]) bySource[src] = { sessions: new Set(), userIds: new Set() };
+      bySource[src].sessions.add(a.session_id);
+      if (a.user_id) bySource[src].userIds.add(a.user_id);
+    }
+
+    // For each source, fetch conversion events
+    const { data: events } = await sb.from('experiment_events')
+      .select('session_id,event_type')
+      .gte('created_at', thirtyDaysAgo)
+      .in('event_type', ['screener_complete', 'signup', 'pro_subscribe']);
+
+    const eventsBySession = {};
+    for (const e of (events || [])) {
+      if (!eventsBySession[e.session_id]) eventsBySession[e.session_id] = {};
+      eventsBySession[e.session_id][e.event_type] = true;
+    }
+
+    // Tally per source
+    const rows = [];
+    for (const src of Object.keys(bySource)) {
+      const stats = { src, sessions: bySource[src].sessions.size, users: bySource[src].userIds.size, screener_complete: 0, signup: 0, pro_subscribe: 0 };
+      for (const sid of bySource[src].sessions) {
+        const ev = eventsBySession[sid] || {};
+        if (ev.screener_complete) stats.screener_complete++;
+        if (ev.signup) stats.signup++;
+        if (ev.pro_subscribe) stats.pro_subscribe++;
+      }
+      rows.push(stats);
+    }
+    rows.sort((a, b) => b.sessions - a.sessions);
+
+    let html = '<table style="width:100%;font-size:13px"><tr><th>Source</th><th>Sessions</th><th>Signed-up users</th><th>Screener complete</th><th>Signups</th><th>Pro subs</th><th>Pro CVR</th></tr>';
+    for (const r of rows) {
+      const cvr = r.sessions ? (r.pro_subscribe / r.sessions * 100).toFixed(2) + '%' : '—';
+      html += '<tr style="border-top:1px solid #eee">' +
+        '<td style="padding:6px"><strong>' + esc(r.src) + '</strong></td>' +
+        '<td style="padding:6px">' + r.sessions + '</td>' +
+        '<td style="padding:6px">' + r.users + '</td>' +
+        '<td style="padding:6px">' + r.screener_complete + '</td>' +
+        '<td style="padding:6px">' + r.signup + '</td>' +
+        '<td style="padding:6px">' + r.pro_subscribe + '</td>' +
+        '<td style="padding:6px">' + cvr + '</td>' +
+        '</tr>';
+    }
+    html += '</table>';
+    c.innerHTML = html;
+  } catch (e) {
+    c.innerHTML = '<p style="color:red">Error: ' + esc(String(e)) + '</p>';
+  }
 }
 
 async function bumpQueueItem(qId,cohort){
