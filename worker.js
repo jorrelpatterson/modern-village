@@ -74,6 +74,32 @@ function emailWrapper(bodyContent, unsubscribeUrl) {
   );
 }
 
+// Attribute a conversion (signup, booking, subscribe) back to the most recent
+// campaign_sends row for this email within the last 60 days.
+async function attributeConversion(env, email, conversionType, userId) {
+  if (!email) return;
+  const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' };
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 60);
+
+  const sendsRes = await fetch(env.SUPABASE_URL + '/rest/v1/campaign_sends?email=eq.' + encodeURIComponent(email.toLowerCase()) + '&converted_at=is.null&created_at=gte.' + cutoff.toISOString() + '&order=created_at.desc&limit=1&select=id,lead_id', { headers: supaH });
+  const sends = await sendsRes.json();
+  if (!sends || !sends.length) return;
+
+  const now = new Date().toISOString();
+  await fetch(env.SUPABASE_URL + '/rest/v1/campaign_sends?id=eq.' + sends[0].id, {
+    method: 'PATCH', headers: supaH,
+    body: JSON.stringify({ converted_at: now, conversion_type: conversionType })
+  });
+
+  if (sends[0].lead_id) {
+    await fetch(env.SUPABASE_URL + '/rest/v1/leads?id=eq.' + sends[0].lead_id, {
+      method: 'PATCH', headers: supaH,
+      body: JSON.stringify({ converted_at: now, converted_user_id: userId || null })
+    });
+  }
+}
+
 export default {
   async fetch(request, env) {
     const h = getCors(request);
@@ -862,6 +888,40 @@ async function runDailyTasks(env) {
       }
     } catch (e) { console.error('Re-engage step-3 reset error:', e); }
   } catch (e) { console.error('Re-engagement error:', e); }
+
+  // -- ATTRIBUTION BACKFILL: link new signups + bookings + subscribes to recent campaign_sends --
+  try {
+    const yest = new Date();
+    yest.setDate(yest.getDate() - 1);
+    const yestStart = yest.toISOString().split('T')[0] + 'T00:00:00';
+    const yestEnd = yest.toISOString().split('T')[0] + 'T23:59:59';
+
+    // Yesterday's new signups
+    const newProfilesRes = await fetch(supaUrl + '/rest/v1/profiles?created_at=gte.' + yestStart + '&created_at=lte.' + yestEnd + '&select=id,email', { headers });
+    const newProfiles = await newProfilesRes.json();
+    for (const p of (newProfiles || [])) {
+      await attributeConversion(env, p.email, 'signup', p.id);
+    }
+
+    // Yesterday's new bookings
+    const newBookRes = await fetch(supaUrl + '/rest/v1/bookings?created_at=gte.' + yestStart + '&created_at=lte.' + yestEnd + '&select=id,user_id', { headers });
+    const newBookings = await newBookRes.json();
+    for (const b of (newBookings || [])) {
+      const profRes = await fetch(supaUrl + '/rest/v1/profiles?id=eq.' + b.user_id + '&select=email', { headers });
+      const prof = await profRes.json();
+      if (prof && prof.length && prof[0].email) {
+        await attributeConversion(env, prof[0].email, 'booking', b.user_id);
+      }
+    }
+
+    // Yesterday's new Pro subscribers
+    // Note: profiles has no subscription_started_at column, using updated_at as a proxy.
+    const newProRes = await fetch(supaUrl + '/rest/v1/profiles?subscription_status=eq.pro&updated_at=gte.' + yestStart + '&updated_at=lte.' + yestEnd + '&select=id,email', { headers });
+    const newPro = await newProRes.json();
+    for (const p of (newPro || [])) {
+      await attributeConversion(env, p.email, 'subscribed', p.id);
+    }
+  } catch (e) { console.error('Attribution backfill error:', e); }
 
   // -- SCREENER LEAD AUTO-ENROLL: Send Day 0 email + create lead for sequence enrollment --
   try {
