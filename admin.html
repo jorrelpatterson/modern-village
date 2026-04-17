@@ -424,6 +424,11 @@
         </div>
       </details>
 
+      <details style="margin-top:16px;background:#fff;border-radius:12px;padding:12px;border:1px solid #eee">
+        <summary style="cursor:pointer;font-weight:700" onclick="loadExperimentSlots()">&#x1F9EA; Experiment Slots (Marketing AutoResearch)</summary>
+        <div id="expSlotsContainer" style="padding:12px"></div>
+      </details>
+
       <div style="margin-top:24px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
           <h3 style="margin:0">Email Campaigns</h3>
@@ -1834,6 +1839,50 @@ async function loadQueueManager(cohort){
     list.innerHTML=html;
   }catch(e){
     list.innerHTML='<p style="color:red">Error: '+esc(String(e))+'</p>';
+    console.error(e);
+  }
+}
+
+async function loadExperimentSlots() {
+  const c = document.getElementById('expSlotsContainer');
+  c.innerHTML = '<div style="padding:20px;text-align:center;color:#999">Loading...</div>';
+  try {
+    const { data: slots, error } = await sb.from('experiment_slots').select('*').order('id');
+    if (error) throw error;
+    if (!slots || !slots.length) { c.innerHTML = '<p style="color:#999">No slots yet. Add via migration or admin.</p>'; return; }
+
+    let html = '<table style="width:100%;font-size:13px">';
+    html += '<tr><th>Slot</th><th>Status</th><th>Mode</th><th>Variants</th><th>Top win %</th><th>Last optimized</th><th></th></tr>';
+
+    for (const s of slots) {
+      const { data: variants } = await sb.from('experiment_variants').select('variant_key,status').eq('slot_id', s.id);
+      const activeCount = (variants || []).filter(v => v.status === 'active').length;
+      const pendingCount = (variants || []).filter(v => v.status === 'pending_approval').length;
+
+      // Compute top win probability from variant_stats (Beta mean = alpha / (alpha+beta))
+      const stats = s.variant_stats || {};
+      let topWinPct = '&mdash;';
+      const keys = Object.keys(stats).filter(k => stats[k].sends > 0);
+      if (keys.length >= 2) {
+        const means = keys.map(k => ({ k, mean: stats[k].alpha / (stats[k].alpha + stats[k].beta) }));
+        means.sort((a, b) => b.mean - a.mean);
+        topWinPct = '<strong>' + means[0].k + '</strong> (' + (means[0].mean * 100).toFixed(1) + '%)';
+      }
+
+      html += '<tr style="border-top:1px solid #eee">' +
+        '<td style="padding:6px"><strong>' + esc(s.id) + '</strong><br><span style="color:#999;font-size:11px">' + esc(s.description || '') + '</span></td>' +
+        '<td style="padding:6px">' + esc(s.status) + '</td>' +
+        '<td style="padding:6px">' + esc(s.deploy_mode) + (pendingCount ? ' <span style="background:#fa0;color:#fff;padding:1px 6px;border-radius:4px;font-size:10px">+' + pendingCount + ' pending</span>' : '') + '</td>' +
+        '<td style="padding:6px">' + activeCount + '</td>' +
+        '<td style="padding:6px">' + topWinPct + '</td>' +
+        '<td style="padding:6px;color:#999;font-size:11px">' + (s.last_optimized_at ? new Date(s.last_optimized_at).toLocaleDateString() : 'never') + '</td>' +
+        '<td style="padding:6px"><button class="btn btn-sm btn-outline" onclick="viewSlotDetail(\'' + esc(s.id) + '\')">Detail</button></td>' +
+        '</tr>';
+    }
+    html += '</table>';
+    c.innerHTML = html;
+  } catch (e) {
+    c.innerHTML = '<p style="color:red">Error: ' + esc(String(e)) + '</p>';
     console.error(e);
   }
 }
