@@ -1018,6 +1018,38 @@ async function runDailyTasks(env) {
     }
   } catch (e) { console.error('Attribution subscribes error:', e); }
 
+  // -- SEND-TIME LEARNING: roll up best_open_hour per lead from last 30 days of opens --
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const openedRes = await fetch(supaUrl + '/rest/v1/campaign_sends?opened_at=gte.' + thirtyDaysAgo.toISOString() + '&lead_id=not.is.null&select=lead_id,opened_at', { headers });
+    const opened = await openedRes.json();
+
+    // Group opens by lead_id × hour-of-day
+    const byLead = {};
+    for (const s of (opened || [])) {
+      const h = new Date(s.opened_at).getUTCHours();
+      if (!byLead[s.lead_id]) byLead[s.lead_id] = {};
+      byLead[s.lead_id][h] = (byLead[s.lead_id][h] || 0) + 1;
+    }
+
+    // For each lead with >= 3 opens, set best_open_hour = mode hour
+    for (const leadId of Object.keys(byLead)) {
+      const hours = byLead[leadId];
+      const total = Object.values(hours).reduce((a, b) => a + b, 0);
+      if (total < 3) continue;
+      let bestHour = 0, bestCount = 0;
+      for (const h of Object.keys(hours)) {
+        if (hours[h] > bestCount) { bestCount = hours[h]; bestHour = parseInt(h); }
+      }
+      await fetch(supaUrl + '/rest/v1/leads?id=eq.' + leadId, {
+        method: 'PATCH', headers,
+        body: JSON.stringify({ best_open_hour: bestHour })
+      });
+    }
+  } catch (e) { console.error('Send-time learning error:', e); }
+
   // -- SCREENER LEAD AUTO-ENROLL: Send Day 0 email + create lead for sequence enrollment --
   try {
     const screenerRes = await fetch(supaUrl + '/rest/v1/screener_leads?marketing_consent=eq.true&enrolled_in_sequence=eq.false&unsubscribed=eq.false&select=id,email,parent_name,score,risk_level,unsubscribe_token', { headers });
