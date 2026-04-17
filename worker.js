@@ -279,6 +279,93 @@ export default {
       return new Response('{"ok":true,"matched":true,"send_id":"' + send.id + '"}', { headers: h });
     }
 
+    // ═══ EXPERIMENT FRAMEWORK — GET /experiment/variant?slot=X&session=Y&utm=<encoded-json> ═══
+    if (url.pathname === '/experiment/variant' && request.method === 'GET') {
+      const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' };
+      const slotId = url.searchParams.get('slot');
+      const sessionId = url.searchParams.get('session');
+      if (!slotId || !sessionId) {
+        return new Response('{"error":"missing slot or session"}', { status: 400, headers: h });
+      }
+
+      // Check existing sticky assignment
+      const assignRes = await fetch(env.SUPABASE_URL + '/rest/v1/experiment_assignments?session_id=eq.' + encodeURIComponent(sessionId) + '&slot_id=eq.' + encodeURIComponent(slotId) + '&select=variant_key', { headers: supaH });
+      const assignRows = await assignRes.json();
+      if (assignRows && assignRows.length) {
+        // Return the assigned variant's current content
+        const vRes = await fetch(env.SUPABASE_URL + '/rest/v1/experiment_variants?slot_id=eq.' + encodeURIComponent(slotId) + '&variant_key=eq.' + encodeURIComponent(assignRows[0].variant_key) + '&select=content', { headers: supaH });
+        const vRows = await vRes.json();
+        const content = (vRows && vRows[0]) ? vRows[0].content : null;
+        return new Response(JSON.stringify({ variant_key: assignRows[0].variant_key, content: content }), { headers: h });
+      }
+
+      // Load slot + active variants
+      const slotRes = await fetch(env.SUPABASE_URL + '/rest/v1/experiment_slots?id=eq.' + encodeURIComponent(slotId) + '&status=eq.active&select=id,variant_stats,min_sends_per_variant', { headers: supaH });
+      const slots = await slotRes.json();
+      if (!slots || !slots.length) {
+        return new Response('{"error":"slot not found or not active"}', { status: 404, headers: h });
+      }
+      const slot = slots[0];
+
+      const variantsRes = await fetch(env.SUPABASE_URL + '/rest/v1/experiment_variants?slot_id=eq.' + encodeURIComponent(slotId) + '&status=eq.active&select=variant_key,content', { headers: supaH });
+      const variants = await variantsRes.json();
+      if (!variants || !variants.length) {
+        return new Response('{"error":"no active variants"}', { status: 404, headers: h });
+      }
+
+      // Ensure variant_stats has entry for each active variant
+      const stats = slot.variant_stats || {};
+      for (const v of variants) {
+        if (!stats[v.variant_key]) stats[v.variant_key] = { alpha: 1, beta: 1, sends: 0 };
+      }
+
+      // Pick variant using existing pickVariant helper (defined elsewhere in worker.js)
+      const chosenKey = pickVariant(stats);
+      const chosen = variants.find(v => v.variant_key === chosenKey) || variants[0];
+
+      // Parse UTM if provided
+      let initialUtm = null;
+      const utmParam = url.searchParams.get('utm');
+      if (utmParam) {
+        try { initialUtm = JSON.parse(decodeURIComponent(utmParam)); } catch (e) {}
+      }
+
+      // Insert assignment
+      await fetch(env.SUPABASE_URL + '/rest/v1/experiment_assignments', {
+        method: 'POST',
+        headers: { ...supaH, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          slot_id: slotId,
+          variant_key: chosenKey,
+          initial_utm: initialUtm
+        })
+      });
+
+      // Fire view event
+      await fetch(env.SUPABASE_URL + '/rest/v1/experiment_events', {
+        method: 'POST',
+        headers: { ...supaH, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          slot_id: slotId,
+          variant_key: chosenKey,
+          session_id: sessionId,
+          event_type: 'view',
+          event_data: initialUtm ? { utm: initialUtm } : null
+        })
+      });
+
+      // Bump variant_stats.sends for bandit cold-start tracking
+      stats[chosenKey].sends = (stats[chosenKey].sends || 0) + 1;
+      await fetch(env.SUPABASE_URL + '/rest/v1/experiment_slots?id=eq.' + encodeURIComponent(slotId), {
+        method: 'PATCH',
+        headers: supaH,
+        body: JSON.stringify({ variant_stats: stats })
+      });
+
+      return new Response(JSON.stringify({ variant_key: chosenKey, content: chosen.content }), { headers: h });
+    }
+
     // === FEEDBACK NOTIFICATION ===
     if (url.pathname === '/feedback-notify') {
       try {
