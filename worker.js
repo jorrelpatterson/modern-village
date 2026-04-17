@@ -1458,78 +1458,126 @@ async function runDailyTasks(env) {
     }
   } catch (e) { console.error('Strategy rankings error:', e); }
 
-  // ── AUTORESEARCH: Email Campaign Auto-Optimization ──
+  // ── AUTORESEARCH: Email Campaign Auto-Optimization (sequence-aware) ──
   try {
-    // Find campaigns sent 48+ hours ago that haven't been auto-optimized yet
-    const cutoff = new Date();
-    cutoff.setHours(cutoff.getHours() - 48);
+    const campRes = await fetch(supaUrl + '/rest/v1/campaigns?status=eq.active&select=id,name,cohort,sequence_steps,variant_stats', { headers });
+    const camps = await campRes.json();
 
-    const campaignRes = await fetch(supaUrl + '/rest/v1/campaigns?is_sequence=eq.false&status=eq.active&created_at=lte.' + cutoff.toISOString() + '&select=id,name,subject_a,subject_b,body,target_type', { headers });
-    const campaigns = await campaignRes.json();
+    for (const camp of (camps || [])) {
+      const steps = (camp.sequence_steps && camp.sequence_steps.length) ? camp.sequence_steps : [{ step: 0, variants: null }];
+      const newVariantStats = camp.variant_stats || {};
 
-    for (const camp of (campaigns || [])) {
-      // Check if already optimized
-      const optCheck = await fetch(supaUrl + '/rest/v1/email_optimization_logs?campaign_id=eq.' + camp.id + '&action=eq.winner_picked&select=id&limit=1', { headers });
-      const optExists = await optCheck.json();
-      if (optExists && optExists.length) continue;
+      for (let stepIdx = 0; stepIdx < steps.length; stepIdx++) {
+        const step = steps[stepIdx];
+        const stepKey = 'step_' + stepIdx;
+        // Variants: use step.variants[] (new format), fall back to step.subject/html (legacy), or campaign.subject_a (blast)
+        const variants = step.variants || (step.subject ? [{ id: 'a', subject: step.subject, body_html: step.html }] : (camp.subject_a ? [{ id: 'a', subject: camp.subject_a, body_html: camp.body_html }] : []));
+        if (!variants.length) continue;
 
-      // Get send stats per variant
-      const sendsRes = await fetch(supaUrl + '/rest/v1/campaign_sends?campaign_id=eq.' + camp.id + '&select=variant,status', { headers });
-      const sends = await sendsRes.json();
-      if (!sends || sends.length < 10) continue;
+        const sendsRes = await fetch(supaUrl + '/rest/v1/campaign_sends?campaign_id=eq.' + camp.id + '&sequence_step=eq.' + stepIdx + '&select=variant,status,opened_at,clicked_at,replied_at,converted_at', { headers });
+        const sends = await sendsRes.json();
+        if (!sends || !sends.length) continue;
 
-      const statsA = { sent: 0, opened: 0 };
-      const statsB = { sent: 0, opened: 0 };
-      (sends || []).forEach(s => {
-        if (s.variant === 'a') { statsA.sent++; if (s.status === 'opened' || s.status === 'clicked') statsA.opened++; }
-        else if (s.variant === 'b') { statsB.sent++; if (s.status === 'opened' || s.status === 'clicked') statsB.opened++; }
-      });
-
-      const rateA = statsA.sent ? Math.round(statsA.opened / statsA.sent * 1000) / 10 : 0;
-      const rateB = statsB.sent ? Math.round(statsB.opened / statsB.sent * 1000) / 10 : 0;
-      const winner = rateA >= rateB ? 'a' : 'b';
-      const winningSubject = winner === 'a' ? camp.subject_a : (camp.subject_b || camp.subject_a);
-
-      // Log the winner
-      await fetch(supaUrl + '/rest/v1/email_optimization_logs', {
-        method: 'POST',
-        headers: { ...headers, 'Prefer': 'return=minimal' },
-        body: JSON.stringify({
-          campaign_id: camp.id,
-          action: 'winner_picked',
-          details: { winner: winner, subject_a: camp.subject_a, subject_b: camp.subject_b, open_rate_a: rateA, open_rate_b: rateB, winning_subject: winningSubject, total_sends: sends.length }
-        })
-      });
-
-      // Generate a new variant using Claude (iterate on the winner)
-      try {
-        const optimizePrompt = 'You are an email marketing optimizer for Modern Village, an ABA-powered parenting platform for neurodivergent families.\n\nA/B test results:\n- Subject A: "' + camp.subject_a + '" → ' + rateA + '% open rate (' + statsA.sent + ' sends)\n- Subject B: "' + (camp.subject_b || 'none') + '" → ' + rateB + '% open rate (' + statsB.sent + ' sends)\n\nWinner: Variant ' + winner.toUpperCase() + ' ("' + winningSubject + '")\n\nGenerate 2 new subject line variants that iterate on what worked. Keep what made the winner succeed (emotional hook, length, emoji usage, specificity) but test a new angle.\n\nRespond with ONLY a JSON object: {"subject_a": "...", "subject_b": "..."}';
-
-        const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 200, messages: [{ role: 'user', content: optimizePrompt }] })
-        });
-        const aiData = await aiRes.json();
-        const aiText = aiData.content && aiData.content[0] ? aiData.content[0].text : '';
-
-        // Parse the JSON response
-        const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const newVariants = JSON.parse(jsonMatch[0]);
-
-          // Log the new variant generation
-          await fetch(supaUrl + '/rest/v1/email_optimization_logs', {
-            method: 'POST',
-            headers: { ...headers, 'Prefer': 'return=minimal' },
-            body: JSON.stringify({
-              campaign_id: camp.id,
-              action: 'new_variant_generated',
-              details: { previous_winner: winningSubject, new_subject_a: newVariants.subject_a, new_subject_b: newVariants.subject_b }
-            })
-          });
+        const sendsByVariant = {};
+        for (const s of sends) {
+          const v = s.variant || 'a';
+          if (!sendsByVariant[v]) sendsByVariant[v] = [];
+          sendsByVariant[v].push(s);
         }
-      } catch (aiErr) { console.error('AI optimization error:', aiErr); }
+
+        const stepStats = {};
+        for (const v of Object.keys(sendsByVariant)) {
+          stepStats[v] = posteriorFromSends(sendsByVariant[v]);
+        }
+        newVariantStats[stepKey] = stepStats;
+
+        const activeVariants = Object.keys(stepStats);
+        if (activeVariants.length < 2) continue;
+        const allEnough = activeVariants.every(v => stepStats[v].sends >= 50);
+        if (!allEnough) continue;
+
+        // Already optimized this step?
+        const optCheck = await fetch(supaUrl + '/rest/v1/email_optimization_logs?campaign_id=eq.' + camp.id + '&action=eq.winner_picked&details->>step=eq.' + stepIdx + '&select=id&limit=1', { headers });
+        const optExists = await optCheck.json();
+        if (optExists && optExists.length) continue;
+
+        // Thompson: 1000-sample win-probability estimate
+        const N_SAMPLES = 1000;
+        const winCounts = {};
+        for (const v of activeVariants) winCounts[v] = 0;
+        for (let i = 0; i < N_SAMPLES; i++) {
+          let bestV = activeVariants[0], bestSample = -1;
+          for (const v of activeVariants) {
+            const s = sampleBeta(stepStats[v].alpha, stepStats[v].beta);
+            if (s > bestSample) { bestSample = s; bestV = v; }
+          }
+          winCounts[bestV]++;
+        }
+        let actualWinner = null;
+        for (const v of activeVariants) {
+          if (winCounts[v] / N_SAMPLES > 0.90) { actualWinner = v; break; }
+        }
+        if (!actualWinner) continue;
+
+        const winnerVariant = variants.find(v => v.id === actualWinner) || variants[0];
+        const losers = activeVariants.filter(v => v !== actualWinner);
+
+        // Log winner
+        await fetch(supaUrl + '/rest/v1/email_optimization_logs', {
+          method: 'POST',
+          headers: { ...headers, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            campaign_id: camp.id,
+            action: 'winner_picked',
+            details: { step: stepIdx, winner: actualWinner, losers: losers, win_probability: winCounts[actualWinner] / N_SAMPLES, winning_subject: winnerVariant.subject }
+          })
+        });
+
+        // Generate new challenger via Claude
+        try {
+          const loserSubjects = losers.map(l => '"' + (variants.find(v => v.id === l)?.subject || '?') + '"').join(', ');
+          const optimizePrompt = 'You are an email subject-line optimizer for Modern Village (an ABA-powered platform for neurodivergent families). Cohort: ' + (camp.cohort || 'general') + '.\n\nWinning subject: "' + winnerVariant.subject + '"\nIt won by ' + Math.round(winCounts[actualWinner] / N_SAMPLES * 100) + '% probability over ' + loserSubjects + '.\n\nWrite ONE new challenger subject line that keeps what made the winner work (its emotional hook, length, specificity) but tests a different angle. Respond with ONLY the subject text, nothing else.';
+
+          const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 100, messages: [{ role: 'user', content: optimizePrompt }] })
+          });
+          const aiData = await aiRes.json();
+          const newSubject = (aiData.content && aiData.content[0] ? aiData.content[0].text : '').trim().replace(/^["']|["']$/g, '');
+
+          if (newSubject) {
+            const usedIds = new Set(variants.map(v => v.id));
+            let newId = 'a';
+            for (const c of 'abcdefghijklmnop') { if (!usedIds.has(c)) { newId = c; break; } }
+
+            const newVariants = variants.filter(v => !losers.includes(v.id));
+            newVariants.push({ id: newId, subject: newSubject, body_html: winnerVariant.body_html });
+            steps[stepIdx].variants = newVariants;
+
+            // Reset loser posteriors, keep winner's, init new variant
+            newVariantStats[stepKey] = newVariantStats[stepKey] || {};
+            for (const l of losers) delete newVariantStats[stepKey][l];
+            newVariantStats[stepKey][newId] = { alpha: 1, beta: 1, sends: 0 };
+
+            await fetch(supaUrl + '/rest/v1/email_optimization_logs', {
+              method: 'POST',
+              headers: { ...headers, 'Prefer': 'return=minimal' },
+              body: JSON.stringify({
+                campaign_id: camp.id,
+                action: 'new_variant_generated',
+                details: { step: stepIdx, new_variant_id: newId, new_subject: newSubject, replaced_losers: losers, kept_winner: actualWinner }
+              })
+            });
+          }
+        } catch (aiErr) { console.error('AI optimization error:', aiErr); }
+      }
+
+      // Persist updated sequence_steps + variant_stats to the campaign
+      await fetch(supaUrl + '/rest/v1/campaigns?id=eq.' + camp.id, {
+        method: 'PATCH', headers,
+        body: JSON.stringify({ sequence_steps: steps, variant_stats: newVariantStats })
+      });
     }
   } catch (e) { console.error('Email optimization error:', e); }
 }
