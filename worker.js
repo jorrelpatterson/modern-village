@@ -100,6 +100,98 @@ async function attributeConversion(env, email, conversionType, userId) {
   }
 }
 
+// ═══ BANDIT HELPERS (Thompson sampling for variant selection) ═══
+
+// Sample from a Gamma distribution (Marsaglia & Tsang method for shape >= 1).
+// For shape < 1, uses the boost trick: Gamma(a+1, 1) * U^(1/a).
+function sampleGamma(shape) {
+  if (shape < 1) return sampleGamma(shape + 1) * Math.pow(Math.random(), 1 / shape);
+  const d = shape - 1/3;
+  const c = 1 / Math.sqrt(9 * d);
+  while (true) {
+    let x, v;
+    do {
+      const u1 = Math.random(), u2 = Math.random();
+      x = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      v = 1 + c * x;
+    } while (v <= 0);
+    v = v * v * v;
+    const u = Math.random();
+    if (u < 1 - 0.0331 * x * x * x * x) return d * v;
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+  }
+}
+
+// Sample from Beta(alpha, beta) using two Gamma samples.
+function sampleBeta(alpha, beta) {
+  const x = sampleGamma(alpha);
+  const y = sampleGamma(beta);
+  return x / (x + y);
+}
+
+// Thompson sample: pick the variant with the highest sampled Beta value.
+// variantStats: { "a": {alpha, beta, sends}, "b": {...}, ... }
+function pickVariantThompson(variantStats) {
+  const ids = Object.keys(variantStats);
+  if (!ids.length) return null;
+  let bestId = ids[0];
+  let bestSample = -1;
+  for (const id of ids) {
+    const s = variantStats[id] || { alpha: 1, beta: 1 };
+    const sample = sampleBeta(s.alpha || 1, s.beta || 1);
+    if (sample > bestSample) {
+      bestSample = sample;
+      bestId = id;
+    }
+  }
+  return bestId;
+}
+
+// Cold-start gate: first COLD_START_SENDS per variant picked uniformly random,
+// then Thompson. Protects low-sample variants from premature exploitation.
+const COLD_START_SENDS = 5;
+function pickVariant(variantStats) {
+  const ids = Object.keys(variantStats);
+  if (!ids.length) return null;
+  const underExplored = ids.filter(id => (variantStats[id]?.sends || 0) < COLD_START_SENDS);
+  if (underExplored.length) return underExplored[Math.floor(Math.random() * underExplored.length)];
+  return pickVariantThompson(variantStats);
+}
+
+// ═══ BANDIT REWARD + POSTERIOR UPDATE ═══
+
+// Reward from a single send event.
+// Weights: open=1, click=5, reply=10, conversion=100.
+function rewardFromSend(send) {
+  let r = 0;
+  if (send.status === 'opened' || send.opened_at) r += 1;
+  if (send.status === 'clicked' || send.clicked_at) r += 5;
+  if (send.status === 'replied' || send.replied_at) r += 10;
+  if (send.converted_at) r += 100;
+  return r;
+}
+
+// Compute Beta posterior (alpha, beta, sends) for a variant from its sends.
+// Treat each send as a Bernoulli trial with success = reward / MAX_REWARD.
+const MAX_REWARD_PER_SEND = 1 + 5 + 10 + 100; // 116
+function posteriorFromSends(sends) {
+  let totalSuccess = 0;
+  let totalFailure = 0;
+  let count = 0;
+  for (const s of sends) {
+    const r = rewardFromSend(s);
+    const norm = r / MAX_REWARD_PER_SEND;
+    totalSuccess += norm;
+    totalFailure += (1 - norm);
+    count++;
+  }
+  return {
+    alpha: 1 + totalSuccess,
+    beta: 1 + totalFailure,
+    sends: count
+  };
+}
+
 export default {
   async fetch(request, env) {
     const h = getCors(request);
