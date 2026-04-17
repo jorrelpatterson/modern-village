@@ -19,15 +19,16 @@
   },
   "current": {
     "blockers": [
-      "Apply 2 autoresearch migrations to Supabase: 20260417_experiment_framework.sql + 20260417_seed_landing_headline.sql",
-      "Create Meta Pixel in Meta Business Manager, replace REPLACE_WITH_REAL_PIXEL_ID in 4 HTML files (index/screener/app/blog)",
-      "Deploy worker.js (includes all 4 experiment endpoints + nightly optimizer cron)",
       "Ariana editing BCBA cold sequence copy in admin (9 emails with placeholder [DRAFT ...] subjects) — gates drips Task 19 E2E + cold B2B revenue",
       "HIPAA BAAs pending with Resend + Anthropic (Supabase signed)",
       "Healthcare attorney review of 7 partnership contracts (~$2-4K flat fee) — gates Modern Village Services LLC formation + Stripe transfer",
-      "Feature branch feat/email-drips-optimization not yet merged to main (acceptable for now; both drips + autoresearch live on this branch)"
+      "Feature branch feat/email-drips-optimization not yet merged to main (acceptable for now; both drips + autoresearch live on this branch)",
+      "Meta Pixel not yet created — add when starting Meta Ads (Facebook Page is created, just need to finish Events Manager setup + find-replace REPLACE_WITH_REAL_PIXEL_ID in 4 HTML files + redeploy)"
     ],
-    "next_action": "Jorrel is STARTING A NEW THREAD for iOS Capacitor wrap. Handoff doc: docs/superpowers/HANDOFF-2026-04-17-ios-capacitor.md. Outside the Capacitor work: apply 2 autoresearch migrations + set Meta Pixel ID + deploy worker.js (~10min), send Ariana BCBA editing ask, scope PC Billing Phase 2a+2b as separate builds. Email drips + autoresearch framework are both CODE COMPLETE on branch feat/email-drips-optimization (49 commits ahead of main).",
+    "small_followups": [
+      "Wire signup + pro_subscribe event tracking into app.html (~5 min). The autoresearch landing_headline slot currently tracks view/click/screener_complete. Adding signup (20x weight) and pro_subscribe (100x weight) closes the attribution loop. Code: in signup success handler call window.mvExperiment.linkSession(user.id) + trackEvent('landing_headline','signup'); in Stripe subscription success call trackEvent('landing_headline','pro_subscribe',{amount:19.99}). Do before running Meta Ads at scale."
+    ],
+    "next_action": "Jorrel is STARTING A NEW THREAD for iOS Capacitor wrap. Handoff doc: docs/superpowers/HANDOFF-2026-04-17-ios-capacitor.md. Autoresearch framework DEPLOYED and verified working 2026-04-17 evening (worker version a0865252 → later 4c922a1 fix for GET method gate). Landing_headline slot live, collecting view/click/screener_complete events. Small follow-ups: wire signup+pro_subscribe tracking in app.html (~5 min), create Meta Pixel when starting Meta Ads. In parallel: send Ariana BCBA editing ask, scope PC Billing Phase 2a+2b.",
     "active_thread_focus": "iOS Capacitor wrap — starting fresh session",
     "last_session": "2026-04-17",
     "completed_today_part_2": [
