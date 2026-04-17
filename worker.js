@@ -234,7 +234,7 @@ export default {
 
     const url = new URL(request.url);
 
-    if (request.method !== 'POST' && !(request.method === 'GET' && url.pathname === '/unsubscribe')) {
+    if (request.method !== 'POST' && !(request.method === 'GET' && (url.pathname === '/unsubscribe' || url.pathname === '/experiment/variant'))) {
       return new Response('{"error":"Method not allowed"}', { status: 405, headers: h });
     }
 
