@@ -628,6 +628,15 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
 <body>
 
 <!-- SPLASH -->
+<div id="mvBiometricPrompt" class="hidden" style="position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:24px;padding:32px 24px;max-width:340px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="font-size:48px;margin-bottom:12px">🔐</div>
+    <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:800;margin-bottom:8px;color:#2d1f14">Enable Face ID?</div>
+    <div style="font-size:14px;color:#6b5d4e;line-height:1.5;margin-bottom:24px">Use Face ID or Touch ID to unlock Modern Village. Keeps your child's information private if someone else picks up your phone.</div>
+    <button onclick="mvBiometricYes()" style="width:100%;background:#7A9E7E;color:white;border:none;border-radius:14px;padding:14px;font-weight:700;font-size:15px;cursor:pointer;margin-bottom:8px">Enable Face ID</button>
+    <button onclick="mvBiometricLater()" style="width:100%;background:transparent;color:#6b5d4e;border:none;border-radius:14px;padding:12px;font-weight:600;font-size:14px;cursor:pointer">Not now</button>
+  </div>
+</div>
 <div id="mvLockScreen" class="hidden" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#7A9E7E 0%,#5a7c5f 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;padding:40px 24px;text-align:center">
   <div style="font-size:56px;margin-bottom:16px">🔐</div>
   <div style="font-family:'Fraunces',serif;font-size:32px;font-weight:800;margin-bottom:8px;letter-spacing:-0.02em">Modern Village</div>
@@ -1389,6 +1398,37 @@ var mvNative = {
   }
 };
 
+// Offer biometric opt-in after first sign-in (native only)
+function mvBiometricPromptKey(){ return S.user ? 'mv_applock_prompted_'+S.user.id : null; }
+async function offerBiometricSetup(){
+  if(typeof mvNative==='undefined' || !mvNative.isNative()) return;
+  if(mvNative.biometric.isEnabled()) return; // already on
+  var k = mvBiometricPromptKey();
+  if(!k) return;
+  if(localStorage.getItem(k)==='1') return; // already asked, don't nag
+  // Show the prompt modal
+  var modal = document.getElementById('mvBiometricPrompt');
+  if(!modal) return;
+  modal.classList.remove('hidden');
+}
+async function mvBiometricYes(){
+  document.getElementById('mvBiometricPrompt').classList.add('hidden');
+  var ok = await mvNative.biometric.authenticate('Enable biometric unlock for Modern Village');
+  var k = mvBiometricPromptKey(); if(k) localStorage.setItem(k,'1');
+  if(ok){
+    mvNative.biometric.setEnabled(true);
+    mvNative.haptic('success');
+    showToast('Face ID enabled');
+  } else {
+    mvNative.haptic('error');
+    showToast('You can enable it later in Profile › App Security');
+  }
+}
+function mvBiometricLater(){
+  document.getElementById('mvBiometricPrompt').classList.add('hidden');
+  var k = mvBiometricPromptKey(); if(k) localStorage.setItem(k,'1');
+}
+
 // Show lock screen, require Face ID before revealing app content
 async function mvAppLockGate(){
   if(!mvNative.biometric.isEnabled()) return true;
@@ -1640,6 +1680,8 @@ async function handleAuth(){
       if(typeof mvNative!=='undefined') mvNative.haptic('success');
       closeAuth();
       enterApp();
+      // Offer biometric opt-in after UI has settled
+      setTimeout(function(){ if(typeof offerBiometricSetup==='function') offerBiometricSetup(); }, 800);
             var pendingToken=sessionStorage.getItem('mv_invite_token');
       if(pendingToken){sessionStorage.removeItem('mv_invite_token');try{var ir=await authFetch(API_URL+'accept-invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:pendingToken})});var id=await ir.json();if(id.success){showToast('You\'ve joined the care team!');await loadProfile();applyRole()}}catch(e){}}
     }
@@ -1872,6 +1914,8 @@ async function init(){
           }
           enterApp();
           await checkInviteToken();
+          // Offer biometric opt-in for existing sessions too
+          setTimeout(function(){ if(typeof offerBiometricSetup==='function') offerBiometricSetup(); }, 1200);
           return;
         }
       }
@@ -5456,16 +5500,20 @@ function openProfile(){
   var emailMktEl = document.getElementById('profEmailMarketing');
   if(emailMktEl) emailMktEl.checked = S.profile && S.profile.email_marketing_opted_in !== false;
 
-  // App Security (biometric) — native only
-  (async function(){
-    var sec = document.getElementById('profAppSecurityBlock');
-    if(!sec) return;
-    if(typeof mvNative==='undefined' || !mvNative.isNative()){ sec.style.display='none'; return; }
-    var avail = await mvNative.biometric.isAvailable();
-    if(!avail){ sec.style.display='none'; return; }
-    sec.style.display='block';
-    document.getElementById('profAppLock').checked = mvNative.biometric.isEnabled();
-  })();
+  // App Security (biometric) — shown on any native platform;
+  // checkBiometry() returns isAvailable=false on iOS until the user has
+  // granted biometric permission at least once, so we can't gate on it.
+  // If biometry is unavailable, the first toggleAppLock(true) will surface
+  // that via the authenticate() failure and revert the toggle.
+  var secBlock = document.getElementById('profAppSecurityBlock');
+  if(secBlock){
+    if(typeof mvNative!=='undefined' && mvNative.isNative()){
+      secBlock.style.display='block';
+      document.getElementById('profAppLock').checked = mvNative.biometric.isEnabled();
+    } else {
+      secBlock.style.display='none';
+    }
+  }
 
   // Render children list
   renderProfileChildren();
