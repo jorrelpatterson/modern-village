@@ -1303,7 +1303,11 @@ async function registerPushNotifications(){
           body: JSON.stringify({ token: token.value, platform: platform, app_version: '1.0.0' })
         });
         var t = await r.text();
-        alert('[Push] DBG 5: POST status=' + r.status + ' body=' + t.substring(0,150));
+        var dbg = {};
+        try { dbg = (JSON.parse(t).debug) || {}; } catch(e){}
+        alert('[Push] DBG 5a: status=' + r.status + ' | supaStatus=' + (dbg.supabaseStatus||'?') + ' | url=' + (dbg.workerSupabaseUrl||'?'));
+        alert('[Push] DBG 5b: anonKeyPrefix=' + (dbg.workerAnonKeyPrefix||'?') + ' | len=' + (dbg.workerAnonKeyLen||'?'));
+        alert('[Push] DBG 5c: supaBody=' + (dbg.supabaseBody||'?').substring(0, 200));
       } catch(e) { alert('[Push] DBG ERR POST: ' + e.message); }
     });
 
