@@ -1279,50 +1279,43 @@ async function registerPushNotifications(){
     if(_pushRegistered) return;
     if(!window.Capacitor || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) return;
     var Push = window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications;
-    if(!Push) return;
+    if(!Push){ alert('[Push] DBG: plugin missing'); return; }
     _pushRegistered = true;
+    alert('[Push] DBG 1: starting');
 
     var perm = await Push.checkPermissions();
     if(perm.receive !== 'granted'){
       var req = await Push.requestPermissions();
-      if(req.receive !== 'granted') return;
+      if(req.receive !== 'granted'){ alert('[Push] DBG: permission=' + req.receive); return; }
     }
+    alert('[Push] DBG 2: permission granted');
 
     Push.addListener('registration', async function(token){
       try {
+        alert('[Push] DBG 3: registration fired, token len=' + (token && token.value ? token.value.length : 'MISSING'));
         var platform = (window.Capacitor.getPlatform && window.Capacitor.getPlatform()) || 'ios';
-        var authHeaders = {'Content-Type':'application/json'};
         var tk = await getAuthToken();
-        if(tk) authHeaders['Authorization'] = 'Bearer ' + tk;
-        await fetch(API_URL + 'push/register', {
+        if(!tk){ alert('[Push] DBG 4: no auth token'); return; }
+        var r = await fetch(API_URL + 'push/register', {
           method: 'POST',
-          headers: authHeaders,
-          body: JSON.stringify({
-            token: token.value,
-            platform: platform,
-            device_id: null,
-            app_version: '1.0.0',
-            os_version: null
-          })
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tk },
+          body: JSON.stringify({ token: token.value, platform: platform, app_version: '1.0.0' })
         });
-        console.log('[Push] Token registered');
-      } catch(e) { console.error('[Push] Register failed:', e); }
+        var t = await r.text();
+        alert('[Push] DBG 5: POST status=' + r.status + ' body=' + t.substring(0,150));
+      } catch(e) { alert('[Push] DBG ERR POST: ' + e.message); }
     });
 
     Push.addListener('registrationError', function(err){
-      console.error('[Push] Registration error:', err);
+      alert('[Push] DBG APNs regError: ' + JSON.stringify(err).substring(0, 250));
     });
 
-    Push.addListener('pushNotificationReceived', function(notif){
-      console.log('[Push] Received (foreground):', notif);
-    });
+    Push.addListener('pushNotificationReceived', function(notif){ console.log('[Push] Received:', notif); });
+    Push.addListener('pushNotificationActionPerformed', function(action){ console.log('[Push] Tapped:', action); });
 
-    Push.addListener('pushNotificationActionPerformed', function(action){
-      console.log('[Push] Tapped:', action);
-    });
-
+    alert('[Push] DBG 6: calling Push.register()');
     await Push.register();
-  } catch(e) { console.error('[Push] Setup failed:', e); }
+  } catch(e) { alert('[Push] DBG setup threw: ' + e.message); }
 }
 
 // ═══ SECURITY: Audit logging ═══
