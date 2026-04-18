@@ -1639,7 +1639,9 @@ function showAuth(force){
   // Show Face ID button if biometric is enabled + we have saved creds (native only)
   var bioBtn = document.getElementById('authBiometricBtn');
   if(bioBtn){
-    if(typeof mvNative!=='undefined' && mvNative.isNative() && mvNative.biometric.isEnabled() && mvNative.biometric.hasCredentials()){
+    // Show Face ID button whenever we have saved creds on this device.
+    // isEnabled() is user-scoped so returns false after logout — irrelevant here.
+    if(typeof mvNative!=='undefined' && mvNative.isNative() && mvNative.biometric.hasCredentials()){
       bioBtn.classList.remove('hidden');
     } else {
       bioBtn.classList.add('hidden');
@@ -1653,7 +1655,7 @@ function toggleAuthMode(){
   // Hide Face ID button in signup mode (only for returning users)
   var bioBtn = document.getElementById('authBiometricBtn');
   if(bioBtn && isSignup) bioBtn.classList.add('hidden');
-  else if(bioBtn && !isSignup && typeof mvNative!=='undefined' && mvNative.isNative() && mvNative.biometric.isEnabled() && mvNative.biometric.hasCredentials()){
+  else if(bioBtn && !isSignup && typeof mvNative!=='undefined' && mvNative.isNative() && mvNative.biometric.hasCredentials()){
     bioBtn.classList.remove('hidden');
   }
   // Update password autocomplete hint so iOS suggests strong password on signup, current on login
