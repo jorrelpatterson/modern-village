@@ -655,8 +655,8 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     <p class="auth-sub" id="authSub">Save your strategies and track progress</p>
     <div id="authError" class="auth-error"></div>
     <div id="authNameField" class="auth-field"><label>Your name</label><input id="authName" type="text" placeholder="e.g. Sarah"></div>
-    <div class="auth-field"><label>Email</label><input id="authEmail" type="email" placeholder="you@email.com"></div>
-    <div class="auth-field"><label>Password</label><input id="authPass" type="password" placeholder="6+ characters"></div>
+    <div class="auth-field"><label>Email</label><input id="authEmail" name="email" type="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="you@email.com"></div>
+    <div class="auth-field"><label>Password</label><input id="authPass" name="password" type="password" autocomplete="current-password" placeholder="6+ characters"></div>
     <div id="authProviderToggle" class="hidden" style="margin:-4px 0 8px"><a style="font-size:13px;color:var(--sage-dark);cursor:pointer;font-weight:600" onclick="toggleProviderMode()">I'm a Provider / BCBA</a></div>
     <div id="authProviderFields" class="hidden">
       <div style="background:var(--sage-light);border-radius:12px;padding:14px;margin-bottom:12px;font-size:13px;color:var(--sage-dark);font-weight:600">Provider Registration</div>
@@ -1656,6 +1656,9 @@ function toggleAuthMode(){
   else if(bioBtn && !isSignup && typeof mvNative!=='undefined' && mvNative.isNative() && mvNative.biometric.isEnabled() && mvNative.biometric.hasCredentials()){
     bioBtn.classList.remove('hidden');
   }
+  // Update password autocomplete hint so iOS suggests strong password on signup, current on login
+  var pwEl = document.getElementById('authPass');
+  if(pwEl) pwEl.setAttribute('autocomplete', isSignup ? 'new-password' : 'current-password');
   document.getElementById('authTitle').textContent=isSignup?'Create Account':'Welcome Back';
   document.getElementById('authSub').textContent=isSignup?'Save your strategies and track progress':'Log in to your Modern Village account';
   document.getElementById('authSubmit').textContent=isSignup?'Create Account':'Log In';
