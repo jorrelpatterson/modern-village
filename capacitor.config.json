@@ -5,10 +5,28 @@
   "server": {
     "url": "https://modernvillage.app",
     "cleartext": false,
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "allowNavigation": [
+      "modernvillage.app",
+      "*.modernvillage.app",
+      "*.supabase.co",
+      "*.supabase.in",
+      "accounts.google.com",
+      "*.google.com",
+      "*.googleapis.com",
+      "apis.google.com",
+      "appleid.apple.com",
+      "*.stripe.com",
+      "js.stripe.com",
+      "*.anthropic.com",
+      "*.cloudflare.com",
+      "*.workers.dev",
+      "*.vercel.app"
+    ]
   },
   "ios": {
     "contentInset": "automatic",
-    "limitsNavigationsToAppBoundDomains": false
+    "limitsNavigationsToAppBoundDomains": false,
+    "scrollEnabled": true
   }
 }
