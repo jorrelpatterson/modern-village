@@ -7171,6 +7171,20 @@ async function toggleEmailMarketing(val){
   if(S.profile)S.profile.email_marketing_opted_in=val;
   showToast(val?'Marketing emails enabled':'Marketing emails disabled');
 }
+async function toggleAppLock(on){
+  if(typeof mvNative==='undefined' || !mvNative.isNative()){ document.getElementById('profAppLock').checked=false; return; }
+  if(on){
+    var ok = await mvNative.biometric.authenticate('Enable biometric unlock');
+    if(!ok){ document.getElementById('profAppLock').checked=false; showToast('Biometric authentication failed'); mvNative.haptic('error'); return; }
+    mvNative.biometric.setEnabled(true);
+    mvNative.haptic('success');
+    showToast('Biometric unlock enabled');
+  } else {
+    mvNative.biometric.setEnabled(false);
+    mvNative.haptic('light');
+    showToast('Biometric unlock disabled');
+  }
+}
 async function saveProfile(){
   var name = document.getElementById('profName').value.trim();
   var phoneVal = document.getElementById('profPhone').value.trim();
