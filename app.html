@@ -1296,6 +1296,7 @@ async function registerPushNotifications(){
         var platform = (window.Capacitor.getPlatform && window.Capacitor.getPlatform()) || 'ios';
         var tk = await getAuthToken();
         if(!tk){ alert('[Push] DBG 4: no auth token'); return; }
+        alert('[Push] DBG 4b: token prefix=' + tk.substring(0,20) + '... len=' + tk.length);
         var r = await fetch(API_URL + 'push/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tk },
