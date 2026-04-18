@@ -666,6 +666,10 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
       <div style="display:flex;gap:8px" class="auth-field"><div style="flex:1"><label>License State</label><select id="authLicState" class="fi" style="padding:10px 12px"><option value="">State</option><option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option><option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option><option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option><option>KS</option><option>KY</option><option>LA</option><option>ME</option><option>MD</option><option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option><option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option><option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option><option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option><option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option><option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option><option>DC</option></select></div><div style="flex:1"><label>License #</label><input id="authLicNum" type="text" placeholder="License number"></div></div>
       <div class="auth-field"><label>CPT Codes (select all that apply)</label><div id="authCptCodes" style="display:flex;flex-wrap:wrap;gap:6px"></div></div>
     </div>
+    <button id="authAppleBtn" class="hidden" onclick="mvAppleSignIn()" style="width:100%;background:#000;color:white;border:none;border-radius:14px;padding:14px;font-weight:700;font-size:15px;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M14.94 10.43c.01-1.42.63-2.78 1.71-3.78-.68-.97-1.77-1.53-2.95-1.56-1.24-.13-2.44.74-3.07.74-.65 0-1.62-.72-2.67-.7-1.37.04-2.64.8-3.33 2-1.42 2.45-.36 6.06 1.02 8.04.69.97 1.49 2.06 2.54 2.02 1.03-.04 1.41-.65 2.66-.65s1.59.65 2.67.63c1.11-.02 1.81-.97 2.48-1.95.49-.68.87-1.43 1.12-2.23-1.33-.56-2.18-1.88-2.18-3.34.01-.22.02-.44.05-.66.28-1.1 1.01-2.04 1.98-2.55zM12.59 3.67c.58-.71.88-1.63.85-2.56-.89.09-1.73.48-2.3 1.16-.57.67-.87 1.54-.85 2.45.9.02 1.76-.4 2.3-1.05z"/></svg>
+      Sign in with Apple
+    </button>
     <button id="authBiometricBtn" class="hidden" onclick="mvBiometricSignIn()" style="width:100%;background:#5a7c5f;color:white;border:none;border-radius:14px;padding:14px;font-weight:700;font-size:15px;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5a2 2 0 0 0-2 2v4"/><path d="M15 4h4a2 2 0 0 1 2 2v4"/><path d="M9 20H5a2 2 0 0 1-2-2v-4"/><path d="M15 20h4a2 2 0 0 0 2-2v-4"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
       Sign in with Face ID
@@ -1446,6 +1450,69 @@ var mvNative = {
         else if(B.set) await B.set({ count: 0 });
       } catch(e){}
     }
+  },
+  // Native geolocation — more accurate than browser + uses iOS permission flow
+  geo: {
+    getCurrent: async function(opts){
+      opts = opts || {};
+      // Native path
+      if(mvNative.isNative()){
+        var G = window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation;
+        if(G){
+          try {
+            var p = await G.getCurrentPosition({ enableHighAccuracy: !!opts.highAccuracy, timeout: opts.timeout || 10000, maximumAge: opts.maxAge || 300000 });
+            return { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
+          } catch(e){ return null; }
+        }
+      }
+      // Web fallback
+      if(!navigator.geolocation) return null;
+      return new Promise(function(resolve){
+        navigator.geolocation.getCurrentPosition(
+          function(pos){ resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }); },
+          function(){ resolve(null); },
+          { enableHighAccuracy: !!opts.highAccuracy, timeout: opts.timeout || 10000, maximumAge: opts.maxAge || 300000 }
+        );
+      });
+    }
+  },
+  // Native camera — for future explicit camera-only capture. Current file inputs
+  // already invoke iOS camera/library sheet, so this is for flows that want JUST camera.
+  camera: {
+    takePhoto: async function(opts){
+      opts = opts || {};
+      if(!mvNative.isNative()) return null;
+      var C = window.Capacitor.Plugins && window.Capacitor.Plugins.Camera;
+      if(!C) return null;
+      try {
+        var img = await C.getPhoto({
+          quality: opts.quality || 85,
+          allowEditing: false,
+          resultType: 'dataUrl',
+          source: opts.source || 'PROMPT',
+          width: opts.width || 1200
+        });
+        return img.dataUrl;
+      } catch(e){ return null; }
+    }
+  },
+  // Apple Sign-In — required by Apple for App Store submission if app has any other login
+  appleSignIn: {
+    isAvailable: function(){
+      return mvNative.isNative() && !!(window.Capacitor.Plugins && window.Capacitor.Plugins.SignInWithApple);
+    },
+    authorize: async function(){
+      if(!mvNative.appleSignIn.isAvailable()) return null;
+      var S = window.Capacitor.Plugins.SignInWithApple;
+      try {
+        var r = await S.authorize({
+          clientId: 'app.modernvillage.ios',
+          redirectURI: 'https://modernvillage.app/auth/callback',
+          scopes: 'email name'
+        });
+        return r && r.response ? r.response : null; // { identityToken, email, givenName, familyName, user, authorizationCode }
+      } catch(e){ console.warn('Apple Sign-In error:', e); return null; }
+    }
   }
 };
 
@@ -1479,6 +1546,48 @@ async function mvBiometricYes(){
 function mvBiometricLater(){
   document.getElementById('mvBiometricPrompt').classList.add('hidden');
   var k = mvBiometricPromptKey(); if(k) localStorage.setItem(k,'1');
+}
+
+// Sign in with Apple: get identity token from Apple, hand to Supabase's OAuth flow
+async function mvAppleSignIn(){
+  if(typeof mvNative==='undefined' || !mvNative.appleSignIn || !mvNative.appleSignIn.isAvailable()) return;
+  var btn = document.getElementById('authAppleBtn');
+  if(btn) btn.style.opacity='0.6';
+  try {
+    var r = await mvNative.appleSignIn.authorize();
+    if(!r || !r.identityToken){
+      mvNative.haptic('error');
+      showToast('Apple Sign-In canceled');
+      if(btn) btn.style.opacity='1';
+      return;
+    }
+    // Hand Apple's identity token to Supabase — it verifies the JWT and creates / signs in the user
+    var result = await sb.auth.signInWithIdToken({ provider: 'apple', token: r.identityToken });
+    if(result.error){
+      console.error('Supabase Apple login error:', result.error);
+      mvNative.haptic('error');
+      showToast('Sign-in failed: ' + (result.error.message || 'unknown'));
+      if(btn) btn.style.opacity='1';
+      return;
+    }
+    S.user = result.data.user;
+    // First-time users: Apple gives name only on FIRST auth. Save to profile if provided.
+    var profileUpdate = { email: S.user.email };
+    if(r.givenName || r.familyName){
+      profileUpdate.name = [r.givenName, r.familyName].filter(function(x){ return !!x; }).join(' ');
+    }
+    try { await sb.from('profiles').update(profileUpdate).eq('id', S.user.id); } catch(e){}
+    if(profileUpdate.name) S.name = profileUpdate.name;
+    await loadProfile();
+    mvNative.haptic('success');
+    closeAuth();
+    enterApp();
+    setTimeout(function(){ if(typeof offerBiometricSetup==='function') offerBiometricSetup(); }, 800);
+  } catch(e){
+    mvNative.haptic('error');
+    showToast('Apple Sign-In error: ' + (e && e.message ? e.message : 'unknown'));
+  }
+  if(btn) btn.style.opacity='1';
 }
 
 // Sign in via Face ID on the login screen — pulls saved creds + calls Supabase
@@ -1658,12 +1767,19 @@ function showAuth(force){
   // Show Face ID button if biometric is enabled + we have saved creds (native only)
   var bioBtn = document.getElementById('authBiometricBtn');
   if(bioBtn){
-    // Show Face ID button whenever we have saved creds on this device.
-    // isEnabled() is user-scoped so returns false after logout — irrelevant here.
     if(typeof mvNative!=='undefined' && mvNative.isNative() && mvNative.biometric.hasCredentials()){
       bioBtn.classList.remove('hidden');
     } else {
       bioBtn.classList.add('hidden');
+    }
+  }
+  var appleBtn = document.getElementById('authAppleBtn');
+  if(appleBtn){
+    // Apple Sign-In: show whenever native platform + plugin available (sign-up OR sign-in)
+    if(typeof mvNative!=='undefined' && mvNative.appleSignIn && mvNative.appleSignIn.isAvailable()){
+      appleBtn.classList.remove('hidden');
+    } else {
+      appleBtn.classList.add('hidden');
     }
   }
 }
@@ -1676,6 +1792,11 @@ function toggleAuthMode(){
   if(bioBtn && isSignup) bioBtn.classList.add('hidden');
   else if(bioBtn && !isSignup && typeof mvNative!=='undefined' && mvNative.isNative() && mvNative.biometric.hasCredentials()){
     bioBtn.classList.remove('hidden');
+  }
+  // Apple button shows in both modes (can create or sign in with Apple)
+  var appleBtn = document.getElementById('authAppleBtn');
+  if(appleBtn && typeof mvNative!=='undefined' && mvNative.appleSignIn && mvNative.appleSignIn.isAvailable()){
+    appleBtn.classList.remove('hidden');
   }
   // Update password autocomplete hint so iOS suggests strong password on signup, current on login
   var pwEl = document.getElementById('authPass');
@@ -3230,13 +3351,18 @@ function formatEventDate(d,t){
 }
 
 async function getVillageLocation(callback){
+  // mvNative.geo handles both native (@capacitor/geolocation) and browser fallback
+  if(typeof mvNative!=='undefined' && mvNative.geo){
+    var r = await mvNative.geo.getCurrent({ timeout: 10000, maxAge: 300000 });
+    if(r){ callback(approximateLocation(r.lat, r.lng)); }
+    else { callback(null); }
+    return;
+  }
+  // Pure-web fallback if mvNative isn't loaded yet
   if(!navigator.geolocation){callback(null);return}
   navigator.geolocation.getCurrentPosition(
-    function(pos){
-      var approx=approximateLocation(pos.coords.latitude,pos.coords.longitude);
-      callback(approx);
-    },
-    function(){callback(null)},
+    function(pos){ callback(approximateLocation(pos.coords.latitude, pos.coords.longitude)); },
+    function(){ callback(null); },
     {timeout:10000,maximumAge:300000}
   );
 }
