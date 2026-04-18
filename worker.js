@@ -587,22 +587,8 @@ export default {
 
     // ═══ PUSH: REGISTER DEVICE TOKEN ═══
     if (url.pathname === '/push/register') {
-      // TEMP DEBUG: detailed auth diagnostics
-      if (!authToken) return new Response('{"error":"Auth required","debug":"no Authorization header received"}', { status: 401, headers: h });
-      let authDebug = { tokenLen: authToken.length, tokenPrefix: authToken.substring(0, 20) };
-      try {
-        const vr = await fetch(env.SUPABASE_URL + '/auth/v1/user', {
-          headers: { 'Authorization': 'Bearer ' + authToken, 'apikey': env.SUPABASE_ANON_KEY }
-        });
-        authDebug.supabaseStatus = vr.status;
-        if (!vr.ok) {
-          authDebug.supabaseBody = (await vr.text()).substring(0, 200);
-          return new Response(JSON.stringify({ error: 'Auth required', debug: authDebug }), { status: 401, headers: h });
-        }
-        var authedUser = await vr.json();
-      } catch (e) {
-        return new Response(JSON.stringify({ error: 'Auth required', debug: { ...authDebug, threw: String(e) } }), { status: 401, headers: h });
-      }
+      const authedUser = await verifyToken(authToken, env);
+      if (!authedUser) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
       const { token, platform, device_id, app_version, os_version } = body;
       if (!token || !platform) return new Response('{"error":"Missing token or platform"}', { status: 400, headers: h });
       if (!['ios', 'android'].includes(platform)) return new Response('{"error":"Invalid platform"}', { status: 400, headers: h });

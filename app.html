@@ -1279,48 +1279,36 @@ async function registerPushNotifications(){
     if(_pushRegistered) return;
     if(!window.Capacitor || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) return;
     var Push = window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications;
-    if(!Push){ alert('[Push] DBG: plugin missing'); return; }
+    if(!Push) return;
     _pushRegistered = true;
-    alert('[Push] DBG 1: starting');
 
     var perm = await Push.checkPermissions();
     if(perm.receive !== 'granted'){
       var req = await Push.requestPermissions();
-      if(req.receive !== 'granted'){ alert('[Push] DBG: permission=' + req.receive); return; }
+      if(req.receive !== 'granted') return;
     }
-    alert('[Push] DBG 2: permission granted');
 
     Push.addListener('registration', async function(token){
       try {
-        alert('[Push] DBG 3: registration fired, token len=' + (token && token.value ? token.value.length : 'MISSING'));
+        // Force-refresh session so a stale JWT doesn't trigger session_not_found on the worker
+        try { await sb.auth.refreshSession(); } catch(e){}
         var platform = (window.Capacitor.getPlatform && window.Capacitor.getPlatform()) || 'ios';
         var tk = await getAuthToken();
-        if(!tk){ alert('[Push] DBG 4: no auth token'); return; }
-        alert('[Push] DBG 4b: token prefix=' + tk.substring(0,20) + '... len=' + tk.length);
-        var r = await fetch(API_URL + 'push/register', {
+        if(!tk) return;
+        await fetch(API_URL + 'push/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tk },
           body: JSON.stringify({ token: token.value, platform: platform, app_version: '1.0.0' })
         });
-        var t = await r.text();
-        var dbg = {};
-        try { dbg = (JSON.parse(t).debug) || {}; } catch(e){}
-        alert('[Push] DBG 5a: status=' + r.status + ' | supaStatus=' + (dbg.supabaseStatus||'?') + ' | url=' + (dbg.workerSupabaseUrl||'?'));
-        alert('[Push] DBG 5b: anonKeyPrefix=' + (dbg.workerAnonKeyPrefix||'?') + ' | len=' + (dbg.workerAnonKeyLen||'?'));
-        alert('[Push] DBG 5c: supaBody=' + (dbg.supabaseBody||'?').substring(0, 200));
-      } catch(e) { alert('[Push] DBG ERR POST: ' + e.message); }
+      } catch(e) { console.warn('[Push] register POST failed:', e); }
     });
 
-    Push.addListener('registrationError', function(err){
-      alert('[Push] DBG APNs regError: ' + JSON.stringify(err).substring(0, 250));
-    });
-
+    Push.addListener('registrationError', function(err){ console.warn('[Push] APNs regError:', err); });
     Push.addListener('pushNotificationReceived', function(notif){ console.log('[Push] Received:', notif); });
     Push.addListener('pushNotificationActionPerformed', function(action){ console.log('[Push] Tapped:', action); });
 
-    alert('[Push] DBG 6: calling Push.register()');
     await Push.register();
-  } catch(e) { alert('[Push] DBG setup threw: ' + e.message); }
+  } catch(e) { console.warn('[Push] setup failed:', e); }
 }
 
 // ═══ SECURITY: Audit logging ═══
