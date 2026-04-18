@@ -3,7 +3,7 @@
   "appName": "Modern Village",
   "webDir": "www",
   "server": {
-    "url": "https://modernvillage.app",
+    "url": "https://modernvillage.app/app.html",
     "cleartext": false,
     "androidScheme": "https",
     "allowNavigation": [

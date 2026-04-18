@@ -37,6 +37,85 @@ function getCors(request) {
   };
 }
 
+
+// ═══ APNs PUSH HELPERS ═══
+let _apnsJwtCache = null;
+
+function _b64url(buf) {
+  if (buf instanceof ArrayBuffer) buf = new Uint8Array(buf);
+  if (buf instanceof Uint8Array) {
+    let s = '';
+    for (const b of buf) s += String.fromCharCode(b);
+    return btoa(s).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+  }
+  return btoa(typeof buf === 'string' ? buf : JSON.stringify(buf))
+    .replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+async function getApnsJwt(env) {
+  const now = Math.floor(Date.now() / 1000);
+  if (_apnsJwtCache && _apnsJwtCache.exp > now + 60) return _apnsJwtCache.jwt;
+
+  const pem = (env.APNS_AUTH_KEY || '').replace(/-----[^-]+-----/g, '').replace(/\s/g, '');
+  if (!pem) throw new Error('APNS_AUTH_KEY missing');
+  const binaryKey = Uint8Array.from(atob(pem), ch => ch.charCodeAt(0));
+
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryKey,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign']
+  );
+
+  const header = { alg: 'ES256', kid: env.APNS_KEY_ID, typ: 'JWT' };
+  const payload = { iss: env.APNS_TEAM_ID, iat: now };
+  const data = _b64url(header) + '.' + _b64url(payload);
+
+  const sig = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    key,
+    new TextEncoder().encode(data)
+  );
+
+  const jwt = data + '.' + _b64url(sig);
+  _apnsJwtCache = { jwt, exp: now + 3000 };
+  return jwt;
+}
+
+async function sendApns(env, deviceToken, payload, opts) {
+  opts = opts || {};
+  const jwt = await getApnsJwt(env);
+  const bundleId = env.APNS_BUNDLE_ID || 'app.modernvillage.ios';
+
+  const response = await fetch('https://api.push.apple.com/3/device/' + deviceToken, {
+    method: 'POST',
+    headers: {
+      'authorization': 'bearer ' + jwt,
+      'apns-topic': bundleId,
+      'apns-push-type': opts.pushType || 'alert',
+      'apns-priority': String(opts.priority || 10),
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const text = await response.text();
+  return { status: response.status, body: text, ok: response.status === 200 };
+}
+
+function buildApnsPayload(title, body, data) {
+  return {
+    aps: {
+      alert: { title: title || '', body: body || '' },
+      sound: 'default',
+      'mutable-content': 1
+    },
+    ...(data || {})
+  };
+}
+
+
 async function verifyToken(token, env) {
   if (!token) return null;
   try {
@@ -503,6 +582,111 @@ export default {
       });
 
       return new Response(JSON.stringify({ success: true, sent: sent }), { headers: h });
+    }
+
+
+    // ═══ PUSH: REGISTER DEVICE TOKEN ═══
+    if (url.pathname === '/push/register') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      const { token, platform, device_id, app_version, os_version } = body;
+      if (!token || !platform) return new Response('{"error":"Missing token or platform"}', { status: 400, headers: h });
+      if (!['ios', 'android'].includes(platform)) return new Response('{"error":"Invalid platform"}', { status: 400, headers: h });
+
+      const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' };
+      const upsertR = await fetch(env.SUPABASE_URL + '/rest/v1/push_tokens?on_conflict=user_id,token', {
+        method: 'POST',
+        headers: supaH,
+        body: JSON.stringify({
+          user_id: user.id,
+          platform: platform,
+          token: token,
+          device_id: device_id || null,
+          app_version: app_version || null,
+          os_version: os_version || null,
+          last_seen_at: new Date().toISOString(),
+          disabled_at: null
+        })
+      });
+      if (!upsertR.ok) return new Response(JSON.stringify({ error: 'Failed to register', status: upsertR.status }), { status: 500, headers: h });
+      return new Response('{"ok":true}', { headers: h });
+    }
+
+    // ═══ PUSH: SEND TEST TO SELF (for debugging) ═══
+    if (url.pathname === '/push/test') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+
+      const tokensR = await fetch(env.SUPABASE_URL + '/rest/v1/push_tokens?user_id=eq.' + user.id + '&disabled_at=is.null&select=id,token,platform', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const tokens = await tokensR.json();
+      if (!tokens.length) return new Response('{"error":"No registered devices"}', { status: 404, headers: h });
+
+      const results = [];
+      for (const t of tokens) {
+        if (t.platform !== 'ios') { results.push({ id: t.id, skipped: 'non-ios' }); continue; }
+        try {
+          const payload = buildApnsPayload('Hey — test from Modern Village', 'Push notifications are working.', { push_type: 'test' });
+          const r = await sendApns(env, t.token, payload);
+          results.push({ id: t.id, status: r.status, ok: r.ok, error: r.ok ? null : r.body });
+        } catch (e) {
+          results.push({ id: t.id, error: String(e) });
+        }
+      }
+      return new Response(JSON.stringify({ ok: true, results: results }), { headers: h });
+    }
+
+    // ═══ PUSH: ADMIN SEND TO USER BY ID ═══
+    if (url.pathname === '/push/send') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      const adminCheck = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=is_admin', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const adminData = await adminCheck.json();
+      if (!adminData.length || !adminData[0].is_admin) return new Response('{"error":"Admin only"}', { status: 403, headers: h });
+
+      const { target_user_id, title, body: pushBody, push_type, data } = body;
+      if (!target_user_id || !title || !pushBody) return new Response('{"error":"Missing fields"}', { status: 400, headers: h });
+
+      const tokensR = await fetch(env.SUPABASE_URL + '/rest/v1/push_tokens?user_id=eq.' + target_user_id + '&disabled_at=is.null&select=id,token,platform', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const tokens = await tokensR.json();
+      if (!tokens.length) return new Response('{"error":"No devices for user"}', { status: 404, headers: h });
+
+      const results = [];
+      for (const t of tokens) {
+        if (t.platform !== 'ios') { results.push({ id: t.id, skipped: 'non-ios' }); continue; }
+        try {
+          const payload = buildApnsPayload(title, pushBody, { push_type: push_type || 'admin', ...(data || {}) });
+          const r = await sendApns(env, t.token, payload);
+          results.push({ id: t.id, status: r.status, ok: r.ok, error: r.ok ? null : r.body });
+
+          // Log to push_send_log
+          await fetch(env.SUPABASE_URL + '/rest/v1/push_send_log', {
+            method: 'POST',
+            headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({
+              user_id: target_user_id,
+              push_type: push_type || 'admin',
+              platform: t.platform,
+              token_id: t.id,
+              title: title,
+              body: pushBody,
+              payload: data || null,
+              status: r.ok ? 'sent' : 'failed',
+              error_code: r.ok ? null : String(r.status),
+              error_message: r.ok ? null : r.body,
+              sent_at: new Date().toISOString()
+            })
+          });
+        } catch (e) {
+          results.push({ id: t.id, error: String(e) });
+        }
+      }
+      return new Response(JSON.stringify({ ok: true, results: results }), { headers: h });
     }
 
     // === AI CHAT ===

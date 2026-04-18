@@ -1272,6 +1272,59 @@ async function authFetch(url, opts){
   return fetch(url,opts);
 }
 
+// ═══ PUSH NOTIFICATIONS (native only) ═══
+var _pushRegistered = false;
+async function registerPushNotifications(){
+  try {
+    if(_pushRegistered) return;
+    if(!window.Capacitor || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) return;
+    var Push = window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications;
+    if(!Push) return;
+    _pushRegistered = true;
+
+    var perm = await Push.checkPermissions();
+    if(perm.receive !== 'granted'){
+      var req = await Push.requestPermissions();
+      if(req.receive !== 'granted') return;
+    }
+
+    Push.addListener('registration', async function(token){
+      try {
+        var platform = (window.Capacitor.getPlatform && window.Capacitor.getPlatform()) || 'ios';
+        var authHeaders = {'Content-Type':'application/json'};
+        var tk = await getAuthToken();
+        if(tk) authHeaders['Authorization'] = 'Bearer ' + tk;
+        await fetch(API_URL + 'push/register', {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify({
+            token: token.value,
+            platform: platform,
+            device_id: null,
+            app_version: '1.0.0',
+            os_version: null
+          })
+        });
+        console.log('[Push] Token registered');
+      } catch(e) { console.error('[Push] Register failed:', e); }
+    });
+
+    Push.addListener('registrationError', function(err){
+      console.error('[Push] Registration error:', err);
+    });
+
+    Push.addListener('pushNotificationReceived', function(notif){
+      console.log('[Push] Received (foreground):', notif);
+    });
+
+    Push.addListener('pushNotificationActionPerformed', function(action){
+      console.log('[Push] Tapped:', action);
+    });
+
+    await Push.register();
+  } catch(e) { console.error('[Push] Setup failed:', e); }
+}
+
 // ═══ SECURITY: Audit logging ═══
 async function auditLog(action, resourceType, resourceId, details){
   if(!S.user||!sb) return;
@@ -1777,6 +1830,7 @@ async function finishOnboarding(){
 // ═══ ENTER APP ═══
 function enterApp(){
   document.getElementById('app').classList.remove('hidden');
+  if(typeof registerPushNotifications==='function') registerPushNotifications();
   document.getElementById('authModal').classList.add('hidden');
   document.getElementById('onboarding').classList.add('hidden');
   var initial=S.name?S.name[0].toUpperCase():(S.user?S.user.email[0].toUpperCase():'?');
