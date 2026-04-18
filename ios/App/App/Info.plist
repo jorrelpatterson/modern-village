@@ -49,5 +49,7 @@
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Modern Village uses Face ID to keep your child's information private — so only you can unlock the app.</string>
 </dict>
 </plist>

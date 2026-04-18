@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Modern Village</title>
 <meta name="theme-color" content="#7A9E7E">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://jrsiqjfwvunrjiihnsgc.supabase.co https://village-api.jorrelpatterson.workers.dev https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://doxy.me https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.stripe.com; img-src 'self' data: https://jrsiqjfwvunrjiihnsgc.supabase.co; font-src https://fonts.gstatic.com;">
@@ -392,7 +392,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
 .chip{display:inline-block;padding:8px 16px;border-radius:20px;border:1.5px solid var(--sand);background:white;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;color:var(--warm-gray)}.chip.on{background:var(--sage);border-color:var(--sage);color:white}
 
 /* Header */
-.hdr{position:sticky;top:0;z-index:50;background:rgba(253,248,240,0.94);backdrop-filter:blur(20px);border-bottom:1px solid rgba(232,221,208,0.4);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.hdr{position:sticky;top:0;z-index:50;background:rgba(253,248,240,0.94);backdrop-filter:blur(20px);border-bottom:1px solid rgba(232,221,208,0.4);padding:calc(12px + env(safe-area-inset-top)) 20px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .hdr-left{display:flex;align-items:center;gap:12px}
 .hdr-menu{background:none;border:none;cursor:pointer;padding:4px;display:flex}
 .hdr-logo{width:32px;height:32px;border-radius:8px;background:var(--sage);display:flex;align-items:center;justify-content:center}
@@ -628,6 +628,15 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
 <body>
 
 <!-- SPLASH -->
+<div id="mvLockScreen" class="hidden" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#7A9E7E 0%,#5a7c5f 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;padding:40px 24px;text-align:center">
+  <div style="font-size:56px;margin-bottom:16px">🔐</div>
+  <div style="font-family:'Fraunces',serif;font-size:32px;font-weight:800;margin-bottom:8px;letter-spacing:-0.02em">Modern Village</div>
+  <div style="font-size:15px;opacity:0.85;margin-bottom:40px">Unlock to continue</div>
+  <div id="mvLockRetry" class="hidden" style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:260px">
+    <button onclick="mvLockRetry()" style="background:white;color:#5a7c5f;border:none;border-radius:14px;padding:14px;font-weight:700;font-size:15px;cursor:pointer">Try Again</button>
+    <button onclick="mvLockSignOut()" style="background:transparent;color:white;border:1px solid rgba(255,255,255,0.4);border-radius:14px;padding:14px;font-weight:600;font-size:14px;cursor:pointer">Sign Out</button>
+  </div>
+</div>
 <div id="splash" class="splash"><div class="splash-box"><svg width="44" height="44" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 24C8 32 14 38 22 38C30 38 36 32 36 24C36 14 22 6 22 6Z" fill="white" opacity="0.9"/><path d="M22 12C22 12 13 18 13 25C13 30 17 34 22 34C27 34 31 30 31 25C31 18 22 12 22 12Z" fill="white" opacity="0.5"/><circle cx="22" cy="24" r="4" fill="white"/></svg></div><h1>Modern <span>Village</span></h1><p>It takes a village. Let us be yours.</p></div>
 
 <!-- AUTH MODAL -->
@@ -1070,6 +1079,13 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--warm-gray)"><input type="checkbox" id="profEmailMarketing" onchange="toggleEmailMarketing(this.checked)"> Receive weekly digests and parenting tips</label>
         </div>
 
+        <!-- App Security (native iOS/Android only — hidden on web) -->
+        <div id="profAppSecurityBlock" style="display:none;background:white;border-radius:20px;padding:24px;border:1px solid var(--sand);margin-bottom:16px">
+          <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:800;margin-bottom:4px">App Security</div>
+          <div style="font-size:13px;color:var(--warm-gray);margin-bottom:14px">Require Face ID or Touch ID to open the app — helpful if you share your phone.</div>
+          <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:14px;font-weight:600"><span>Require biometric unlock</span><input type="checkbox" id="profAppLock" onchange="toggleAppLock(this.checked)" style="width:20px;height:20px;cursor:pointer"></label>
+        </div>
+
         <button class="btn btn-p" style="width:100%;padding:16px;font-size:16px;margin-bottom:16px" onclick="saveProfile()">Save Changes</button>
 
         <!-- Subscription -->
@@ -1311,6 +1327,103 @@ async function registerPushNotifications(){
   } catch(e) { console.warn('[Push] setup failed:', e); }
 }
 
+// ═══ NATIVE iOS/Android HELPERS ═══
+var mvNative = {
+  isNative: function(){
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  },
+  // Haptic feedback — types: 'light','medium','heavy','success','warning','error'
+  haptic: function(type){
+    if(!mvNative.isNative()) return;
+    var H = window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+    if(!H) return;
+    try {
+      if(type==='success') H.notification({type:'SUCCESS'});
+      else if(type==='warning') H.notification({type:'WARNING'});
+      else if(type==='error') H.notification({type:'ERROR'});
+      else if(type==='heavy') H.impact({style:'HEAVY'});
+      else if(type==='medium') H.impact({style:'MEDIUM'});
+      else H.impact({style:'LIGHT'});
+    } catch(e){}
+  },
+  // Status bar styling — call once on app startup
+  initStatusBar: async function(){
+    if(!mvNative.isNative()) return;
+    var SB = window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar;
+    if(!SB) return;
+    try {
+      await SB.setStyle({style:'DARK'}); // dark icons/text on our light cream background
+      await SB.setOverlaysWebView({overlay:false});
+    } catch(e){}
+  },
+  // Native share sheet with web fallback
+  share: async function(opts){
+    if(mvNative.isNative()){
+      var Sh = window.Capacitor.Plugins && window.Capacitor.Plugins.Share;
+      if(Sh){ try { await Sh.share(opts); return true; } catch(e){ return false; } }
+    }
+    if(navigator.share){ try { await navigator.share(opts); return true; } catch(e){ return false; } }
+    return false;
+  },
+  // Biometric App Lock
+  biometric: {
+    // Preference stored in localStorage — per device, per user
+    prefKey: function(){ return S.user ? 'mv_applock_'+S.user.id : 'mv_applock_guest'; },
+    isEnabled: function(){ return mvNative.isNative() && localStorage.getItem(mvNative.biometric.prefKey())==='1'; },
+    setEnabled: function(on){ localStorage.setItem(mvNative.biometric.prefKey(), on?'1':'0'); },
+    isAvailable: async function(){
+      if(!mvNative.isNative()) return false;
+      var B = window.Capacitor.Plugins && window.Capacitor.Plugins.BiometricAuth;
+      if(!B) return false;
+      try { var r = await B.checkBiometry(); return !!(r && r.isAvailable); } catch(e){ return false; }
+    },
+    authenticate: async function(reason){
+      if(!mvNative.isNative()) return true;
+      var B = window.Capacitor.Plugins && window.Capacitor.Plugins.BiometricAuth;
+      if(!B) return true;
+      try {
+        await B.authenticate({ reason: reason||'Unlock Modern Village', cancelTitle:'Cancel', iosFallbackTitle:'Use Passcode', allowDeviceCredential:true });
+        return true;
+      } catch(e){ return false; }
+    }
+  }
+};
+
+// Show lock screen, require Face ID before revealing app content
+async function mvAppLockGate(){
+  if(!mvNative.biometric.isEnabled()) return true;
+  var lockEl = document.getElementById('mvLockScreen');
+  if(!lockEl) return true; // safety
+  lockEl.classList.remove('hidden');
+  var ok = await mvNative.biometric.authenticate('Unlock Modern Village');
+  if(ok){
+    lockEl.classList.add('hidden');
+    mvNative.haptic('success');
+    return true;
+  }
+  // Failed — keep lock visible, show retry button
+  document.getElementById('mvLockRetry').classList.remove('hidden');
+  mvNative.haptic('error');
+  return false;
+}
+async function mvLockRetry(){
+  document.getElementById('mvLockRetry').classList.add('hidden');
+  var ok = await mvNative.biometric.authenticate('Unlock Modern Village');
+  if(ok){
+    document.getElementById('mvLockScreen').classList.add('hidden');
+    mvNative.haptic('success');
+  } else {
+    document.getElementById('mvLockRetry').classList.remove('hidden');
+    mvNative.haptic('error');
+  }
+}
+async function mvLockSignOut(){
+  mvNative.biometric.setEnabled(false);
+  document.getElementById('mvLockScreen').classList.add('hidden');
+  await sb.auth.signOut();
+  location.reload();
+}
+
 // ═══ SECURITY: Audit logging ═══
 async function auditLog(action, resourceType, resourceId, details){
   if(!S.user||!sb) return;
@@ -1524,6 +1637,7 @@ async function handleAuth(){
       S.user=result.data.user;
       await sb.from('profiles').update({email:email}).eq('id',S.user.id);
       await loadProfile();
+      if(typeof mvNative!=='undefined') mvNative.haptic('success');
       closeAuth();
       enterApp();
             var pendingToken=sessionStorage.getItem('mv_invite_token');
@@ -1731,6 +1845,8 @@ function renderChildSwitcher(){
 
 // ═══ SPLASH & INIT ═══
 async function init(){
+  // Native init — status bar styling (no-op on web)
+  if(typeof mvNative!=='undefined') mvNative.initStatusBar();
   setTimeout(function(){document.getElementById('splash').classList.add('out')},1800);
   setTimeout(async function(){
     document.getElementById('splash').classList.add('hidden');
@@ -1749,6 +1865,11 @@ async function init(){
         if(session.data.session){
           S.user=session.data.session.user;
           await loadProfile();
+          // App Lock gate — Face ID / Touch ID if user enabled it
+          if(typeof mvAppLockGate==='function' && mvNative.biometric.isEnabled()){
+            var unlocked = await mvAppLockGate();
+            if(!unlocked){ return; } // stay on lock screen until user authenticates or signs out
+          }
           enterApp();
           await checkInviteToken();
           return;
@@ -1997,15 +2118,15 @@ function copyRefLink(){
   });
 }
 
-function shareRefLink(){
+async function shareRefLink(){
   var code=S.profile.referral_code||'';
   var link='https://modernvillage.app/app.html?ref='+code;
   var text='I use Modern Village for ABA behavioral strategies for my kid — it\'s been a game changer. Try it free and we both get a free month: '+link;
-  if(navigator.share){
-    navigator.share({title:'Modern Village — ABA Parenting Support',text:text,url:link}).catch(function(){});
-  } else {
-    copyRefLink();
-  }
+  var opts = {title:'Modern Village — ABA Parenting Support',text:text,url:link,dialogTitle:'Share Modern Village'};
+  var ok = false;
+  if(typeof mvNative!=='undefined') ok = await mvNative.share(opts);
+  if(!ok) copyRefLink();
+  else if(typeof mvNative!=='undefined') mvNative.haptic('success');
 }
 
 // ═══ SIDEBAR ═══
@@ -2153,6 +2274,7 @@ async function send(text){
   // If not logged in and used 3 free, require auth
   if(!S.user&&S.freeUsed>=S.freeLimit){showAuth(true);return}
   if(!canSend()){showPw();return}
+  if(typeof mvNative!=='undefined') mvNative.haptic('light');
   document.getElementById('coachEmpty').classList.add('hidden');
   document.getElementById('chatMsgs').classList.remove('hidden');
   document.getElementById('paywall').classList.add('hidden');
@@ -5334,6 +5456,17 @@ function openProfile(){
   var emailMktEl = document.getElementById('profEmailMarketing');
   if(emailMktEl) emailMktEl.checked = S.profile && S.profile.email_marketing_opted_in !== false;
 
+  // App Security (biometric) — native only
+  (async function(){
+    var sec = document.getElementById('profAppSecurityBlock');
+    if(!sec) return;
+    if(typeof mvNative==='undefined' || !mvNative.isNative()){ sec.style.display='none'; return; }
+    var avail = await mvNative.biometric.isAvailable();
+    if(!avail){ sec.style.display='none'; return; }
+    sec.style.display='block';
+    document.getElementById('profAppLock').checked = mvNative.biometric.isEnabled();
+  })();
+
   // Render children list
   renderProfileChildren();
 
@@ -7067,7 +7200,7 @@ async function saveProfile(){
       p.innerHTML='Coaching for <strong>'+esc(S.child)+'</strong>'+(S.age?' \u00b7 '+esc(S.age):'')+(S.dx?' \u00b7 '+esc(S.dx):'');
     }
     renderSb();
-    showToast('Profile saved!');
+    (typeof mvNative!=='undefined'&&mvNative.haptic('success')); showToast('Profile saved!');
   } else { showToast('Error saving profile'); }
 }
 
