@@ -1387,14 +1387,16 @@ var mvNative = {
       try { var r = await B.checkBiometry(); return !!(r && r.isAvailable); } catch(e){ return false; }
     },
     authenticate: async function(reason){
-      if(!mvNative.isNative()) return true;
+      if(!mvNative.isNative()){ mvNative.biometric._lastError='not-native'; return false; }
       var B = window.Capacitor.Plugins && window.Capacitor.Plugins.BiometricAuth;
-      if(!B) return true;
+      if(!B){ mvNative.biometric._lastError='plugin-missing: ' + Object.keys(window.Capacitor.Plugins||{}).join(','); return false; }
       try {
         await B.authenticate({ reason: reason||'Unlock Modern Village', cancelTitle:'Cancel', iosFallbackTitle:'Use Passcode', allowDeviceCredential:true });
+        mvNative.biometric._lastError=null;
         return true;
-      } catch(e){ return false; }
-    }
+      } catch(e){ mvNative.biometric._lastError='authenticate threw: ' + (e && e.message ? e.message : String(e)); return false; }
+    },
+    _lastError: null
   }
 };
 
@@ -1421,7 +1423,8 @@ async function mvBiometricYes(){
     showToast('Face ID enabled');
   } else {
     mvNative.haptic('error');
-    showToast('You can enable it later in Profile › App Security');
+    var err = mvNative.biometric._lastError || 'unknown';
+    alert('Face ID setup failed\n\nReason: ' + err);
   }
 }
 function mvBiometricLater(){
@@ -1441,7 +1444,16 @@ async function mvAppLockGate(){
     mvNative.haptic('success');
     return true;
   }
-  // Failed — keep lock visible, show retry button
+  // Self-heal: plugin isn't installed in this build — auto-disable App Lock
+  // instead of stranding the user on a lock screen that can never unlock
+  var err = mvNative.biometric._lastError || '';
+  if(err.indexOf('plugin-missing')===0 || err==='not-native'){
+    mvNative.biometric.setEnabled(false);
+    lockEl.classList.add('hidden');
+    showToast('Biometric unavailable — App Lock disabled');
+    return true;
+  }
+  // Otherwise, user declined or failed — keep lock visible, show retry button
   document.getElementById('mvLockRetry').classList.remove('hidden');
   mvNative.haptic('error');
   return false;
@@ -7223,7 +7235,13 @@ async function toggleAppLock(on){
   if(typeof mvNative==='undefined' || !mvNative.isNative()){ document.getElementById('profAppLock').checked=false; return; }
   if(on){
     var ok = await mvNative.biometric.authenticate('Enable biometric unlock');
-    if(!ok){ document.getElementById('profAppLock').checked=false; showToast('Biometric authentication failed'); mvNative.haptic('error'); return; }
+    if(!ok){
+      document.getElementById('profAppLock').checked=false;
+      mvNative.haptic('error');
+      var err = mvNative.biometric._lastError || 'unknown';
+      alert('Face ID setup failed\n\nReason: ' + err);
+      return;
+    }
     mvNative.biometric.setEnabled(true);
     mvNative.haptic('success');
     showToast('Biometric unlock enabled');
