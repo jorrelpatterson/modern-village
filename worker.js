@@ -109,10 +109,104 @@ function buildApnsPayload(title, body, data) {
     aps: {
       alert: { title: title || '', body: body || '' },
       sound: 'default',
-      'mutable-content': 1
+      'mutable-content': 1,
+      ...(data && data._badge !== undefined ? { badge: data._badge } : {})
     },
     ...(data || {})
   };
+}
+
+// ═══ PUSH: high-level send helper ═══
+// Looks up target user's push tokens, checks opt-out prefs, dedups, sends APNs, logs.
+// Returns { sent: N, skipped: reason } summary.
+async function sendPushToUser(env, userId, title, body, pushType, opts) {
+  opts = opts || {};
+  const dedupKey = opts.dedupKey || null; // if set, skip if same (user,type,key) already sent
+  const incrementBadge = opts.incrementBadge !== false; // default true
+  const supaH = {
+    'apikey': env.SUPABASE_SERVICE_KEY,
+    'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY,
+    'Content-Type': 'application/json'
+  };
+
+  // 1) Check user prefs (master opt-out + per-type pref)
+  const prefCol = 'push_pref_' + pushType.replace(/-/g, '_');
+  const profR = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + userId + '&select=push_opted_out,push_badge_count,' + prefCol, { headers: supaH });
+  const profs = await profR.json();
+  if (!profs || !profs.length) return { sent: 0, skipped: 'no-profile' };
+  const p = profs[0];
+  if (p.push_opted_out) return { sent: 0, skipped: 'opted-out' };
+  if (p[prefCol] === false) return { sent: 0, skipped: 'pref-off' };
+
+  // 2) Dedup check
+  if (dedupKey) {
+    const dedupR = await fetch(env.SUPABASE_URL + '/rest/v1/push_dedup?user_id=eq.' + userId + '&push_type=eq.' + pushType + '&dedup_key=eq.' + encodeURIComponent(dedupKey) + '&select=user_id', { headers: supaH });
+    const existing = await dedupR.json();
+    if (existing && existing.length > 0) return { sent: 0, skipped: 'dedup' };
+  }
+
+  // 3) Look up active push tokens
+  const tokR = await fetch(env.SUPABASE_URL + '/rest/v1/push_tokens?user_id=eq.' + userId + '&disabled_at=is.null&select=id,token,platform', { headers: supaH });
+  const tokens = await tokR.json();
+  if (!tokens || !tokens.length) return { sent: 0, skipped: 'no-tokens' };
+
+  // 4) Increment badge counter + send (iOS badge = this user's total unread pushes)
+  let newBadge = p.push_badge_count || 0;
+  if (incrementBadge) {
+    newBadge = newBadge + 1;
+    await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + userId, {
+      method: 'PATCH',
+      headers: { ...supaH, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ push_badge_count: newBadge })
+    });
+  }
+
+  let sent = 0;
+  for (const t of tokens) {
+    if (t.platform !== 'ios') continue; // iOS only for now; add FCM later
+    try {
+      const payload = buildApnsPayload(title, body, { push_type: pushType, _badge: newBadge, ...(opts.data || {}) });
+      const r = await sendApns(env, t.token, payload);
+      if (r.ok) sent++;
+      // Log
+      await fetch(env.SUPABASE_URL + '/rest/v1/push_send_log', {
+        method: 'POST',
+        headers: { ...supaH, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          user_id: userId,
+          push_type: pushType,
+          platform: t.platform,
+          token_id: t.id,
+          title: title,
+          body: body,
+          payload: opts.data || null,
+          status: r.ok ? 'sent' : 'failed',
+          error_code: r.ok ? null : String(r.status),
+          error_message: r.ok ? null : (r.body || '').substring(0, 200),
+          sent_at: new Date().toISOString()
+        })
+      });
+      // Auto-disable tokens that APNs rejects permanently (410 Gone, etc.)
+      if (r.status === 410 || (r.status === 400 && r.body && r.body.indexOf('BadDeviceToken') >= 0)) {
+        await fetch(env.SUPABASE_URL + '/rest/v1/push_tokens?id=eq.' + t.id, {
+          method: 'PATCH',
+          headers: { ...supaH, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ disabled_at: new Date().toISOString() })
+        });
+      }
+    } catch (e) { /* log-only */ }
+  }
+
+  // 5) Record dedup
+  if (dedupKey && sent > 0) {
+    await fetch(env.SUPABASE_URL + '/rest/v1/push_dedup', {
+      method: 'POST',
+      headers: { ...supaH, 'Prefer': 'return=minimal,resolution=ignore-duplicates' },
+      body: JSON.stringify({ user_id: userId, push_type: pushType, dedup_key: dedupKey })
+    });
+  }
+
+  return { sent, skipped: null };
 }
 
 
@@ -612,6 +706,67 @@ export default {
       return new Response('{"ok":true}', { headers: h });
     }
 
+    // ═══ PUSH: NOTIFY MILESTONE (called from app when user earns milestone) ═══
+    if (url.pathname === '/push/notify-milestone') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      const { milestone_title } = body;
+      const title = 'You earned a milestone 🏆';
+      const bodyText = milestone_title ? milestone_title : 'Open the app to see what you unlocked.';
+      // Dedup on milestone title so repeat calls for the same milestone don't re-push
+      const dedupKey = 'm-' + (milestone_title || 'generic').substring(0, 40);
+      const result = await sendPushToUser(env, user.id, title, bodyText, 'milestone', { dedupKey });
+      return new Response(JSON.stringify({ ok: true, ...result }), { headers: h });
+    }
+
+    // ═══ PUSH: NOTIFY COMMUNITY REPLY (called when someone replies to user's post) ═══
+    // Body: { author_user_id } — the user who authored the original post (who receives the push)
+    if (url.pathname === '/push/notify-reply') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      const { author_user_id, post_id } = body;
+      if (!author_user_id) return new Response('{"error":"Missing author_user_id"}', { status: 400, headers: h });
+      if (author_user_id === user.id) return new Response('{"ok":true,"skipped":"self-reply"}', { headers: h });
+      const result = await sendPushToUser(env, author_user_id, 'Someone replied 💬', 'Your post got a new reply.', 'community_reply', { dedupKey: post_id ? ('r-' + post_id + '-' + Date.now()) : null, data: { post_id: post_id || null } });
+      return new Response(JSON.stringify({ ok: true, ...result }), { headers: h });
+    }
+
+    // ═══ PUSH: NOTIFY NEW STRATEGY CARD (admin-only broadcast) ═══
+    if (url.pathname === '/push/notify-new-strategy') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      // Admin check
+      const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY };
+      const profR = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=is_admin', { headers: supaH });
+      const profs = await profR.json();
+      if (!profs || !profs.length || !profs[0].is_admin) return new Response('{"error":"Admin only"}', { status: 403, headers: h });
+
+      const { strategy_title, strategy_id } = body;
+      if (!strategy_title) return new Response('{"error":"Missing strategy_title"}', { status: 400, headers: h });
+      // Broadcast to all parents who have the new-strategy pref on
+      const usersR = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?role=eq.parent&push_pref_new_strategy=eq.true&push_opted_out=eq.false&select=id', { headers: supaH });
+      const users = await usersR.json();
+      const dedupKey = 's-' + (strategy_id || strategy_title.substring(0, 40));
+      let sent = 0;
+      for (const u of (users || [])) {
+        const r = await sendPushToUser(env, u.id, 'New strategy card 💡', strategy_title, 'new_strategy', { dedupKey, data: { strategy_id: strategy_id || null } });
+        if (r.sent > 0) sent++;
+      }
+      return new Response(JSON.stringify({ ok: true, recipients_sent: sent, total_eligible: (users || []).length }), { headers: h });
+    }
+
+    // ═══ PUSH: CLEAR BADGE (called when user opens the app / reads notifications) ═══
+    if (url.pathname === '/push/clear-badge') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id, {
+        method: 'PATCH',
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ push_badge_count: 0 })
+      });
+      return new Response('{"ok":true}', { headers: h });
+    }
+
     // ═══ PUSH: SEND TEST TO SELF (for debugging) ═══
     if (url.pathname === '/push/test') {
       const user = await verifyToken(authToken, env);
@@ -707,9 +862,37 @@ export default {
     } catch { return new Response('{"error":"AI failed"}', { status: 500, headers: h }); }
   },
 
-  // === CRON: Runs daily for booking reminders + email drips ===
+  // === CRON: Routes based on cron expression ===
+  // Existing daily cron: runs email drips + booking email reminders.
+  // Add these cron triggers in Cloudflare dashboard to enable push routines:
+  //   '0 14 * * *'  — 7am PT morning pushes (routine + booking push reminder)
+  //   '0 4 * * *'   — 8pm PT evening pushes (daily check-in + streak at risk)
+  //   '0 16 * * 0'  — Sunday 9am PT weekly digest
+  //
+  // If only one daily cron is configured, we fire everything from runDailyTasks.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runDailyTasks(env));
+    const cron = event && event.cron;
+    // Route by specific cron expressions
+    if (cron === '0 14 * * *') {
+      ctx.waitUntil(Promise.all([runDailyTasks(env), runMorningPushes(env)]));
+      return;
+    }
+    if (cron === '0 4 * * *') {
+      ctx.waitUntil(runEveningPushes(env));
+      return;
+    }
+    if (cron === '0 16 * * 0') {
+      ctx.waitUntil(runWeeklyPushes(env));
+      return;
+    }
+    // Fallback: single-cron setup — fire everything once a day
+    ctx.waitUntil(Promise.all([
+      runDailyTasks(env),
+      runMorningPushes(env),
+      runEveningPushes(env),
+      // Weekly digest only on Sundays when using single-cron mode
+      (new Date()).getUTCDay() === 0 ? runWeeklyPushes(env) : Promise.resolve()
+    ]));
   }
 };
 
@@ -1353,4 +1536,87 @@ async function runDailyTasks(env) {
       } catch (aiErr) { console.error('AI optimization error:', aiErr); }
     }
   } catch (e) { console.error('Email optimization error:', e); }
+}
+
+
+// ═══════════════════════════════════════════════════
+// PUSH NOTIFICATION ROUTINES (Phase 3)
+// Each routine queries eligible users and fires pushes via sendPushToUser().
+// Routed by scheduled() based on cron spec (morning / evening / weekly).
+// ═══════════════════════════════════════════════════
+
+// Morning pushes (fire ~7am PT / 14:00 UTC)
+// - Morning routine reminder (parents with active routines)
+// - Booking reminder push (24hr before — parallels existing email reminder)
+async function runMorningPushes(env) {
+  const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' };
+  const today = new Date().toISOString().split('T')[0];
+
+  // -- Morning routine: parents who opted in --
+  try {
+    const r = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?role=eq.parent&push_pref_morning_routine=eq.true&push_opted_out=eq.false&select=id', { headers: supaH });
+    const users = await r.json();
+    for (const u of (users || [])) {
+      await sendPushToUser(env, u.id, 'Good morning ☀️', 'Start the day with a quick routine.', 'morning_routine', { dedupKey: today });
+    }
+  } catch (e) { console.error('morning_routine push error:', e); }
+
+  // -- Booking reminder: users with a session 24hr out --
+  try {
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowIso = tomorrow.toISOString().split('T')[0];
+    const r = await fetch(env.SUPABASE_URL + '/rest/v1/bookings?session_date=eq.' + tomorrowIso + '&status=neq.cancelled&select=id,user_id,provider_name,session_time', { headers: supaH });
+    const bookings = await r.json();
+    for (const b of (bookings || [])) {
+      const body = 'Session with ' + (b.provider_name || 'your provider') + ' tomorrow' + (b.session_time ? ' at ' + b.session_time : '') + '.';
+      await sendPushToUser(env, b.user_id, 'Session reminder 📅', body, 'booking_reminder', { dedupKey: 'b-' + b.id });
+    }
+  } catch (e) { console.error('booking_reminder push error:', e); }
+}
+
+// Evening pushes (fire ~8pm PT / 04:00 UTC next day)
+// - Daily check-in reminder for parents who haven't checked in today
+// - Streak at risk for users with streak ≥ 3 who skipped today
+async function runEveningPushes(env) {
+  const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' };
+  const today = new Date().toISOString().split('T')[0];
+
+  try {
+    // Find parents who haven't checked in today
+    const allR = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?role=eq.parent&push_opted_out=eq.false&select=id,push_pref_daily_checkin,push_pref_streak_at_risk', { headers: supaH });
+    const parents = await allR.json();
+    for (const p of (parents || [])) {
+      // Has this user checked in today?
+      const ciR = await fetch(env.SUPABASE_URL + '/rest/v1/daily_checkins?user_id=eq.' + p.id + '&date=eq.' + today + '&select=id,streak_count&limit=1', { headers: supaH });
+      const ci = await ciR.json();
+      if (ci && ci.length > 0) continue; // already checked in
+
+      // Get current streak (last check-in's streak_count, if streak broken it'll be 0 next time)
+      const lastR = await fetch(env.SUPABASE_URL + '/rest/v1/daily_checkins?user_id=eq.' + p.id + '&order=date.desc&limit=1&select=date,streak_count', { headers: supaH });
+      const last = await lastR.json();
+      const currentStreak = (last && last[0] && last[0].streak_count) || 0;
+
+      // Streak at risk takes precedence (more urgent for retention)
+      if (currentStreak >= 3 && p.push_pref_streak_at_risk !== false) {
+        await sendPushToUser(env, p.id, 'Don\'t break your streak 🔥', 'You\'re on a ' + currentStreak + '-day streak. A 30-second check-in keeps it alive.', 'streak_at_risk', { dedupKey: today });
+      } else if (p.push_pref_daily_checkin !== false) {
+        await sendPushToUser(env, p.id, 'Evening check-in 🌱', 'How did today go?', 'daily_checkin', { dedupKey: today });
+      }
+    }
+  } catch (e) { console.error('evening push error:', e); }
+}
+
+// Weekly digest (fire Sunday ~9am PT / 16:00 UTC Sunday)
+async function runWeeklyPushes(env) {
+  const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' };
+  const now = new Date();
+  // Week key: year + ISO week number
+  const weekKey = now.getFullYear() + '-W' + Math.ceil(((now - new Date(now.getFullYear(), 0, 1)) / 86400000 + new Date(now.getFullYear(), 0, 1).getDay() + 1) / 7);
+  try {
+    const r = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?role=eq.parent&push_pref_weekly_digest=eq.true&push_opted_out=eq.false&select=id', { headers: supaH });
+    const users = await r.json();
+    for (const u of (users || [])) {
+      await sendPushToUser(env, u.id, 'Your week in Modern Village 📝', 'See this week\'s patterns, wins, and next steps.', 'weekly_digest', { dedupKey: weekKey });
+    }
+  } catch (e) { console.error('weekly_digest push error:', e); }
 }

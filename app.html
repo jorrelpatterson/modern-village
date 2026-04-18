@@ -2092,6 +2092,16 @@ async function finishOnboarding(){
 function enterApp(){
   document.getElementById('app').classList.remove('hidden');
   if(typeof registerPushNotifications==='function') registerPushNotifications();
+  // Clear push badge when user actually enters the app
+  if(S.user){
+    try {
+      authFetch(API_URL+'push/clear-badge',{ method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' }).catch(function(){});
+    } catch(e){}
+    // Clear delivered notifications from tray too
+    if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications){
+      try { window.Capacitor.Plugins.PushNotifications.removeAllDeliveredNotifications(); } catch(e){}
+    }
+  }
   document.getElementById('authModal').classList.add('hidden');
   document.getElementById('onboarding').classList.add('hidden');
   var initial=S.name?S.name[0].toUpperCase():(S.user?S.user.email[0].toUpperCase():'?');
@@ -3123,6 +3133,17 @@ async function postComment(postId, parentCommentId){
       var countEl = document.getElementById('cc_'+postId);
       if(countEl) countEl.textContent = parseInt(countEl.textContent||0) + 1;
       showToast('Comment posted!');
+      // Fire push to post author (server skips if author === current user)
+      try {
+        var postR = await sb.from('community_posts').select('user_id').eq('id', postId).single();
+        if(postR.data && postR.data.user_id){
+          authFetch(API_URL+'push/notify-reply',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({ author_user_id: postR.data.user_id, post_id: postId })
+          }).catch(function(e){ console.warn('reply push failed:', e); });
+        }
+      } catch(e){}
     }
   } catch(e) {
     console.error('Comment error:', e);
@@ -6207,6 +6228,16 @@ async function checkMilestones(){
     achieved=achieved.concat(newMilestones);
     localStorage.setItem('mv_milestones_'+S.user.id,JSON.stringify(achieved));
     showMilestoneCelebration(newMilestones[0]);
+    // Fire push for each newly earned milestone (server-side dedup prevents repeats)
+    for(var mi=0; mi<newMilestones.length; mi++){
+      var md = milestoneDefinitions.find(function(d){ return d.id===newMilestones[mi]; });
+      var mTitle = md ? md.title : 'Milestone earned';
+      authFetch(API_URL+'push/notify-milestone',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ milestone_title: mTitle })
+      }).catch(function(e){ console.warn('milestone push failed:', e); });
+    }
   }
 }
 
