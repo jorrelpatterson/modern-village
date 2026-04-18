@@ -665,6 +665,10 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
       <div style="display:flex;gap:8px" class="auth-field"><div style="flex:1"><label>License State</label><select id="authLicState" class="fi" style="padding:10px 12px"><option value="">State</option><option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option><option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option><option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option><option>KS</option><option>KY</option><option>LA</option><option>ME</option><option>MD</option><option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option><option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option><option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option><option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option><option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option><option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option><option>DC</option></select></div><div style="flex:1"><label>License #</label><input id="authLicNum" type="text" placeholder="License number"></div></div>
       <div class="auth-field"><label>CPT Codes (select all that apply)</label><div id="authCptCodes" style="display:flex;flex-wrap:wrap;gap:6px"></div></div>
     </div>
+    <button id="authBiometricBtn" class="hidden" onclick="mvBiometricSignIn()" style="width:100%;background:#5a7c5f;color:white;border:none;border-radius:14px;padding:14px;font-weight:700;font-size:15px;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5a2 2 0 0 0-2 2v4"/><path d="M15 4h4a2 2 0 0 1 2 2v4"/><path d="M9 20H5a2 2 0 0 1-2-2v-4"/><path d="M15 20h4a2 2 0 0 0 2-2v-4"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+      Sign in with Face ID
+    </button>
     <button id="authSubmit" class="auth-btn auth-btn-primary" onclick="handleAuth()">Create Account</button>
     <div class="auth-toggle" id="authToggle">Already have an account? <a onclick="toggleAuthMode()">Log in</a></div>
     <div id="authForgotLink" class="hidden" style="text-align:center;margin-top:8px"><a style="font-size:13px;color:var(--sage-dark);cursor:pointer" onclick="sendPasswordReset()">Forgot password?</a></div>
@@ -1398,7 +1402,31 @@ var mvNative = {
         return true;
       } catch(e){ mvNative.biometric._lastError='authenticate threw: ' + (e && e.message ? e.message : String(e)); return false; }
     },
-    _lastError: null
+    _lastError: null,
+    // Saved credentials (localStorage, lightly obfuscated) — enables biometric sign-in after logout
+    _credsKey: 'mv_biocreds',
+    saveCredentials: function(email, password){
+      if(!mvNative.isNative() || !email || !password) return;
+      try {
+        var obf = btoa(unescape(encodeURIComponent(password)));
+        localStorage.setItem(mvNative.biometric._credsKey, JSON.stringify({ email: email, pw: obf, saved: Date.now() }));
+      } catch(e){}
+    },
+    getCredentials: function(){
+      try {
+        var raw = localStorage.getItem(mvNative.biometric._credsKey);
+        if(!raw) return null;
+        var d = JSON.parse(raw);
+        if(!d || !d.email || !d.pw) return null;
+        return { email: d.email, password: decodeURIComponent(escape(atob(d.pw))) };
+      } catch(e){ return null; }
+    },
+    clearCredentials: function(){
+      try { localStorage.removeItem(mvNative.biometric._credsKey); } catch(e){}
+    },
+    hasCredentials: function(){
+      try { return !!localStorage.getItem(mvNative.biometric._credsKey); } catch(e){ return false; }
+    }
   }
 };
 
@@ -1432,6 +1460,50 @@ async function mvBiometricYes(){
 function mvBiometricLater(){
   document.getElementById('mvBiometricPrompt').classList.add('hidden');
   var k = mvBiometricPromptKey(); if(k) localStorage.setItem(k,'1');
+}
+
+// Sign in via Face ID on the login screen — pulls saved creds + calls Supabase
+async function mvBiometricSignIn(){
+  if(typeof mvNative==='undefined' || !mvNative.isNative()) return;
+  var btn = document.getElementById('authBiometricBtn');
+  if(btn) btn.style.opacity='0.6';
+  try {
+    var ok = await mvNative.biometric.authenticate('Sign in to Modern Village');
+    if(!ok){
+      mvNative.haptic('error');
+      if(btn) btn.style.opacity='1';
+      var err = mvNative.biometric._lastError;
+      if(err && err.indexOf('canceled')>=0) return; // user tapped cancel, no toast
+      showToast('Face ID failed — try again or use password');
+      return;
+    }
+    var creds = mvNative.biometric.getCredentials();
+    if(!creds){
+      if(btn) btn.classList.add('hidden');
+      showToast('No saved login found');
+      return;
+    }
+    // Sign in silently using stored creds
+    var result = await sb.auth.signInWithPassword({ email: creds.email, password: creds.password });
+    if(result.error){
+      // Stored password is invalid (user probably changed it elsewhere) — clear and fall back
+      mvNative.biometric.clearCredentials();
+      if(btn) btn.classList.add('hidden');
+      mvNative.haptic('error');
+      showToast('Saved password no longer works — please sign in with your password');
+      return;
+    }
+    S.user = result.data.user;
+    await sb.from('profiles').update({ email: creds.email }).eq('id', S.user.id);
+    await loadProfile();
+    mvNative.haptic('success');
+    closeAuth();
+    enterApp();
+  } catch(e){
+    mvNative.haptic('error');
+    showToast('Sign in failed: ' + (e && e.message ? e.message : 'unknown'));
+  }
+  if(btn) btn.style.opacity='1';
 }
 
 // Show lock screen, require Face ID before revealing app content
@@ -1564,11 +1636,26 @@ function showAuth(force){
   document.getElementById('authProviderFields').classList.add('hidden');
   document.getElementById('authProviderToggle').classList.remove('hidden');
   document.getElementById('authForgotLink').classList.add('hidden');
+  // Show Face ID button if biometric is enabled + we have saved creds (native only)
+  var bioBtn = document.getElementById('authBiometricBtn');
+  if(bioBtn){
+    if(typeof mvNative!=='undefined' && mvNative.isNative() && mvNative.biometric.isEnabled() && mvNative.biometric.hasCredentials()){
+      bioBtn.classList.remove('hidden');
+    } else {
+      bioBtn.classList.add('hidden');
+    }
+  }
 }
 
 function toggleAuthMode(){
   S.authMode=S.authMode==='signup'?'login':'signup';
   var isSignup=S.authMode==='signup';
+  // Hide Face ID button in signup mode (only for returning users)
+  var bioBtn = document.getElementById('authBiometricBtn');
+  if(bioBtn && isSignup) bioBtn.classList.add('hidden');
+  else if(bioBtn && !isSignup && typeof mvNative!=='undefined' && mvNative.isNative() && mvNative.biometric.isEnabled() && mvNative.biometric.hasCredentials()){
+    bioBtn.classList.remove('hidden');
+  }
   document.getElementById('authTitle').textContent=isSignup?'Create Account':'Welcome Back';
   document.getElementById('authSub').textContent=isSignup?'Save your strategies and track progress':'Log in to your Modern Village account';
   document.getElementById('authSubmit').textContent=isSignup?'Create Account':'Log In';
@@ -1691,6 +1778,10 @@ async function handleAuth(){
       S.user=result.data.user;
       await sb.from('profiles').update({email:email}).eq('id',S.user.id);
       await loadProfile();
+      // Save credentials for future biometric sign-in (native only)
+      if(typeof mvNative!=='undefined' && mvNative.isNative()){
+        mvNative.biometric.saveCredentials(email, pass);
+      }
       if(typeof mvNative!=='undefined') mvNative.haptic('success');
       closeAuth();
       enterApp();
@@ -7249,6 +7340,7 @@ async function toggleAppLock(on){
     showToast('Biometric unlock enabled');
   } else {
     mvNative.biometric.setEnabled(false);
+    mvNative.biometric.clearCredentials();
     mvNative.haptic('light');
     showToast('Biometric unlock disabled');
   }
