@@ -90,6 +90,7 @@
 ### Platform (Phase 2)
 | Feature | Description | Priority |
 |---------|-------------|----------|
+| **Apple Sign-In account linking** | Currently: signing in with Apple using an email that already has a password account creates a DUPLICATE Supabase user. Fix: enable Supabase manual identity linking (Authentication → Settings → toggle on, or env var GOTRUE_SECURITY_MANUAL_LINKING_ENABLED=true), then add in-app flow to link identities when an Apple sign-in matches an existing email. Priority rises when we get production users. | Medium |
 | iOS/Android Capacitor wrap | Native app shell wrapping existing HTML. Web-only Stripe payments (no in-app purchases — saves $3-6K/mo). Native plugins: push, biometrics, camera, geolocation, share, haptics, offline cache, badge count. See `docs/SUPPLEMENTARY.md` §8 for full strategy. | High |
 | Push notifications | HIPAA-safe generic text only. Daily check-in (8pm), morning routine (7am), booking reminder (24hr), streak at risk, milestone celebration, weekly digest, community reply, new strategy card. | High (requires native app) |
 | **Medical billing module** | **DONE (Phase 1): Claims tracking, payer management, superbills, billing dashboard, aging reports. NEXT (Phase 2): PC (Parent Consultation / CPT 97156) billing — the main insurance path. See "PC Billing Build" section below. Phase 3: Clearinghouse integration (EDI 837). Phase 4: ERA/EOB auto-processing, denial management automation, batch claim submission.** | **Phase 1 Done** |
