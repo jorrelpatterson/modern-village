@@ -628,6 +628,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
 <body>
 
 <!-- SPLASH -->
+<div id="mvOfflineBanner" class="hidden" style="position:fixed;top:0;left:0;right:0;z-index:9997;background:#D9A56B;color:#2d1f14;font-size:13px;font-weight:600;padding:8px 20px;text-align:center;padding-top:calc(8px + env(safe-area-inset-top));box-shadow:0 2px 8px rgba(0,0,0,0.1)">⚠️ You’re offline — some features unavailable</div>
 <div id="mvBiometricPrompt" class="hidden" style="position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:20px">
   <div style="background:white;border-radius:24px;padding:32px 24px;max-width:340px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
     <div style="font-size:48px;margin-bottom:12px">🔐</div>
@@ -1427,6 +1428,24 @@ var mvNative = {
     hasCredentials: function(){
       try { return !!localStorage.getItem(mvNative.biometric._credsKey); } catch(e){ return false; }
     }
+  },
+  // App icon badge — only way to truly clear the badge from JS is this plugin
+  badge: {
+    set: async function(count){
+      if(!mvNative.isNative()) return;
+      var B = window.Capacitor.Plugins && window.Capacitor.Plugins.Badge;
+      if(!B || !B.set) return;
+      try { await B.set({ count: count || 0 }); } catch(e){}
+    },
+    clear: async function(){
+      if(!mvNative.isNative()) return;
+      var B = window.Capacitor.Plugins && window.Capacitor.Plugins.Badge;
+      if(!B) return;
+      try {
+        if(B.clear) await B.clear();
+        else if(B.set) await B.set({ count: 0 });
+      } catch(e){}
+    }
   }
 };
 
@@ -1999,6 +2018,20 @@ function renderChildSwitcher(){
 async function init(){
   // Native init — status bar styling (no-op on web)
   if(typeof mvNative!=='undefined') mvNative.initStatusBar();
+  // Register service worker for offline shell caching (web browsers + Capacitor WebView)
+  if('serviceWorker' in navigator){
+    try { navigator.serviceWorker.register('/sw.js').catch(function(e){ console.warn('[SW] register:', e); }); } catch(e){}
+  }
+  // Connectivity monitoring — show offline banner when disconnected
+  function mvUpdateOnlineState(){
+    var banner = document.getElementById('mvOfflineBanner');
+    if(!banner) return;
+    if(navigator.onLine === false) banner.classList.remove('hidden');
+    else banner.classList.add('hidden');
+  }
+  window.addEventListener('online', mvUpdateOnlineState);
+  window.addEventListener('offline', mvUpdateOnlineState);
+  mvUpdateOnlineState();
   setTimeout(function(){document.getElementById('splash').classList.add('out')},1800);
   setTimeout(async function(){
     document.getElementById('splash').classList.add('hidden');
@@ -2097,10 +2130,12 @@ function enterApp(){
     try {
       authFetch(API_URL+'push/clear-badge',{ method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' }).catch(function(){});
     } catch(e){}
-    // Clear delivered notifications from tray too
+    // Clear delivered notifications from tray
     if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications){
       try { window.Capacitor.Plugins.PushNotifications.removeAllDeliveredNotifications(); } catch(e){}
     }
+    // Clear the app icon badge directly
+    if(typeof mvNative!=='undefined' && mvNative.badge) mvNative.badge.clear();
   }
   document.getElementById('authModal').classList.add('hidden');
   document.getElementById('onboarding').classList.add('hidden');
