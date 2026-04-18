@@ -1382,16 +1382,18 @@ var mvNative = {
     setEnabled: function(on){ localStorage.setItem(mvNative.biometric.prefKey(), on?'1':'0'); },
     isAvailable: async function(){
       if(!mvNative.isNative()) return false;
-      var B = window.Capacitor.Plugins && window.Capacitor.Plugins.BiometricAuth;
+      var B = window.Capacitor.Plugins && window.Capacitor.Plugins.BiometricAuthNative;
       if(!B) return false;
       try { var r = await B.checkBiometry(); return !!(r && r.isAvailable); } catch(e){ return false; }
     },
     authenticate: async function(reason){
       if(!mvNative.isNative()){ mvNative.biometric._lastError='not-native'; return false; }
-      var B = window.Capacitor.Plugins && window.Capacitor.Plugins.BiometricAuth;
+      var B = window.Capacitor.Plugins && window.Capacitor.Plugins.BiometricAuthNative;
       if(!B){ mvNative.biometric._lastError='plugin-missing: ' + Object.keys(window.Capacitor.Plugins||{}).join(','); return false; }
       try {
-        await B.authenticate({ reason: reason||'Unlock Modern Village', cancelTitle:'Cancel', iosFallbackTitle:'Use Passcode', allowDeviceCredential:true });
+        // Native plugin exposes internalAuthenticate (JS wrapper's authenticate() wraps this;
+        // we access the registered plugin directly so we call the native method directly)
+        await B.internalAuthenticate({ reason: reason||'Unlock Modern Village', cancelTitle:'Cancel', iosFallbackTitle:'Use Passcode', allowDeviceCredential:true });
         mvNative.biometric._lastError=null;
         return true;
       } catch(e){ mvNative.biometric._lastError='authenticate threw: ' + (e && e.message ? e.message : String(e)); return false; }
