@@ -61,5 +61,7 @@
 	<string>Modern Village uses the camera so you can take photos of wins, events, or your child’s artwork to share.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Modern Village uses your location to show parents and resources nearby in your community.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Modern Village uses your location to show parents and resources nearby in your community.</string>
 </dict>
 </plist>
