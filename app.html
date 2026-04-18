@@ -1497,20 +1497,26 @@ var mvNative = {
     }
   },
   // Apple Sign-In — required by Apple for App Store submission if app has any other login
+  // Uses @capawesome/capacitor-apple-sign-in (Capacitor 8 compatible)
   appleSignIn: {
     isAvailable: function(){
-      return mvNative.isNative() && !!(window.Capacitor.Plugins && window.Capacitor.Plugins.SignInWithApple);
+      return mvNative.isNative() && !!(window.Capacitor.Plugins && window.Capacitor.Plugins.AppleSignIn);
     },
     authorize: async function(){
       if(!mvNative.appleSignIn.isAvailable()) return null;
-      var S = window.Capacitor.Plugins.SignInWithApple;
+      var S = window.Capacitor.Plugins.AppleSignIn;
       try {
-        var r = await S.authorize({
-          clientId: 'app.modernvillage.ios',
-          redirectURI: 'https://modernvillage.app/auth/callback',
-          scopes: 'email name'
-        });
-        return r && r.response ? r.response : null; // { identityToken, email, givenName, familyName, user, authorizationCode }
+        var r = await S.signIn({ scopes: ['email', 'fullName'] });
+        if(!r) return null;
+        // Normalize to the shape the rest of the app expects
+        return {
+          identityToken: r.idToken,
+          authorizationCode: r.authorizationCode,
+          email: r.email || null,
+          givenName: r.givenName || null,
+          familyName: r.familyName || null,
+          user: r.user || null
+        };
       } catch(e){ console.warn('Apple Sign-In error:', e); return null; }
     }
   }
