@@ -1,0 +1,10 @@
+# Vercel hosts modernvillage.app as a static site.
+# iOS/Capacitor files are dev-only and must NOT be processed by Vercel.
+package.json
+package-lock.json
+node_modules/
+capacitor.config.json
+ios/
+resources/
+www/
+.superpowers/
