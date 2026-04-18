@@ -6,6 +6,60 @@
 
 ## Completed
 
+### iOS Capacitor — Full Native Feature Set (2026-04-18)
+**Branch:** `feat/ios-capacitor` (all commits pushed to main, Vercel + Cloudflare + Supabase all live). **TestFlight build 7 live + tested on physical device.**
+
+**Phase 0 — Capacitor shell:**
+- [x] Bundle ID `app.modernvillage.ios` + App Store Connect record
+- [x] Xcode 26 signing + archive pipeline (Team ID `X577Q747WV`)
+- [x] TestFlight internal tester group `ModernVillage`
+- [x] App icon + splash screens from brand assets
+- [x] Capacitor config `allowNavigation` whitelist (Supabase, Google, Stripe, Apple, Anthropic, Cloudflare, Vercel)
+
+**Phase 2 — Push Notifications:**
+- [x] Supabase `push_tokens` + `push_send_log` + `push_dedup` tables
+- [x] APNs auth key (`MLBB3NX7FC`) + Cloudflare Worker secrets
+- [x] `registerPushNotifications()` client flow with stale-session self-heal
+- [x] All 8 push trigger types wired: daily check-in, morning routine, booking reminder (24hr), streak at risk, milestone celebration, weekly digest, community reply, new strategy card
+- [x] Worker endpoints `/push/register`, `/push/test`, `/push/send`, `/push/notify-milestone`, `/push/notify-reply`, `/push/notify-new-strategy`, `/push/clear-badge`
+- [x] Cron routing (morning 7am PT / evening 8pm PT / Sunday digest) with single-cron fallback mode
+
+**Phase 3 — Badge count:**
+- [x] `@capawesome/capacitor-badge` plugin
+- [x] Server-side `push_badge_count` counter with auto-increment on send
+- [x] Icon badge clears on app foreground
+
+**Phase 4 — Biometric auth:**
+- [x] `@aparajita/capacitor-biometric-auth` plugin
+- [x] Face ID App Lock (gate on app open for signed-in users)
+- [x] Face ID Sign-In (button on login screen after logout, uses saved creds)
+- [x] Opt-in modal after first sign-in
+- [x] iOS Save Password prompt (autocomplete + name attrs)
+- [x] NSFaceIDUsageDescription
+
+**Phase 5 — Native UX polish:**
+- [x] `@capacitor/haptics` — tap feedback on chat send, login, profile save
+- [x] `@capacitor/status-bar` — dark content styling
+- [x] Safe area handling — viewport-fit=cover + env(safe-area-inset-top)
+- [x] `@capacitor/share` — native share sheet in referral flow
+- [x] `@capacitor/camera` + `@capacitor/geolocation` — Info.plist usage descriptions (location, camera, photo library, microphone)
+- [x] Service worker (`sw.js`) — offline caching for app shell + CDN assets
+- [x] Offline banner — amber #mvOfflineBanner with navigator.onLine detection
+
+**Phase 6 — Apple Sign-In:**
+- [x] `@capawesome/capacitor-apple-sign-in` plugin (Capacitor 8 compatible — swapped from @capacitor-community version which pinned to Cap 7)
+- [x] Apple Developer Services ID `app.modernvillage.auth` + Sign In with Apple key (`NA3B894JG3`)
+- [x] Supabase Apple provider enabled with JWT client secret (regenerate every 6 months via `/tmp/gen-apple-jwt.js`)
+- [x] Black "Sign in with Apple" button on auth modal
+- [x] `com.apple.developer.applesignin` entitlement
+- [x] App Store privacy labels reference doc (`docs/APP-STORE-PRIVACY-LABELS.md`)
+
+**Known limitations (on roadmap, see Platform section below):**
+- Apple Sign-In creates duplicate Supabase account when email matches existing password user (needs Supabase manual identity linking + in-app merge UX)
+- Offline caching is pragmatic only — full offline-first with IndexedDB data sync is a bigger project
+
+**Full session snapshot:** see `project_ios_session_wrap_2026-04-18.md` in memory (has external config state, 20+ commit log, lessons learned)
+
 ### Partnership Legal Framework (2026-04-14)
 - [x] Full term sheet drafted (`docs/legal/TERM-SHEET.md`)
 - [x] 7 draft contracts for attorney review (`docs/legal/1-7.md`)
@@ -91,8 +145,9 @@
 | Feature | Description | Priority |
 |---------|-------------|----------|
 | **Apple Sign-In account linking** | Currently: signing in with Apple using an email that already has a password account creates a DUPLICATE Supabase user. Fix: enable Supabase manual identity linking (Authentication → Settings → toggle on, or env var GOTRUE_SECURITY_MANUAL_LINKING_ENABLED=true), then add in-app flow to link identities when an Apple sign-in matches an existing email. Priority rises when we get production users. | Medium |
-| iOS/Android Capacitor wrap | Native app shell wrapping existing HTML. Web-only Stripe payments (no in-app purchases — saves $3-6K/mo). Native plugins: push, biometrics, camera, geolocation, share, haptics, offline cache, badge count. See `docs/SUPPLEMENTARY.md` §8 for full strategy. | High |
-| Push notifications | HIPAA-safe generic text only. Daily check-in (8pm), morning routine (7am), booking reminder (24hr), streak at risk, milestone celebration, weekly digest, community reply, new strategy card. | High (requires native app) |
+| ~~iOS Capacitor wrap~~ | **DONE** (2026-04-18). TestFlight build 7 with all native plugins: push, biometric (App Lock + Sign-In), camera, geolocation, share, haptics, status bar, offline cache (pragmatic), badge count, Apple Sign-In. See Completed section above. | **Done** |
+| Android Capacitor wrap | Scaffolded via `npx cap add android` but no plugins mirrored yet. Mirror iOS plugins, Google Play Data Safety form, submit to Play Console. | High |
+| ~~Push notifications~~ | **DONE** (2026-04-18). All 8 HIPAA-safe triggers wired end-to-end: daily check-in, morning routine, booking reminder, streak at risk, milestone, weekly digest, community reply, new strategy card. Cron-scheduled + event-based. | **Done** |
 | **Medical billing module** | **DONE (Phase 1): Claims tracking, payer management, superbills, billing dashboard, aging reports. NEXT (Phase 2): PC (Parent Consultation / CPT 97156) billing — the main insurance path. See "PC Billing Build" section below. Phase 3: Clearinghouse integration (EDI 837). Phase 4: ERA/EOB auto-processing, denial management automation, batch claim submission.** | **Phase 1 Done** |
 | ~~**Admin role-based access**~~ | **DONE** (2026-04-07). VA roles in admin panel: Marketing VA, Billing VA, Content VA, Super. VA Team management page with create/edit/remove. | Medium |
 | **Instagram auto-posting** | **Connect Instagram Graph API via Meta Business Suite for scheduled auto-publishing from admin panel. Requires: FB Business account + IG Professional account + Meta App Review.** | Medium |
