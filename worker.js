@@ -599,7 +599,7 @@ export default {
           authDebug.supabaseBody = (await vr.text()).substring(0, 200);
           return new Response(JSON.stringify({ error: 'Auth required', debug: authDebug }), { status: 401, headers: h });
         }
-        var user = await vr.json();
+        var authedUser = await vr.json();
       } catch (e) {
         return new Response(JSON.stringify({ error: 'Auth required', debug: { ...authDebug, threw: String(e) } }), { status: 401, headers: h });
       }
@@ -612,7 +612,7 @@ export default {
         method: 'POST',
         headers: supaH,
         body: JSON.stringify({
-          user_id: user.id,
+          user_id: authedUser.id,
           platform: platform,
           token: token,
           device_id: device_id || null,
