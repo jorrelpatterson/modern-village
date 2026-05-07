@@ -1,6 +1,14 @@
-# Setting up Modern Village on a new machine
+# Setting up Modern Village on a new machine (or external drive)
 
-Use this when you (Jorrel) want to spin up the project on a different Mac (laptop, second desktop, etc.) — or if you ever lose the Mac mini and need to rebuild from scratch.
+Use this when you (Jorrel) want to spin up the project on a different Mac (laptop, second desktop, etc.), move it to a new external drive, or if you ever lose the Mac mini and need to rebuild from scratch.
+
+**Moving the repo to a different external drive on the SAME Mac:**
+1. Make sure `git status` is clean and current branch is pushed: `git push origin <branch>`.
+2. Copy the entire `modern-village/` folder to the new drive.
+3. Copy the two `AuthKey_*.p8` files (see "Files NOT in git" below) — they live at the repo root and on Desktop respectively.
+4. On the new drive, run `npm install` (node_modules may not copy cleanly across filesystems).
+5. Note: Claude Code memory at `~/.claude/projects/<encoded-path>/memory/` is keyed by absolute path. Memory will appear empty when you open the new drive's path. Use `docs/AGENT-CONTEXT.md` to rebuild context — it mirrors the memory contents into the repo so they survive moves.
+6. Update Xcode signing if the project's absolute path matters for any local script (rare).
 
 ## What you need installed
 

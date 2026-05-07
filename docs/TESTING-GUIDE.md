@@ -1,9 +1,10 @@
 # Modern Village — Complete Testing Guide
 
-**Last updated:** 2026-04-07
+**Last updated:** 2026-05-06
 **URL:** https://modernvillage.app/app.html
 **Admin:** https://modernvillage.app/admin.html
 **District Portal:** https://modernvillage.app/district-admin.html
+**For a condensed in-person walkthrough with Ariana:** see `docs/SESSION-WALKTHROUGH-ARIANA.md`.
 
 ---
 

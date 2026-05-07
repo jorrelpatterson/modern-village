@@ -1,6 +1,7 @@
 # Modern Village — Marketing Playbook
 
-**Last updated:** 2026-04-06
+**Last updated:** 2026-05-06
+**See also:** `docs/LAUNCH-STRATEGY.md` for the working Jorrel + Ariana launch plan (who-does-what, phase A/B/C, decisions to make together).
 
 ---
 

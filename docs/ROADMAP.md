@@ -1,6 +1,13 @@
 # Modern Village — Product Roadmap
 
-**Last updated:** 2026-04-06
+**Last updated:** 2026-05-06
+
+---
+
+## Currently in flight (2026-05-06)
+
+- **Email Drips + Continual Optimization** — design spec + 2402-line implementation plan committed (commits `234a7fd`, `4ec6c20`). **Code not started.** Spec: `docs/superpowers/specs/2026-04-16-email-drips-and-optimization-design.md`. Plan: `docs/superpowers/plans/2026-04-16-email-drips-and-optimization.md`. This is the gating tech build before scaling cold outreach to the 16K-lead CRM. See `docs/AGENT-CONTEXT.md` for full state.
+- **Launch prep with Ariana** — testing session walkthrough at `docs/SESSION-WALKTHROUGH-ARIANA.md`, launch strategy at `docs/LAUNCH-STRATEGY.md`. Pre-launch decisions still pending (launch date, who's "the face", pricing posture, content boundaries, crisis protocol).
 
 ---
 
