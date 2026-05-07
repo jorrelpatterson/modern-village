@@ -865,9 +865,11 @@ export default {
   // === CRON: Routes based on cron expression ===
   // Existing daily cron: runs email drips + booking email reminders.
   // Add these cron triggers in Cloudflare dashboard to enable push routines:
-  //   '0 14 * * *'  — 7am PT morning pushes (routine + booking push reminder)
-  //   '0 4 * * *'   — 8pm PT evening pushes (daily check-in + streak at risk)
-  //   '0 16 * * 0'  — Sunday 9am PT weekly digest
+  //   '0 14 * * *'             — 7am PT morning pushes (routine + booking push reminder)
+  //   '0 4 * * *'              — 8pm PT evening pushes (daily check-in + streak at risk)
+  //   '0 16 * * 0' or '0 16 * * 7' — Sunday 9am PT weekly digest
+  //   (Cloudflare's cron parser sometimes rejects "Sunday=0"; "7" is the same day
+  //   in standard Unix cron and is accepted by Cloudflare. We match either.)
   //
   // If only one daily cron is configured, we fire everything from runDailyTasks.
   async scheduled(event, env, ctx) {
@@ -881,7 +883,7 @@ export default {
       ctx.waitUntil(runEveningPushes(env));
       return;
     }
-    if (cron === '0 16 * * 0') {
+    if (cron === '0 16 * * 0' || cron === '0 16 * * 7') {
       ctx.waitUntil(runWeeklyPushes(env));
       return;
     }
