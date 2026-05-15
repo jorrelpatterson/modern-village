@@ -2064,12 +2064,13 @@ async function loadTeam(){
   var members = r.data || [];
   var total = members.length;
   var supers = members.filter(function(m){return m.admin_role==='super'}).length;
+  var subAdmins = members.filter(function(m){return m.admin_role==='sub_admin'}).length;
   var marketing = members.filter(function(m){return m.admin_role==='marketing'}).length;
   var billing = members.filter(function(m){return m.admin_role==='billing'}).length;
   var content = members.filter(function(m){return m.admin_role==='content'}).length;
 
   document.getElementById('teamStats').innerHTML =
-    statCard('Total',total,'')+statCard('Super',supers,'')+statCard('Marketing',marketing,'')+statCard('Billing',billing,'')+statCard('Content',content,'');
+    statCard('Total',total,'')+statCard('Super',supers,'')+statCard('Sub Admin',subAdmins,'')+statCard('Marketing',marketing,'')+statCard('Billing',billing,'')+statCard('Content',content,'');
 
   var h = '';
   if(!members.length){
@@ -2078,12 +2079,13 @@ async function loadTeam(){
     h = '<table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Added</th><th>Actions</th></tr></thead><tbody>';
     members.forEach(function(m){
       var d = new Date(m.created_at);
-      var roleColor = m.admin_role==='super'?'tag-sage':m.admin_role==='marketing'?'tag-blue':m.admin_role==='billing'?'tag-yellow':'tag-free';
+      var roleColor = m.admin_role==='super'?'tag-sage':m.admin_role==='sub_admin'?'tag-sage':m.admin_role==='marketing'?'tag-blue':m.admin_role==='billing'?'tag-yellow':'tag-free';
       h += '<tr>';
       h += '<td>'+(m.name?esc(m.name):'<span style="color:var(--warm-gray-light)">\u2014</span>')+'</td>';
       h += '<td style="font-size:12px">'+esc(m.email||'\u2014')+'</td>';
       h += '<td><select style="padding:4px 8px;border-radius:6px;border:1px solid var(--sand);font-size:12px;font-family:inherit" onchange="updateVARole(\x27'+m.id+'\x27,this.value)">';
       h += '<option value="super"'+(m.admin_role==='super'?' selected':'')+'>Super</option>';
+      h += '<option value="sub_admin"'+(m.admin_role==='sub_admin'?' selected':'')+'>Sub Admin</option>';
       h += '<option value="marketing"'+(m.admin_role==='marketing'?' selected':'')+'>Marketing</option>';
       h += '<option value="billing"'+(m.admin_role==='billing'?' selected':'')+'>Billing</option>';
       h += '<option value="content"'+(m.admin_role==='content'?' selected':'')+'>Content</option>';
@@ -2108,7 +2110,7 @@ function openCreateVA(){
   h += '<label class="fl">Email</label><input id="vaEmail" class="fi" type="email" placeholder="va@example.com" style="margin-bottom:12px">';
   h += '<label class="fl">Name</label><input id="vaName" class="fi" placeholder="Full name" style="margin-bottom:12px">';
   h += '<label class="fl">Password</label><input id="vaPass" class="fi" type="password" placeholder="Temporary password (8+ chars)" style="margin-bottom:12px">';
-  h += '<label class="fl">Role</label><select id="vaRole" class="fi" style="margin-bottom:16px"><option value="marketing">Marketing VA</option><option value="billing">Billing VA</option><option value="content">Content VA</option><option value="super">Super Admin</option></select>';
+  h += '<label class="fl">Role</label><select id="vaRole" class="fi" style="margin-bottom:16px"><option value="sub_admin">Sub Admin</option><option value="marketing">Marketing VA</option><option value="billing">Billing VA</option><option value="content">Content VA</option><option value="super">Super Admin</option></select>';
   h += '<div style="display:flex;gap:8px"><button class="btn btn-p" style="flex:1" onclick="createVA()">Create Account</button><button class="btn btn-s" onclick="loadTeam()">Cancel</button></div>';
   h += '<div id="vaError" style="display:none;margin-top:8px;font-size:12px;color:var(--terracotta)"></div>';
   h += '</div>';
