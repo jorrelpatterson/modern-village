@@ -4192,11 +4192,6 @@ async function loadChildren(){
   if(S.role==='parent'){
     var r=await sb.from('children').select('*').eq('user_id',S.user.id).order('created_at',{ascending:true});
     S.children=r.data||[];
-    if(S.children.length > 0){
-      var childIds = S.children.map(function(c){ return c.id; });
-      var pcCount = await sb.from('practice_clients').select('id', { count:'exact', head:true }).in('child_id', childIds);
-      S.hasMyBcba = (pcCount.count || 0) > 0;
-    }
     // Also load children this parent has full access to (co-parent)
     var coAccessR=await sb.from('child_access').select('child_id').eq('user_id',S.user.id).eq('access_level','full').is('revoked_at',null);
     var coChildIds=(coAccessR.data||[]).map(function(a){return a.child_id}).filter(function(id){return !S.children.some(function(c){return c.id===id})});
@@ -4210,6 +4205,12 @@ async function loadChildren(){
       if(S.profile.goals) legacy.goals=S.profile.goals;
       var ins=await sb.from('children').insert(legacy).select();
       if(ins.data&&ins.data.length){S.children=ins.data;await sb.from('profiles').update({active_child_id:ins.data[0].id}).eq('id',S.user.id)}
+    }
+    // hasMyBcba check runs AFTER co-parent concat so co-parented kids count too
+    if(S.children.length > 0){
+      var childIds = S.children.map(function(c){ return c.id; });
+      var pcCount = await sb.from('practice_clients').select('id', { count:'exact', head:true }).in('child_id', childIds);
+      S.hasMyBcba = (pcCount.count || 0) > 0;
     }
   } else {
     var accessR=await sb.from('child_access').select('child_id').eq('user_id',S.user.id).is('revoked_at',null);
