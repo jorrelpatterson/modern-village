@@ -8,7 +8,21 @@ Single source of truth for picking up the BCBA module work on a new machine. Rea
 2. `git pull` to sync the latest from `origin/main`
 3. Re-read this file + the latest commits to catch up
 
-The auto-memory at `~/.claude/projects/-Volumes--626-806-4475-Ai-Projects-modern-village/memory/` lives on the old laptop, not on the external drive. If you want it on the new laptop, copy that directory over manually. Otherwise this doc is the canonical state.
+### Restoring Claude Code auto-memory on a new laptop
+
+The auto-memory + past session transcripts have been backed up to the external drive at:
+
+```
+/Volumes/(626)806-4475/Ai Projects/modern-village-claude-state/-Volumes--626-806-4475-Ai-Projects-modern-village/
+```
+
+On a fresh laptop, run this one-liner to restore (creates `~/.claude/projects/` if needed):
+
+```bash
+mkdir -p ~/.claude/projects && cp -R "/Volumes/(626)806-4475/Ai Projects/modern-village-claude-state/-Volumes--626-806-4475-Ai-Projects-modern-village" ~/.claude/projects/
+```
+
+After that, any new Claude Code session in this repo will see the project memory and prior conversation context automatically. If you skip this step entirely, this `SESSION_HANDOFF.md` is the safety net — read it on session start.
 
 ## What's running in production
 
