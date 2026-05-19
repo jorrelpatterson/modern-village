@@ -243,6 +243,49 @@ Sign in as `testprovider@modernvillage.app` / `TestProvider123!`.
 - [ ] As testparent — open Supabase SQL editor as authenticated parent; `SELECT * FROM public.v_child_target_progress` returns rows for Maya only; `SELECT count(*) FROM public.trials` returns 0 (RLS blocks)
 - [ ] As testcaregiver (RBT after accepting invite) — INSERT INTO public.programs returns RLS violation
 
+### Live Data Entry (BCBA Data Collection — sub-project #2)
+
+Sign in as `testprovider@modernvillage.app` / `TestProvider123!` (must have set up Test Practice with Maya as a client and at least one program with targets).
+
+- [ ] Clients → Maya → "Start session" button visible
+- [ ] Pre-session plan modal: in-treatment targets pre-checked, location/CPT dropdowns, "Run ad-hoc" link
+- [ ] Begin session → active session overlay opens with target name, trial counter, session timer ticking, sync badge "Synced"
+- [ ] 7 trial buttons (Independent / Gestural / Verbal / Model / Partial / Full Physical / No Response) all clickable
+- [ ] Tap Independent → trial counter increments, badge briefly shows "Syncing (1)" → "Synced"
+- [ ] Task-analysis target: step label increments through steps then loops
+- [ ] Tap target pill → bottom sheet → pick another target → top bar updates
+- [ ] "Add another in-treatment target" inserts a new session_targets row mid-session
+- [ ] Tap "+" → behavior overlay opens with list (or quick-add if empty)
+- [ ] Frequency behavior: + / − tally, Save persists count
+- [ ] Duration behavior: Start/Pause timer, Save persists seconds
+- [ ] Interval behavior: configurable totals/seconds, "Occurred" / "Did not occur" marking, Save persists interval_data jsonb
+- [ ] ABC behavior: antecedent/consequence textareas, function chips (tangible/escape/attention/sensory), Save persists
+- [ ] "Recently logged: X" pill appears in trial entry after behavior save
+- [ ] Offline test: DevTools → Network → Offline → tap 5 trials + 1 behavior → re-enable network → within 30s all rows synced to Supabase
+- [ ] End Session → confirm → summary screen shows trial counts, IOA % column (em-dash if no IOA), behavior aggregates, session metadata form
+- [ ] Submit → session row goes to status='completed', client detail Recent Sessions list shows it
+- [ ] Re-open completed session → summary opens read-only (no Submit button)
+
+**As testcaregiver (added to Test Practice as supervising_bcba):**
+
+- [ ] Practice Dashboard shows "Active sessions" card while testprovider is running a session
+- [ ] Tap → confirm → IOA mode opens (top bar "IOA observer · Maya", current target name)
+- [ ] 7-button grid records trials with ioa_observer_id set
+- [ ] Target follows primary's switches within 5s
+- [ ] End-of-session summary (when primary submits) shows IOA % per target
+
+**As testprovider (owner_bcba, after a completed session):**
+
+- [ ] Practice Dashboard shows "Pending cosign" card
+- [ ] Tap → summary opens read-only with "Cosign session" button
+- [ ] Cosign → status='cosigned', cosigner_id set
+
+**As testparent:**
+
+- [ ] Sidebar shows "My BCBA" (highlighted) if Maya has a practice_clients row
+- [ ] Page shows: practice/BCBA header, programs in treatment with targets + % correct, SVG sparklines per target, recent sessions list (aggregate)
+- [ ] DevTools `await sb.from('trials').select('*')` returns empty array (RLS blocks row-level access)
+
 ---
 
 ## 3. CAREGIVER TESTING (testcaregiver@modernvillage.app)

@@ -50,17 +50,18 @@ ABA-powered parenting platform for neurodivergent families. 9 pillars (AI Coach,
 
 ## In-flight work — BCBA Data Collection (Ensora-parity initiative)
 
-**Status as of 2026-05-18:** Foundation (sub-project #1 of 6) **complete** — schema spine, 8 admin screens, RLS, parent read paths, curriculum scaffolding all merged on branch `feat/bcba-data-collection-foundation`. See `docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md` + `docs/superpowers/plans/2026-05-18-bcba-data-collection-foundation.md`.
+**Status as of 2026-05-19:** Sub-projects #1 (Foundation) and #2 (Live Data Entry) both **complete**. Clinical data collection works end-to-end: BCBA/RBT can start a session, run trials, log behaviors, end + submit + cosign. Parents see "My BCBA" with sparklines. Offline support via IndexedDB.
 
 **Sequence forward:**
-1. **Mini-spec — per-patient Stripe billing** (between Foundation and #2). Wire `practices.stripe_*` fields to a real Stripe checkout + webhook, implement the $10/active-Family-subscriber credit.
-2. **Sub-project #2 — Live Data Entry.** Trial-by-trial session UI, IndexedDB offline sync, IOA collection, parent "My BCBA" read-only tab.
-3. **Sub-project #3 — Behavior Reduction** (structured behavior recording during a session).
-4. **Sub-project #4 — Analysis & Reporting** (per-target graphs with phase change lines).
-5. **Sub-project #5 — Documentation** (SOAP auto-fill from session data, timesheet signatures).
-6. **Sub-project #6 — Curriculum Libraries** (Ariana-authored Starter content drop replacing placeholders, VB-MAPP/ABLLS-R licensing).
+1. **Mini-spec — per-patient Stripe billing** (before users sign up). Wire `practices.stripe_*` fields to a real Stripe checkout + webhook, implement the $10/active-Family-subscriber credit.
+2. **Sub-project #3 — Behavior Reduction.** Dedicated ABC graphs, frequency rate trends, behavior dashboard per client.
+3. **Sub-project #4 — Analysis & Reporting.** Per-target line graphs with phase change lines, technical indicators (avg, trend line, std dev), annotations. The iconic BCBA chart.
+4. **Sub-project #5 — Documentation.** SOAP note auto-fill from session data; timesheet signatures.
+5. **Sub-project #6 — Curriculum Libraries.** Ariana-authored Starter content replacing placeholders; VB-MAPP / ABLLS-R / PEAK / AFLS licensing.
 
-**Strategic positioning:** B2B attractor with per-patient pricing, separate Stripe product from $19.99 Family plan, RBT seats free, flywheel via $10/mo credit when a client's parent has a Family subscription. Memory: `project_bcba_data_collection.md`.
+**Coverage vs Ensora (after #2):** ~85% data model, ~50% UI surface. Setup + live data entry pipeline complete. What's missing: dedicated analysis/reporting screens, SOAP auto-fill, licensed curricula. Approximately 8-10 weeks of build remaining for full parity.
+
+Memory: `project_bcba_data_collection.md`.
 
 ## In-flight work — Email Drips + Continual Optimization
 

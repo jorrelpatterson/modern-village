@@ -6,13 +6,31 @@
 
 ## Currently in flight (2026-05-18)
 
-- **BCBA Data Collection — sub-project #1 (Foundation) complete (2026-05-18)** — schema spine + 8 admin screens + parent read paths shipped on branch `feat/bcba-data-collection-foundation`. Awaiting user-run RLS smoke test, parent-view verification, end-to-end smoke walkthrough, and per-patient Stripe billing mini-spec before sub-project #2 (Live Data Entry) starts. Spec: `docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md`. Plan: `docs/superpowers/plans/2026-05-18-bcba-data-collection-foundation.md`.
+- **BCBA Data Collection — sub-projects #1 (Foundation) and #2 (Live Data Entry) both complete (2026-05-19)** — clinical data collection works end-to-end: BCBA/RBT can start a session, run trials, log behaviors, end + submit + cosign. Parents see "My BCBA" with sparklines. Offline support via IndexedDB. **Next: per-patient Stripe billing mini-spec + sub-project #3 (Behavior Reduction — dedicated ABC graphs, frequency rate trends, behavior dashboard per client).** Spec: `docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md`. Plan: `docs/superpowers/plans/2026-05-18-bcba-live-data-entry.md`.
 - **Email Drips + Continual Optimization** — design spec + 2402-line implementation plan committed (commits `234a7fd`, `4ec6c20`). **Code not started.** Spec: `docs/superpowers/specs/2026-04-16-email-drips-and-optimization-design.md`. Plan: `docs/superpowers/plans/2026-04-16-email-drips-and-optimization.md`. This is the gating tech build before scaling cold outreach to the 16K-lead CRM. See `docs/AGENT-CONTEXT.md` for full state.
 - **Launch prep with Ariana** — testing session walkthrough at `docs/SESSION-WALKTHROUGH-ARIANA.md`, launch strategy at `docs/LAUNCH-STRATEGY.md`. Pre-launch decisions still pending (launch date, who's "the face", pricing posture, content boundaries, crisis protocol).
 
 ---
 
 ## Completed
+
+### BCBA Data Collection — Live Data Entry (2026-05-19)
+**Sub-project #2 of 6** — full initiative spec: [docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md](docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md)
+
+- [x] session_targets join table + parent SELECT policy on sessions + v_child_sessions view
+- [x] mvOffline IndexedDB sync queue with 30s background flush + retry + UNIQUE-constraint idempotency
+- [x] Start Session button + Pre-session plan modal (target multi-select, ad-hoc skip)
+- [x] Active session overlay with sticky top bar, target picker bottom-sheet, mid-session target add
+- [x] Trial entry — 7 big buttons, auto-advance, task analysis step cycling, offline-safe
+- [x] Behavior overlay — frequency tally, duration timer, interval recording, ABC entry, quick-add
+- [x] End-of-session summary with per-target trial counts, per-behavior aggregates, IOA % per target
+- [x] IOA observer flow — Active sessions card on Dashboard, lite parallel view, 5s polling of primary's target
+- [x] Cosign flow — Pending cosign card, read-only summary review, cosign action
+- [x] Parent "My BCBA" tab — programs/targets, SVG sparklines, recent sessions (aggregate-only)
+
+**Next:** sub-project #3 — Behavior Reduction (dedicated ABC graphs, frequency rate trends, behavior dashboard per client). Plus a per-patient Stripe billing mini-spec sequenced before users sign up.
+
+Plan: [docs/superpowers/plans/2026-05-18-bcba-live-data-entry.md](docs/superpowers/plans/2026-05-18-bcba-live-data-entry.md)
 
 ### BCBA Data Collection — Foundation (2026-05-18)
 **Sub-project #1 of 6** — full initiative: [docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md](docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md)
