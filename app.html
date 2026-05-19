@@ -1429,6 +1429,32 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   </div>
 </div>
 
+<div id="uploadDocModal" class="modal-overlay" style="display:none">
+  <div class="modal-content" style="max-width:520px">
+    <h3 style="font-family:Fraunces,serif;font-size:22px;margin-bottom:12px">Upload document</h3>
+    <label class="fl">File (PDF, image, or Word — 10MB max) *</label>
+    <input id="docFileInput" class="fi" type="file" accept=".pdf,.png,.jpg,.jpeg,.gif,.heic,.doc,.docx,application/pdf,image/*">
+    <label class="fl" style="margin-top:12px">Category</label>
+    <select id="docCategory" class="fi">
+      <option value="assessment">Initial Assessment</option>
+      <option value="bip">BIP / Behavior Plan</option>
+      <option value="treatment_plan">Treatment Plan</option>
+      <option value="progress_report">Progress Report</option>
+      <option value="insurance_auth">Insurance Authorization</option>
+      <option value="parent_consent">Parent Consent</option>
+      <option value="other" selected>Other</option>
+    </select>
+    <label class="fl" style="margin-top:12px">Description (optional)</label>
+    <textarea id="docDescription" class="fi" rows="2" placeholder="Brief note about what this document is"></textarea>
+    <div id="docUploadStatus" style="margin-top:10px;font-size:12px;color:var(--warm-gray)"></div>
+    <div style="margin-top:8px;padding:8px 10px;background:rgba(232,200,74,0.12);border-radius:8px;font-size:11px;color:#7A6A10">Documents are stored privately. Only members of this practice can access them.</div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-s" style="flex:1" onclick="closeUploadDocModal()">Cancel</button>
+      <button class="btn btn-p" style="flex:1" onclick="submitDocUpload()">Upload</button>
+    </div>
+  </div>
+</div>
+
 <div id="preSessionPlanModal" class="modal-overlay" style="display:none">
   <div class="modal-content" style="max-width:560px;max-height:90vh;overflow-y:auto">
     <h3 style="font-family:Fraunces,serif;font-size:22px;margin-bottom:6px">Start a session</h3>
@@ -2827,7 +2853,7 @@ async function openPracticeClientDetail(practiceClientId){
   await renderClientPrograms();
 }
 
-var clientDetailTab = 'programs'; // 'programs' | 'behaviors'
+var clientDetailTab = 'programs'; // 'programs' | 'behaviors' | 'documents'
 
 async function renderClientProgramsTab(tabBar){
   var el = document.getElementById('practiceClientDetailContent');
@@ -2886,14 +2912,21 @@ async function renderClientProgramsTab(tabBar){
 async function renderClientPrograms(){
   var el = document.getElementById('practiceClientDetailContent');
   el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
+  function tabBtn(key, label){
+    var active = clientDetailTab === key;
+    return '<button onclick="switchClientDetailTab(\x27'+key+'\x27)" style="padding:10px 16px;background:none;border:none;border-bottom:3px solid '+(active?'var(--sage-dark)':'transparent')+';color:'+(active?'var(--sage-dark)':'var(--warm-gray)')+';font-weight:700;font-size:14px;cursor:pointer">'+label+'</button>';
+  }
   var tabBar = '<div style="display:flex;gap:0;border-bottom:1px solid var(--sand);margin:-20px -20px 16px -20px;padding:0 20px">'+
-    '<button onclick="switchClientDetailTab(\x27programs\x27)" style="padding:10px 16px;background:none;border:none;border-bottom:3px solid '+(clientDetailTab==='programs'?'var(--sage-dark)':'transparent')+';color:'+(clientDetailTab==='programs'?'var(--sage-dark)':'var(--warm-gray)')+';font-weight:700;font-size:14px;cursor:pointer">Programs</button>'+
-    '<button onclick="switchClientDetailTab(\x27behaviors\x27)" style="padding:10px 16px;background:none;border:none;border-bottom:3px solid '+(clientDetailTab==='behaviors'?'var(--sage-dark)':'transparent')+';color:'+(clientDetailTab==='behaviors'?'var(--sage-dark)':'var(--warm-gray)')+';font-weight:700;font-size:14px;cursor:pointer">Behaviors</button>'+
+    tabBtn('programs','Programs')+
+    tabBtn('behaviors','Behaviors')+
+    tabBtn('documents','Documents')+
     '</div>';
   if(clientDetailTab === 'programs'){
     await renderClientProgramsTab(tabBar);
-  } else {
+  } else if(clientDetailTab === 'behaviors'){
     await renderClientBehaviorsTab(tabBar);
+  } else {
+    await renderClientDocumentsTab(tabBar);
   }
 }
 
@@ -2903,6 +2936,128 @@ function switchClientDetailTab(tab){
 }
 
 var behaviorDefEditing = null;
+
+// ═══ CLIENT DOCUMENTS ═══
+
+var DOCUMENT_CATEGORIES = [
+  { value: 'assessment', label: 'Initial Assessment' },
+  { value: 'bip', label: 'BIP / Behavior Plan' },
+  { value: 'treatment_plan', label: 'Treatment Plan' },
+  { value: 'progress_report', label: 'Progress Report' },
+  { value: 'insurance_auth', label: 'Insurance Authorization' },
+  { value: 'parent_consent', label: 'Parent Consent' },
+  { value: 'other', label: 'Other' }
+];
+
+async function renderClientDocumentsTab(tabBar){
+  var el = document.getElementById('practiceClientDetailContent');
+  var r = await sb.from('practice_client_documents')
+    .select('id,file_path,file_name,file_size,mime_type,category,description,uploaded_at,uploaded_by:practice_members!uploaded_by(profiles(name,email))')
+    .eq('practice_client_id', currentClient.id)
+    .order('uploaded_at', { ascending: false });
+  if(r.error){ el.innerHTML = tabBar + '<div style="padding:20px;color:var(--terracotta)">'+esc(r.error.message)+'</div>'; return; }
+  var docs = r.data || [];
+  var canWrite = !!S.practiceMember;
+  var canDelete = S.practiceMember && (S.practiceMember.role === 'owner_bcba' || S.practiceMember.role === 'supervising_bcba');
+  var h = '<div style="max-width:880px;margin:0 auto">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-family:Fraunces,serif;font-size:18px;font-weight:700">'+docs.length+' document'+(docs.length!==1?'s':'')+'</div>'+
+    (canWrite ? '<button class="btn btn-p" onclick="openUploadDocModal()">+ Upload document</button>' : '')+'</div>';
+  // Quick category filter chips
+  var docsByCategory = {};
+  docs.forEach(function(d){ var k = d.category || 'other'; if(!docsByCategory[k]) docsByCategory[k] = []; docsByCategory[k].push(d); });
+  if(docs.length === 0){
+    h += '<div style="padding:30px;text-align:center;color:var(--warm-gray);border:1px dashed var(--sand);border-radius:14px">No documents yet. Upload BIPs, treatment plans, assessment forms, insurance auths, signed parent consents.</div>';
+  } else {
+    DOCUMENT_CATEGORIES.forEach(function(cat){
+      var list = docsByCategory[cat.value] || [];
+      if(list.length === 0) return;
+      h += '<div class="label" style="margin-top:14px;margin-bottom:8px">'+cat.label+' ('+list.length+')</div>';
+      list.forEach(function(d){
+        var uploader = d.uploaded_by && d.uploaded_by.profiles ? (d.uploaded_by.profiles.name || d.uploaded_by.profiles.email) : '(unknown)';
+        var sizeKb = d.file_size ? Math.round(d.file_size / 1024) : 0;
+        h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1px solid var(--sand);border-radius:12px;background:white;margin-bottom:6px">'+
+          '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(d.file_name)+'</div>'+
+          '<div style="font-size:11px;color:var(--warm-gray);margin-top:2px">'+(sizeKb?sizeKb+' KB · ':'')+'uploaded '+new Date(d.uploaded_at).toLocaleDateString()+' by '+esc(uploader)+(d.description?' · '+esc(d.description):'')+'</div></div>'+
+          '<div style="display:flex;gap:4px;margin-left:8px">'+
+          '<button class="btn btn-s" style="padding:6px 10px;font-size:11px" onclick="downloadDoc(\x27'+d.id+'\x27,\x27'+esc(d.file_path).replace(/\x27/g,'%27')+'\x27)">Download</button>'+
+          (canDelete ? '<button class="btn btn-s" style="padding:6px 10px;font-size:11px" onclick="deleteDoc(\x27'+d.id+'\x27,\x27'+esc(d.file_path).replace(/\x27/g,'%27')+'\x27)">×</button>' : '')+
+          '</div></div>';
+      });
+    });
+  }
+  h += '</div>';
+  el.innerHTML = tabBar + h;
+}
+
+function openUploadDocModal(){
+  document.getElementById('docFileInput').value = '';
+  document.getElementById('docCategory').value = 'other';
+  document.getElementById('docDescription').value = '';
+  document.getElementById('docUploadStatus').textContent = '';
+  document.getElementById('uploadDocModal').style.display = 'flex';
+}
+
+function closeUploadDocModal(){
+  document.getElementById('uploadDocModal').style.display = 'none';
+}
+
+async function submitDocUpload(){
+  var fileInput = document.getElementById('docFileInput');
+  if(!fileInput.files || fileInput.files.length === 0){ showToast('Pick a file first'); return; }
+  var file = fileInput.files[0];
+  if(file.size > 10 * 1024 * 1024){ showToast('File too large (10MB max)'); return; }
+  var category = document.getElementById('docCategory').value;
+  var description = document.getElementById('docDescription').value.trim() || null;
+  var statusEl = document.getElementById('docUploadStatus');
+  statusEl.textContent = 'Uploading…';
+  // Path: <practice_id>/<practice_client_id>/<uuid>-<sanitized_filename>
+  var ext = (file.name.split('.').pop() || '').toLowerCase().slice(0, 8).replace(/[^a-z0-9]/g, '');
+  var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+  var fileId = mvUuid();
+  var path = S.practiceMember.practice_id + '/' + currentClient.id + '/' + fileId + '-' + safeName;
+  var up = await sb.storage.from('practice-client-documents').upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
+  if(up.error){
+    statusEl.textContent = '';
+    showToast('Upload failed: ' + up.error.message);
+    return;
+  }
+  var ins = await sb.from('practice_client_documents').insert({
+    practice_client_id: currentClient.id,
+    uploaded_by: S.practiceMember.id,
+    file_path: path,
+    file_name: file.name,
+    file_size: file.size,
+    mime_type: file.type || null,
+    category: category,
+    description: description
+  });
+  if(ins.error){
+    statusEl.textContent = '';
+    showToast('Metadata save failed: ' + ins.error.message);
+    return;
+  }
+  statusEl.textContent = '';
+  closeUploadDocModal();
+  showToast('Uploaded');
+  renderClientPrograms();
+}
+
+async function downloadDoc(docId, filePath){
+  showToast('Generating download link…');
+  var r = await sb.storage.from('practice-client-documents').createSignedUrl(filePath, 300);
+  if(r.error){ showToast('Could not get download link: ' + r.error.message); return; }
+  window.open(r.data.signedUrl, '_blank');
+}
+
+async function deleteDoc(docId, filePath){
+  if(!confirm('Delete this document? This is permanent.')) return;
+  var sd = await sb.storage.from('practice-client-documents').remove([filePath]);
+  if(sd.error){ showToast('Storage delete failed: ' + sd.error.message); return; }
+  var dd = await sb.from('practice_client_documents').delete().eq('id', docId);
+  if(dd.error){ showToast('Metadata delete failed: ' + dd.error.message); return; }
+  showToast('Deleted');
+  renderClientPrograms();
+}
 
 async function renderClientBehaviorsTab(tabBar){
   var el = document.getElementById('practiceClientDetailContent');
