@@ -2186,6 +2186,44 @@ async function completeOnboarding(goToMembers){
   else openPracticeDashboard();
   showToast('Practice created — welcome.');
 }
+function renderActiveSessionsCard(sessions){
+  if(!sessions.length) return '';
+  var h = '<div style="margin-bottom:14px"><div class="label" style="margin-bottom:8px">Active sessions ('+sessions.length+')</div>';
+  sessions.forEach(function(s){
+    var when = new Date(s.start_time).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+    var prov = s.provider && s.provider.profiles ? (s.provider.profiles.name || s.provider.profiles.email) : '(unknown)';
+    var child = s.practice_clients && s.practice_clients.children ? s.practice_clients.children.name : '(unknown)';
+    h += '<div onclick="joinAsIoaObserver(\x27'+s.id+'\x27,\x27'+esc(prov)+'\x27)" style="border:1px solid var(--sage-dark);background:var(--sage-light);border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-weight:700;font-size:14px">'+esc(child)+'</div>'+
+      '<div style="font-size:11px;color:var(--sage-dark);margin-top:2px">'+esc(prov)+' &middot; started '+when+' &middot; tap to join as IOA observer</div></div>'+
+      '<span style="font-size:18px">&#128065;</span>'+
+      '</div>';
+  });
+  h += '</div>';
+  return h;
+}
+
+function renderPendingCosignCard(sessions){
+  if(!sessions.length) return '';
+  var canCosign = S.practiceMember.role === 'owner_bcba' || S.practiceMember.role === 'supervising_bcba';
+  if(!canCosign) return '';
+  var h = '<div style="margin-bottom:14px"><div class="label" style="margin-bottom:8px">Pending cosign ('+sessions.length+')</div>';
+  sessions.forEach(function(s){
+    var when = new Date(s.end_time || s.start_time).toLocaleDateString();
+    var prov = s.provider && s.provider.profiles ? (s.provider.profiles.name || s.provider.profiles.email) : '(unknown)';
+    var child = s.practice_clients && s.practice_clients.children ? s.practice_clients.children.name : '(unknown)';
+    h += '<div onclick="openCosignReview(\x27'+s.id+'\x27)" style="border:1px solid var(--terracotta);background:var(--terracotta-light);border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-weight:700;font-size:14px">'+esc(child)+'</div>'+
+      '<div style="font-size:11px;color:var(--terracotta);margin-top:2px">'+esc(prov)+' &middot; '+when+' &middot; review &amp; cosign</div></div>'+
+      '<span style="font-size:18px">&#9997;&#65039;</span>'+
+      '</div>';
+  });
+  h += '</div>';
+  return h;
+}
+
+function openCosignReview(sessionId){ alert('Cosign review opens in Task 10'); }
+
 async function openPracticeDashboard(){
   if(!S.practiceMember){ showToast('Set up your practice first'); return; }
   document.getElementById('practiceDashboardPage').classList.add('open');
@@ -2193,6 +2231,17 @@ async function openPracticeDashboard(){
   el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
   var cR = await sb.from('practice_clients').select('id,status').eq('practice_id', S.practiceMember.practice_id);
   var mR = await sb.from('practice_members').select('id', { count:'exact', head:true }).eq('practice_id', S.practiceMember.practice_id).eq('active', true);
+  var activeSR = await sb.from('sessions')
+    .select('id,start_time,location,provider:practice_members!provider_id(profiles(name,email)),practice_clients!inner(practice_id,children(name))')
+    .eq('status', 'in_progress')
+    .eq('practice_clients.practice_id', S.practiceMember.practice_id)
+    .order('start_time', { ascending: false });
+  var cosignSR = await sb.from('sessions')
+    .select('id,start_time,end_time,practice_clients!inner(practice_id,children(name)),provider:practice_members!provider_id(profiles(name,email))')
+    .eq('status', 'completed')
+    .is('cosigner_id', null)
+    .eq('practice_clients.practice_id', S.practiceMember.practice_id)
+    .order('end_time', { ascending: false });
   var clients = cR.data || [];
   var active = clients.filter(function(c){ return c.status === 'active'; }).length;
   var intake = clients.filter(function(c){ return c.status === 'intake'; }).length;
@@ -2209,13 +2258,14 @@ async function openPracticeDashboard(){
       '<div class="billing-stat"><div class="bs-num">'+intake+'</div><div class="bs-lbl">In intake</div></div>'+
       '<div class="billing-stat"><div class="bs-num">'+(mR.count || 0)+'</div><div class="bs-lbl">Team members</div></div>'+
     '</div>'+
-    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">'+
       '<button class="btn btn-p" onclick="openPracticeClients()">Manage clients</button>'+
       '<button class="btn btn-s" onclick="openPracticeMembers()">Team</button>'+
       '<button class="btn btn-s" onclick="openCurriculumBrowser()">Curriculum library</button>'+
       '<button class="btn btn-s" onclick="openPracticeSettings()">Settings</button>'+
     '</div>'+
-    '<div style="margin-top:24px;padding:14px;background:var(--sage-light);border-radius:14px;font-size:13px;color:var(--sage-dark)">Live data entry, graphs, and SOAP auto-fill ship in the next sub-projects. This is the foundation.</div>'+
+    renderActiveSessionsCard(activeSR.data || [])+
+    renderPendingCosignCard(cosignSR.data || [])+
     '</div>';
   el.innerHTML = h;
 }
@@ -2865,6 +2915,138 @@ async function beginSession(){
 }
 
 var activeSession = null;
+
+async function joinAsIoaObserver(sessionId, primaryName){
+  if(!confirm('Join this session as an IOA observer for ' + primaryName + '?\n\nYou will see the primary observer\x27s current target and can record on the same trials. The system computes IOA % per target after the session ends.')) return;
+  var sR = await sb.from('sessions')
+    .select('id,practice_client_id,start_time,location,practice_clients(children(name))')
+    .eq('id', sessionId)
+    .single();
+  if(sR.error){ showToast(sR.error.message); return; }
+  activeSession = {
+    id: sR.data.id,
+    practice_client_id: sR.data.practice_client_id,
+    child_name: sR.data.practice_clients.children.name,
+    targets: [],
+    current_target_idx: -1,
+    trial_in_target: 0,
+    started_at: new Date(sR.data.start_time),
+    ioa_mode: true,
+    primary_current_target_id: null,
+    primary_current_target_name: null,
+    last_behavior_label: null
+  };
+  document.getElementById('practiceDashboardPage').classList.remove('open');
+  document.getElementById('activeSessionPage').classList.add('open');
+  renderActiveSessionIoa();
+  if(window._ioaPoll) clearInterval(window._ioaPoll);
+  window._ioaPoll = setInterval(pollIoaTarget, 5000);
+  pollIoaTarget();
+}
+
+async function pollIoaTarget(){
+  if(!activeSession || !activeSession.ioa_mode) return;
+  var r = await sb.from('trials')
+    .select('target_id,trial_index,targets(id,name,target_type,target_steps(*))')
+    .eq('session_id', activeSession.id)
+    .is('ioa_observer_id', null)
+    .order('timestamp', { ascending: false })
+    .limit(1);
+  if(r.data && r.data.length > 0){
+    var t = r.data[0];
+    if(t.target_id !== activeSession.primary_current_target_id){
+      activeSession.primary_current_target_id = t.target_id;
+      activeSession.primary_current_target_name = t.targets.name;
+      var steps = (t.targets.target_steps || []).slice().sort(function(a,b){ return a.sequence - b.sequence; });
+      activeSession.targets = [{
+        id: t.targets.id,
+        name: t.targets.name,
+        target_type: t.targets.target_type,
+        steps: steps,
+        planned_trials: 0,
+        trials_run: 0,
+        trials_correct: 0,
+        step_idx: 0
+      }];
+      activeSession.current_target_idx = 0;
+      renderActiveSessionIoa();
+    }
+  } else if(!activeSession.primary_current_target_id){
+    renderActiveSessionIoa();
+  }
+}
+
+function renderActiveSessionIoa(){
+  var el = document.getElementById('activeSessionContent');
+  var top = '<div style="display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--sand);background:white;gap:8px">'+
+    '<button class="btn btn-s" style="padding:6px 10px;font-size:12px" onclick="exitIoaMode()">Exit</button>'+
+    '<div style="flex:1"><div style="font-size:11px;color:var(--warm-gray)">IOA observer · '+esc(activeSession.child_name)+'</div>'+
+      (activeSession.primary_current_target_name ? '<div style="font-size:14px;font-weight:700;color:var(--sage-dark)">'+esc(activeSession.primary_current_target_name)+'</div>' : '<div style="font-size:12px;color:var(--warm-gray)">Waiting for primary to start trials…</div>')+
+    '</div>'+
+    '<div id="asSyncBadge">'+mvOffline.renderBadge()+'</div>'+
+    '</div>';
+  var body;
+  if(!activeSession.primary_current_target_id){
+    body = '<div id="asBody" style="flex:1;padding:30px 20px;text-align:center;color:var(--warm-gray)">Waiting for the primary observer to record a trial. This view will update automatically.</div>';
+  } else {
+    body = '<div id="asBody" style="flex:1;overflow-y:auto;padding:20px">'+ renderTrialEntryIoa(activeSession.targets[0]) +'</div>';
+  }
+  el.innerHTML = top + body;
+}
+
+function renderTrialEntryIoa(target){
+  var btns = [
+    { lvl: 'independent', label: 'Independent', resp: 'correct', color: 'var(--sage-dark)', bg: 'var(--sage-light)' },
+    { lvl: 'gestural', label: 'Gestural', resp: 'prompted', color: '#7A6A10', bg: 'rgba(232,200,74,0.18)' },
+    { lvl: 'verbal', label: 'Verbal', resp: 'prompted', color: '#7A6A10', bg: 'rgba(232,200,74,0.18)' },
+    { lvl: 'model', label: 'Model', resp: 'prompted', color: '#7A6A10', bg: 'rgba(232,200,74,0.18)' },
+    { lvl: 'partial_physical', label: 'Partial Physical', resp: 'prompted', color: '#7A6A10', bg: 'rgba(232,200,74,0.18)' },
+    { lvl: 'full_physical', label: 'Full Physical', resp: 'prompted', color: '#7A6A10', bg: 'rgba(232,200,74,0.18)' },
+    { lvl: 'no_response', label: 'No Response', resp: 'incorrect', color: 'var(--terracotta)', bg: 'var(--terracotta-light)' }
+  ];
+  var grid = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:560px;margin:0 auto">';
+  for(var i=0;i<6;i++){
+    var b = btns[i];
+    grid += '<button onclick="recordTrialIoa(\x27'+b.lvl+'\x27,\x27'+b.resp+'\x27)" style="padding:24px 12px;background:'+b.bg+';color:'+b.color+';border:2px solid '+b.color+';border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;min-height:80px">'+b.label+'</button>';
+  }
+  grid += '</div>';
+  var noResp = btns[6];
+  grid += '<div style="max-width:560px;margin:10px auto 0"><button onclick="recordTrialIoa(\x27'+noResp.lvl+'\x27,\x27'+noResp.resp+'\x27)" style="width:100%;padding:18px;background:'+noResp.bg+';color:'+noResp.color+';border:2px solid '+noResp.color+';border-radius:14px;font-size:15px;font-weight:700;cursor:pointer">'+noResp.label+'</button></div>';
+  return grid;
+}
+
+function recordTrialIoa(promptLevel, response){
+  if(!activeSession || !activeSession.ioa_mode || !activeSession.primary_current_target_id) return;
+  var t = activeSession.targets[0];
+  var trialIndex = t.trials_run + 1;
+  var stepId = null;
+  if(t.target_type === 'task_analysis' && t.steps.length > 0){
+    stepId = t.steps[t.step_idx % t.steps.length].id;
+  }
+  mvOffline.enqueue({
+    table: 'trials',
+    payload: {
+      session_id: activeSession.id,
+      target_id: t.id,
+      target_step_id: stepId,
+      prompt_level: promptLevel,
+      response: response,
+      trial_index: trialIndex,
+      ioa_observer_id: S.practiceMember.id,
+      client_uuid: mvUuid()
+    }
+  });
+  t.trials_run += 1;
+  if(response === 'correct') t.trials_correct += 1;
+  if(t.target_type === 'task_analysis' && t.steps.length > 0) t.step_idx = (t.step_idx + 1) % t.steps.length;
+  renderActiveSessionIoa();
+}
+
+function exitIoaMode(){
+  if(window._ioaPoll){ clearInterval(window._ioaPoll); window._ioaPoll = null; }
+  activeSession = null;
+  document.getElementById('activeSessionPage').classList.remove('open');
+}
 
 async function openActiveSession(sessionId){
   var sR = await sb.from('sessions')
