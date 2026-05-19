@@ -1392,6 +1392,26 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   </div>
 </div>
 
+<div id="preSessionPlanModal" class="modal-overlay" style="display:none">
+  <div class="modal-content" style="max-width:560px;max-height:90vh;overflow-y:auto">
+    <h3 style="font-family:Fraunces,serif;font-size:22px;margin-bottom:6px">Start a session</h3>
+    <div id="psClientName" style="color:var(--warm-gray);font-size:13px;margin-bottom:14px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div><label class="fl">Location</label><select id="psLocation" class="fi"><option value="home">Home</option><option value="clinic">Clinic</option><option value="school">School</option><option value="telehealth">Telehealth</option></select></div>
+      <div><label class="fl">CPT code</label><select id="psCpt" class="fi"><option value="97153">97153</option><option value="97155">97155</option><option value="97156">97156</option></select></div>
+    </div>
+    <div class="label" style="margin-bottom:8px">Targets for today</div>
+    <div id="psTargetsList" style="margin-bottom:8px"></div>
+    <div style="text-align:center;margin:8px 0">
+      <a style="font-size:13px;color:var(--sage-dark);cursor:pointer;text-decoration:underline" onclick="planSkipAdHoc()">Run ad-hoc (skip plan)</a>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-s" style="flex:1" onclick="closePreSessionPlan()">Cancel</button>
+      <button class="btn btn-p" style="flex:1" onclick="beginSession()">Begin session</button>
+    </div>
+  </div>
+</div>
+
 <div id="targetsEditorPage" class="overlay-page">
   <div class="overlay-header">
     <button class="overlay-back" onclick="closeOverlay('targetsEditorPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -2490,18 +2510,23 @@ async function renderClientPrograms(){
   h += '<div class="label" style="margin-top:24px;margin-bottom:8px">Recent Sessions</div>';
   if(sessR.error){
     h += '<div style="color:var(--terracotta);font-size:13px">'+esc(sessR.error.message)+'</div>';
-  } else if(!sessR.data || sessR.data.length === 0){
-    h += '<div style="padding:14px;background:var(--cream);border-radius:12px;font-size:13px;color:var(--warm-gray)">No sessions yet. Live data entry ships in the next sub-project.</div>';
   } else {
-    sessR.data.forEach(function(s){
-      var prov = s.provider && s.provider.profiles ? (s.provider.profiles.name || s.provider.profiles.email) : '(unknown)';
-      var when = new Date(s.start_time).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
-      h += '<div style="border:1px solid var(--sand);border-radius:12px;padding:10px 14px;margin-bottom:6px;background:white;display:flex;justify-content:space-between;align-items:center">'+
-        '<div><div style="font-weight:700;font-size:14px">'+when+'</div>'+
-        '<div style="font-size:12px;color:var(--warm-gray)">'+esc(prov)+(s.cpt_code?' &middot; CPT '+s.cpt_code:'')+(s.location?' &middot; '+s.location:'')+'</div></div>'+
-        '<span class="log-tag">'+s.status.replace(/_/g,' ')+'</span>'+
-        '</div>';
-    });
+    if(canWrite){
+      h += '<button class="btn btn-p" style="width:100%;margin-bottom:12px" onclick="openPreSessionPlan()">Start session</button>';
+    }
+    if(!sessR.data || sessR.data.length === 0){
+      h += '<div style="padding:14px;background:var(--cream);border-radius:12px;font-size:13px;color:var(--warm-gray)">No sessions yet.</div>';
+    } else {
+      sessR.data.forEach(function(s){
+        var prov = s.provider && s.provider.profiles ? (s.provider.profiles.name || s.provider.profiles.email) : '(unknown)';
+        var when = new Date(s.start_time).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+        h += '<div onclick="openSessionSummary(\x27'+s.id+'\x27)" style="border:1px solid var(--sand);border-radius:12px;padding:10px 14px;margin-bottom:6px;background:white;display:flex;justify-content:space-between;align-items:center;cursor:pointer">'+
+          '<div><div style="font-weight:700;font-size:14px">'+when+'</div>'+
+          '<div style="font-size:12px;color:var(--warm-gray)">'+esc(prov)+(s.cpt_code?' &middot; CPT '+s.cpt_code:'')+(s.location?' &middot; '+s.location:'')+'</div></div>'+
+          '<span class="log-tag">'+s.status.replace(/_/g,' ')+'</span>'+
+          '</div>';
+      });
+    }
   }
   h += '</div>';
   el.innerHTML = h;
@@ -2560,6 +2585,79 @@ async function archiveProgram(programId){
   if(upd.error){ showToast(upd.error.message); return; }
   renderClientPrograms();
 }
+
+function openSessionSummary(sessionId){ alert('Session summary opens in Task 8'); }
+
+var preSessionState = { client: null, targets: [] };
+
+async function openPreSessionPlan(){
+  if(!currentClient){ showToast('Open a client first'); return; }
+  preSessionState.client = currentClient;
+  preSessionState.targets = [];
+  document.getElementById('psClientName').textContent = currentClient.children.name + ' · ' + new Date().toLocaleDateString();
+  document.getElementById('psLocation').value = 'home';
+  document.getElementById('psCpt').value = currentClient.service_type || '97156';
+  document.getElementById('psTargetsList').innerHTML = '<div style="color:var(--warm-gray);font-size:13px;padding:8px">Loading targets…</div>';
+  document.getElementById('preSessionPlanModal').style.display = 'flex';
+  var r = await sb.from('targets')
+    .select('id,name,target_type,status,data_collection_config,programs!inner(id,name,practice_client_id)')
+    .eq('programs.practice_client_id', currentClient.id)
+    .in('status', ['baseline','in_treatment','in_maintenance']);
+  if(r.error){ document.getElementById('psTargetsList').innerHTML = '<div style="color:var(--terracotta);padding:8px">'+esc(r.error.message)+'</div>'; return; }
+  if(!r.data || r.data.length === 0){
+    document.getElementById('psTargetsList').innerHTML = '<div style="padding:14px;background:var(--cream);border-radius:10px;font-size:13px;color:var(--warm-gray)">No in-treatment targets. Add targets to a program first, or use "Run ad-hoc".</div>';
+    return;
+  }
+  var byProgram = {};
+  r.data.forEach(function(t){
+    var pname = t.programs.name;
+    if(!byProgram[pname]) byProgram[pname] = [];
+    byProgram[pname].push(t);
+  });
+  var h = '';
+  Object.keys(byProgram).forEach(function(pname){
+    h += '<div style="font-size:12px;color:var(--warm-gray);font-weight:700;margin-top:8px;margin-bottom:4px">'+esc(pname)+'</div>';
+    byProgram[pname].forEach(function(t){
+      preSessionState.targets.push({ id: t.id, name: t.name, target_type: t.target_type, planned_trials: (t.data_collection_config && t.data_collection_config.trials_per_session) || 10, checked: true });
+      var idx = preSessionState.targets.length - 1;
+      h += '<label style="display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--sand);border-radius:10px;margin-bottom:4px;cursor:pointer"><input type="checkbox" checked onchange="preSessionState.targets['+idx+'].checked=this.checked"><span style="flex:1"><strong>'+esc(t.name)+'</strong><span style="color:var(--warm-gray);font-size:11px;margin-left:6px">'+t.target_type.replace(/_/g,' ')+' · '+preSessionState.targets[idx].planned_trials+' trials</span></span></label>';
+    });
+  });
+  document.getElementById('psTargetsList').innerHTML = h;
+}
+
+function closePreSessionPlan(){
+  document.getElementById('preSessionPlanModal').style.display = 'none';
+}
+
+function planSkipAdHoc(){
+  preSessionState.targets = preSessionState.targets.map(function(t){ t.checked = false; return t; });
+  beginSession();
+}
+
+async function beginSession(){
+  var selected = preSessionState.targets.filter(function(t){ return t.checked; });
+  var sessR = await sb.from('sessions').insert({
+    practice_client_id: preSessionState.client.id,
+    provider_id: S.practiceMember.id,
+    start_time: new Date().toISOString(),
+    location: document.getElementById('psLocation').value,
+    cpt_code: document.getElementById('psCpt').value,
+    status: 'in_progress'
+  }).select().single();
+  if(sessR.error){ showToast('Could not start session: '+sessR.error.message); return; }
+  if(selected.length){
+    var rows = selected.map(function(t){
+      return { session_id: sessR.data.id, target_id: t.id, planned_trials: t.planned_trials, planned_by: S.practiceMember.id };
+    });
+    var stR = await sb.from('session_targets').insert(rows);
+    if(stR.error){ showToast('Plan saved partially: '+stR.error.message); }
+  }
+  closePreSessionPlan();
+  openActiveSession(sessR.data.id);
+}
+
+function openActiveSession(sessionId){ alert('Active session UI lands in Task 4 — session created: '+sessionId); }
 
 var currentProgram = null;
 var targetEditing = null;
