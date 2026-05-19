@@ -2297,6 +2297,7 @@ async function completeOnboarding(goToMembers){
   if(mR.error){ showToast('Could not add you as owner: '+mR.error.message); return; }
   auditLog('create_practice', 'practices', pR.data.id, { name: pR.data.name });
   await loadProfile();
+  renderSb();
   closeOverlay('practiceOnboardingPage');
   if(goToMembers) openPracticeMembers();
   else openPracticeDashboard();
