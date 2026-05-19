@@ -2222,7 +2222,25 @@ function renderPendingCosignCard(sessions){
   return h;
 }
 
-function openCosignReview(sessionId){ alert('Cosign review opens in Task 10'); }
+async function openCosignReview(sessionId){
+  document.getElementById('practiceDashboardPage').classList.remove('open');
+  summaryState = { sessionId: sessionId, fromActive: false, ioaByTarget: null, cosignMode: true };
+  document.getElementById('sessionSummaryPage').classList.add('open');
+  await renderSessionSummary();
+}
+
+async function cosignSession(){
+  if(!confirm('Cosign this session? This locks the data; status transitions to "cosigned".')) return;
+  var upd = await sb.from('sessions').update({
+    cosigner_id: S.practiceMember.id,
+    cosigned_at: new Date().toISOString(),
+    status: 'cosigned'
+  }).eq('id', summaryState.sessionId);
+  if(upd.error){ showToast(upd.error.message); return; }
+  showToast('Session cosigned');
+  document.getElementById('sessionSummaryPage').classList.remove('open');
+  openPracticeDashboard();
+}
 
 async function openPracticeDashboard(){
   if(!S.practiceMember){ showToast('Set up your practice first'); return; }
@@ -2802,7 +2820,13 @@ async function renderSessionSummary(){
       '<button class="btn btn-p" style="flex:1" onclick="submitSession()">Submit session</button>'+
       '</div>';
   } else {
-    h += '<div style="padding:14px;background:var(--sage-light);border-radius:12px;font-size:13px;color:var(--sage-dark)">Session is <strong>'+session.status+'</strong>. Read-only view.</div>';
+    h += '<div style="padding:14px;background:var(--sage-light);border-radius:12px;font-size:13px;color:var(--sage-dark);margin-bottom:14px">Session is <strong>'+session.status+'</strong>. Read-only view.</div>';
+    var canCosign = summaryState.cosignMode &&
+      session.status === 'completed' &&
+      (S.practiceMember.role === 'owner_bcba' || S.practiceMember.role === 'supervising_bcba');
+    if(canCosign){
+      h += '<button class="btn btn-p" style="width:100%" onclick="cosignSession()">Cosign session</button>';
+    }
   }
   h += '</div>';
   el.innerHTML = h;
