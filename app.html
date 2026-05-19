@@ -1408,6 +1408,14 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   <div class="overlay-inner" id="curriculumBrowserContent" style="padding-bottom:80px"></div>
 </div>
 
+<div id="practiceSettingsPage" class="overlay-page">
+  <div class="overlay-header">
+    <button class="overlay-back" onclick="closeOverlay('practiceSettingsPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2 class="overlay-title">Practice Settings</h2>
+  </div>
+  <div class="overlay-inner" id="practiceSettingsContent" style="padding-bottom:80px"></div>
+</div>
+
 <div id="targetModal" class="modal-overlay" style="display:none">
   <div class="modal-content" style="max-width:640px;max-height:90vh;overflow-y:auto">
     <h3 id="tmTitle" style="font-family:Fraunces,serif;font-size:22px;margin-bottom:12px">New target</h3>
@@ -2713,7 +2721,41 @@ async function addCurriculumTarget(curriculumTargetId){
   }
   showToast('Added "'+ct.name+'"');
 }
-function openPracticeSettings(){ alert('Practice settings coming next'); }
+async function openPracticeSettings(){
+  if(!S.practiceMember){ showToast('Set up your practice first'); return; }
+  if(S.practiceMember.role !== 'owner_bcba'){ showToast('Only the practice owner can edit settings'); return; }
+  document.getElementById('practiceSettingsPage').classList.add('open');
+  var r = await sb.from('practices').select('settings').eq('id', S.practiceMember.practice_id).single();
+  var s = (r.data && r.data.settings) || {};
+  var el = document.getElementById('practiceSettingsContent');
+  el.innerHTML =
+    '<div style="max-width:640px;margin:0 auto">'+
+    '<h3 style="font-family:Fraunces,serif;font-size:20px;margin-bottom:12px">Default mastery criteria</h3>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+    '<div><label class="fl">% correct</label><input id="psM_pct" class="fi" type="number" min="0" max="100" value="'+((s.default_mastery && s.default_mastery.response_pct)||80)+'"></div>'+
+    '<div><label class="fl">Consecutive sessions</label><input id="psM_cons" class="fi" type="number" min="1" value="'+((s.default_mastery && s.default_mastery.consecutive_sessions)||3)+'"></div>'+
+    '</div>'+
+    '<h3 style="font-family:Fraunces,serif;font-size:20px;margin:24px 0 12px">Daily SOAP requirement</h3>'+
+    '<label style="display:flex;gap:8px;font-size:14px"><input id="psSoap" type="checkbox" '+(s.require_daily_soap?'checked':'')+'> Require a SOAP note for every completed session</label>'+
+    '<h3 style="font-family:Fraunces,serif;font-size:20px;margin:24px 0 12px">IOA collection</h3>'+
+    '<label style="display:flex;gap:8px;font-size:14px"><input id="psIoa" type="checkbox" '+(s.ioa_enabled?'checked':'')+'> Enable inter-observer agreement (live data entry — sub-project #2)</label>'+
+    '<button class="btn btn-p" style="margin-top:24px;width:100%" onclick="savePracticeSettings()">Save settings</button>'+
+    '</div>';
+}
+
+async function savePracticeSettings(){
+  var settings = {
+    default_mastery: {
+      response_pct: parseInt(document.getElementById('psM_pct').value, 10) || 80,
+      consecutive_sessions: parseInt(document.getElementById('psM_cons').value, 10) || 3
+    },
+    require_daily_soap: document.getElementById('psSoap').checked,
+    ioa_enabled: document.getElementById('psIoa').checked
+  };
+  var upd = await sb.from('practices').update({ settings: settings }).eq('id', S.practiceMember.practice_id);
+  if(upd.error){ showToast(upd.error.message); return; }
+  showToast('Settings saved');
+}
 
 function esc(t){if(!t)return '';return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;').replace(/\n/g,'<br>')}
 function now(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
