@@ -1489,6 +1489,14 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   <div class="overlay-inner" id="targetGraphContent" style="padding-bottom:80px"></div>
 </div>
 
+<div id="soapEditorPage" class="overlay-page">
+  <div class="overlay-header">
+    <button class="overlay-back" onclick="closeOverlay('soapEditorPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2 class="overlay-title" id="soapTitle">SOAP note</h2>
+  </div>
+  <div class="overlay-inner" id="soapEditorContent" style="padding-bottom:80px"></div>
+</div>
+
 <div id="targetPickerSheet" style="display:none;position:fixed;left:0;right:0;bottom:0;background:white;border-radius:18px 18px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,0.15);padding:20px;z-index:1100;max-height:60vh;overflow-y:auto">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
     <h3 style="font-family:Fraunces,serif;font-size:18px;font-weight:700">Switch target</h3>
@@ -2748,7 +2756,7 @@ async function renderClientProgramsTab(tabBar){
     .order('created_at', { ascending: true });
   if(pgR.error){ el.innerHTML = '<div style="padding:20px;color:var(--terracotta)">'+esc(pgR.error.message)+'</div>'; return; }
   var sessR = await sb.from('sessions')
-    .select('id,start_time,end_time,location,cpt_code,status,provider:practice_members!provider_id(profiles(name,email))')
+    .select('id,start_time,end_time,location,cpt_code,status,provider:practice_members!provider_id(profiles(name,email)),session_notes(id,signed_at)')
     .eq('practice_client_id', currentClient.id)
     .order('start_time', { ascending: false })
     .limit(20);
@@ -2773,10 +2781,18 @@ async function renderClientProgramsTab(tabBar){
       sessR.data.forEach(function(s){
         var prov = s.provider && s.provider.profiles ? (s.provider.profiles.name || s.provider.profiles.email) : '(unknown)';
         var when = new Date(s.start_time).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
-        h += '<div onclick="openSessionSummary(\x27'+s.id+'\x27)" style="border:1px solid var(--sand);border-radius:12px;padding:10px 14px;margin-bottom:6px;background:white;display:flex;justify-content:space-between;align-items:center;cursor:pointer">'+
-          '<div><div style="font-weight:700;font-size:14px">'+when+'</div>'+
-          '<div style="font-size:12px;color:var(--warm-gray)">'+esc(prov)+(s.cpt_code?' &middot; CPT '+s.cpt_code:'')+(s.location?' &middot; '+s.location:'')+'</div></div>'+
-          '<span class="log-tag">'+s.status.replace(/_/g,' ')+'</span>'+
+        var notes = s.session_notes || [];
+        var soapStatus = '';
+        var hasSoap = notes.length > 0;
+        var signed = notes.some(function(n){ return n.signed_at; });
+        if(signed) soapStatus = '<span class="log-tag" style="background:var(--sage-light);color:var(--sage-dark)">SOAP ✓</span>';
+        else if(hasSoap) soapStatus = '<span class="log-tag" style="background:rgba(232,200,74,0.18);color:#7A6A10">SOAP draft</span>';
+        else if(s.status === 'completed' || s.status === 'cosigned') soapStatus = '<span class="log-tag" style="background:var(--terracotta-light);color:var(--terracotta)">No SOAP</span>';
+        h += '<div style="border:1px solid var(--sand);border-radius:12px;padding:10px 14px;margin-bottom:6px;background:white;display:flex;justify-content:space-between;align-items:center">'+
+          '<div onclick="openSessionSummary(\x27'+s.id+'\x27)" style="flex:1;cursor:pointer"><div style="font-weight:700;font-size:14px">'+when+'</div>'+
+          '<div style="font-size:12px;color:var(--warm-gray)">'+esc(prov)+(s.cpt_code?' &middot; CPT '+s.cpt_code:'')+(s.location?' &middot; '+s.location:'')+'</div>'+
+          '<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap"><span class="log-tag">'+s.status.replace(/_/g,' ')+'</span>'+soapStatus+'</div></div>'+
+          ((s.status === 'completed' || s.status === 'cosigned') ? '<button class="btn btn-s" style="padding:6px 10px;font-size:11px;margin-left:8px" onclick="event.stopPropagation();openSoapEditor(\x27'+s.id+'\x27)">'+(signed?'View SOAP':(hasSoap?'Edit SOAP':'Write SOAP'))+'</button>' : '')+
           '</div>';
       });
     }
@@ -3444,6 +3460,7 @@ async function renderSessionSummary(){
       '</div>';
   } else {
     h += '<div style="padding:14px;background:var(--sage-light);border-radius:12px;font-size:13px;color:var(--sage-dark);margin-bottom:14px">Session is <strong>'+session.status+'</strong>. Read-only view.</div>';
+    h += '<button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="openSoapEditor(\x27'+session.id+'\x27)">Write / view SOAP note</button>';
     var canCosign = summaryState.cosignMode &&
       session.status === 'completed' &&
       (S.practiceMember.role === 'owner_bcba' || S.practiceMember.role === 'supervising_bcba');
@@ -3453,6 +3470,248 @@ async function renderSessionSummary(){
   }
   h += '</div>';
   el.innerHTML = h;
+}
+
+var soapState = { sessionId: null, noteId: null, note: null, session: null, signed: false, generating: false };
+
+async function openSoapEditor(sessionId){
+  soapState = { sessionId: sessionId, noteId: null, note: null, session: null, signed: false, generating: false };
+  document.getElementById('soapEditorPage').classList.add('open');
+  var el = document.getElementById('soapEditorContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
+  // Hydrate session for header context
+  var sR = await sb.from('sessions')
+    .select('id,start_time,end_time,location,cpt_code,status,parent_present,practice_clients(child_id,children(name)),provider:practice_members!provider_id(profiles(name,email))')
+    .eq('id', sessionId)
+    .single();
+  if(sR.error){ el.innerHTML = '<div style="padding:20px;color:var(--terracotta)">'+esc(sR.error.message)+'</div>'; return; }
+  soapState.session = sR.data;
+  document.getElementById('soapTitle').textContent = 'SOAP — '+(sR.data.practice_clients.children.name)+' · '+new Date(sR.data.start_time).toLocaleDateString();
+  // Look up existing session_notes row tied to this session_id (if any)
+  var nR = await sb.from('session_notes')
+    .select('*')
+    .eq('session_id', sessionId)
+    .limit(1)
+    .maybeSingle();
+  if(nR.data){
+    soapState.noteId = nR.data.id;
+    soapState.note = nR.data;
+    soapState.signed = !!nR.data.signed_at;
+  }
+  renderSoapEditor();
+}
+
+function renderSoapEditor(){
+  var el = document.getElementById('soapEditorContent');
+  var s = soapState.session;
+  var n = soapState.note || {};
+  var signed = soapState.signed;
+  var providerName = s.provider && s.provider.profiles ? (s.provider.profiles.name || s.provider.profiles.email) : '';
+  var durMin = s.end_time ? Math.round((new Date(s.end_time) - new Date(s.start_time)) / 60000) : null;
+  var canEdit = !signed && (S.practiceMember.role === 'owner_bcba' || S.practiceMember.role === 'supervising_bcba' || S.practiceMember.role === 'rbt');
+  var h = '<div style="max-width:880px;margin:0 auto">';
+  // Header block
+  h += '<div style="background:white;border:1px solid var(--sand);border-radius:14px;padding:14px;margin-bottom:14px">'+
+    '<div style="font-size:13px;color:var(--warm-gray)">'+esc(providerName)+(durMin?' · '+durMin+' min':'')+(s.location?' · '+s.location:'')+' · CPT '+esc(s.cpt_code||'')+' · session status: '+s.status+'</div>';
+  if(signed){
+    h += '<div style="margin-top:8px;padding:10px;background:var(--sage-light);border-radius:10px;color:var(--sage-dark);font-size:13px"><strong>Signed</strong> by '+esc(n.signed_by_name || '')+' ('+esc(n.signed_by_role || '')+') on '+new Date(n.signed_at).toLocaleString()+'. Locked.</div>';
+  }
+  h += '</div>';
+  // AI generate button
+  if(canEdit){
+    h += '<button id="soapGenBtn" class="btn btn-s" style="margin-bottom:12px" onclick="generateSoapFromSession()"'+(soapState.generating?' disabled':'')+'>'+(soapState.generating?'Generating…':(n.soap_subjective||n.soap_objective?'&#x2728; Regenerate from session data':'&#x2728; Generate from session data'))+'</button>'+
+      '<div style="font-size:12px;color:var(--warm-gray);margin-bottom:14px">AI fills the 4 sections from the session\x27s trial + behavior data. Review and edit before signing.</div>';
+  }
+  // 4 SOAP sections
+  function section(label, helpText, fieldName, value){
+    return '<div style="margin-bottom:14px"><label class="fl">'+label+' <span style="color:var(--warm-gray);font-weight:400;font-size:11px">— '+helpText+'</span></label>'+
+      '<textarea id="soap_'+fieldName+'" class="fi" rows="5" '+(canEdit?'':'readonly')+' style="font-size:13px;line-height:1.5'+(canEdit?'':';background:var(--cream)')+'">'+esc(value || '')+'</textarea></div>';
+  }
+  h += section('S — Subjective', 'parent / RBT observations, child\x27s mood at start', 'subjective', n.soap_subjective);
+  h += section('O — Objective', 'session data: trial counts, % correct, behavior occurrences', 'objective', n.soap_objective);
+  h += section('A — Assessment', 'clinical interpretation of the data, progress vs goals', 'assessment', n.soap_assessment);
+  h += section('P — Plan', 'next steps, intervention changes, what to run next session', 'plan', n.soap_plan);
+  // Sign + save buttons
+  if(canEdit){
+    h += '<div style="display:flex;gap:8px;margin-top:18px">'+
+      '<button class="btn btn-s" style="flex:1" onclick="saveSoap(false)">Save draft</button>'+
+      '<button class="btn btn-p" style="flex:1" onclick="openSignSoap()">Sign &amp; submit</button>'+
+      '</div>';
+  }
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+async function generateSoapFromSession(){
+  if(soapState.generating) return;
+  soapState.generating = true;
+  renderSoapEditor();
+  try {
+    // Pull session data: trials, behaviors, session_targets, phase changes
+    var sessionId = soapState.sessionId;
+    var stR = await sb.from('session_targets').select('target_id,planned_trials,targets(id,name,target_type,operational_definition)').eq('session_id', sessionId);
+    var trR = await sb.from('trials').select('target_id,prompt_level,response,target_step_id').eq('session_id', sessionId).is('superseded_by', null).is('ioa_observer_id', null);
+    var brR = await sb.from('behavior_recordings').select('behavior_definition_id,recording_type,count,duration_seconds,interval_data,function_category,notes,behavior_definitions(name)').eq('session_id', sessionId).is('superseded_by', null);
+    var trialsByTarget = {};
+    (trR.data || []).forEach(function(t){
+      if(!trialsByTarget[t.target_id]) trialsByTarget[t.target_id] = { total: 0, correct: 0, independent: 0 };
+      var b = trialsByTarget[t.target_id];
+      b.total += 1;
+      if(t.response === 'correct') b.correct += 1;
+      if(t.prompt_level === 'independent') b.independent += 1;
+    });
+    var targetSummary = (stR.data || []).map(function(row){
+      var t = row.targets || {};
+      var stats = trialsByTarget[row.target_id] || { total: 0, correct: 0, independent: 0 };
+      var pctCorrect = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
+      var pctIndep = stats.total > 0 ? Math.round((stats.independent / stats.total) * 100) : 0;
+      return '- '+t.name+' ('+t.target_type+'): '+stats.total+' trials run, '+pctCorrect+'% correct, '+pctIndep+'% independent';
+    }).join('\n');
+    var behaviorsByDef = {};
+    (brR.data || []).forEach(function(br){
+      var k = br.behavior_definition_id;
+      if(!behaviorsByDef[k]) behaviorsByDef[k] = { name: (br.behavior_definitions && br.behavior_definitions.name) || '', count: 0, duration: 0, intervals: 0, abc: 0, fcByFunc: {} };
+      var b = behaviorsByDef[k];
+      if(br.recording_type === 'frequency') b.count += (br.count || 0);
+      else if(br.recording_type === 'duration') b.duration += (br.duration_seconds || 0);
+      else if(br.recording_type === 'interval' && br.interval_data) b.intervals += (br.interval_data.results || []).filter(function(x){return x}).length;
+      else if(br.recording_type === 'abc'){
+        b.abc += 1;
+        if(br.function_category){ b.fcByFunc[br.function_category] = (b.fcByFunc[br.function_category] || 0) + 1; }
+      }
+    });
+    var behaviorSummary = Object.values(behaviorsByDef).map(function(b){
+      var parts = [];
+      if(b.count) parts.push(b.count + ' occurrences');
+      if(b.duration) parts.push((b.duration/60).toFixed(1) + ' min total');
+      if(b.intervals) parts.push(b.intervals + ' interval occurrences');
+      if(b.abc){
+        var fnStr = Object.keys(b.fcByFunc).map(function(f){ return f+'='+b.fcByFunc[f]; }).join(', ');
+        parts.push(b.abc + ' ABC entries' + (fnStr ? ' (functions: '+fnStr+')' : ''));
+      }
+      return '- '+b.name+': '+parts.join('; ');
+    }).join('\n') || '(none recorded)';
+    var s = soapState.session;
+    var childName = s.practice_clients.children.name;
+    var startedAt = new Date(s.start_time);
+    var durMin = s.end_time ? Math.round((new Date(s.end_time) - startedAt) / 60000) : 0;
+    var prompt = 'Write a clinical SOAP note for an ABA session. Output STRICTLY in this format with no other text:\n\n'+
+      '===SUBJECTIVE===\n[2-3 sentences about caregiver report / child\x27s presentation at session start. Note the child was '+(s.parent_present?'with parent present':'in standard session')+'.]\n\n'+
+      '===OBJECTIVE===\n[Concrete session data — write 3-5 sentences summarizing the trial counts, % correct, prompt-level distribution, and behavior occurrences below. Use third-person clinical language.]\n\n'+
+      '===ASSESSMENT===\n[3-4 sentences interpreting the data clinically: progress vs targets, behavior reduction/increase trends, generalization observations.]\n\n'+
+      '===PLAN===\n[3-4 sentences on next steps: which targets to continue, prompt level adjustments, BIP changes if behaviors trending up, next session focus.]\n\n'+
+      'Session context:\n'+
+      '- Client: '+childName+'\n'+
+      '- Date: '+startedAt.toLocaleDateString()+'\n'+
+      '- Duration: '+durMin+' minutes\n'+
+      '- Location: '+(s.location||'unspecified')+'\n'+
+      '- CPT: '+(s.cpt_code||'unspecified')+'\n\n'+
+      'Targets run this session:\n'+(targetSummary || '(no targets recorded)')+'\n\n'+
+      'Behaviors recorded this session:\n'+behaviorSummary;
+    var r = await authFetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1200,
+        system: 'You are a clinical documentation assistant for Board Certified Behavior Analysts (BCBAs). Generate professional, insurance-ready SOAP notes from ABA session data. Use clinical ABA terminology. Third person. Specific behavioral observations. Always output ALL FOUR sections separated by ===SUBJECTIVE=== ===OBJECTIVE=== ===ASSESSMENT=== ===PLAN=== markers exactly as shown — never omit a section.',
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    var d = await r.json();
+    var text = '';
+    if(d.content) for(var i=0;i<d.content.length;i++) if(d.content[i].text) text += d.content[i].text;
+    // Parse into 4 sections
+    function extract(marker, nextMarker){
+      var idx = text.indexOf('==='+marker+'===');
+      if(idx < 0) return '';
+      var start = idx + ('==='+marker+'===').length;
+      var endIdx = nextMarker ? text.indexOf('==='+nextMarker+'===', start) : text.length;
+      if(endIdx < 0) endIdx = text.length;
+      return text.substring(start, endIdx).trim();
+    }
+    var sub = extract('SUBJECTIVE', 'OBJECTIVE');
+    var obj = extract('OBJECTIVE', 'ASSESSMENT');
+    var asm = extract('ASSESSMENT', 'PLAN');
+    var pln = extract('PLAN', null);
+    if(!sub && !obj && !asm && !pln){
+      // Parsing failed -- dump raw into Objective as fallback
+      obj = text;
+    }
+    if(!soapState.note) soapState.note = {};
+    soapState.note.soap_subjective = sub;
+    soapState.note.soap_objective = obj;
+    soapState.note.soap_assessment = asm;
+    soapState.note.soap_plan = pln;
+    soapState.generating = false;
+    renderSoapEditor();
+    showToast('SOAP draft generated — review before signing');
+  } catch(e){
+    console.error('SOAP gen error', e);
+    soapState.generating = false;
+    renderSoapEditor();
+    showToast('Could not generate. Try again.');
+  }
+}
+
+async function saveSoap(quiet){
+  var payload = {
+    soap_subjective: document.getElementById('soap_subjective').value.trim() || null,
+    soap_objective: document.getElementById('soap_objective').value.trim() || null,
+    soap_assessment: document.getElementById('soap_assessment').value.trim() || null,
+    soap_plan: document.getElementById('soap_plan').value.trim() || null
+  };
+  if(soapState.noteId){
+    var upd = await sb.from('session_notes').update(payload).eq('id', soapState.noteId);
+    if(upd.error){ if(!quiet) showToast(upd.error.message); return false; }
+  } else {
+    // Look up child_id via practice_clients
+    var s = soapState.session;
+    var insertPayload = Object.assign({
+      provider_id: S.user.id,
+      child_id: s.practice_clients.child_id,
+      session_id: soapState.sessionId,
+      session_date: new Date(s.start_time).toISOString().slice(0,10),
+      duration_minutes: s.end_time ? Math.round((new Date(s.end_time) - new Date(s.start_time))/60000) : null,
+      cpt_code: s.cpt_code || null,
+      session_type: 'session',
+      shared_with_parent: false,
+      billing_status: 'draft'
+    }, payload);
+    var ins = await sb.from('session_notes').insert(insertPayload).select().single();
+    if(ins.error){ if(!quiet) showToast(ins.error.message); return false; }
+    soapState.noteId = ins.data.id;
+    soapState.note = ins.data;
+  }
+  if(!quiet) showToast('Draft saved');
+  return true;
+}
+
+function openSignSoap(){
+  var name = prompt('Type your full name to sign this SOAP note:');
+  if(!name) return;
+  signSoap(name.trim());
+}
+
+async function signSoap(name){
+  // Save first
+  var ok = await saveSoap(true);
+  if(!ok){ showToast('Could not save before signing — try again'); return; }
+  var role = S.practiceMember.role;
+  var upd = await sb.from('session_notes').update({
+    signed_at: new Date().toISOString(),
+    signed_by_name: name,
+    signed_by_role: role,
+    billing_status: 'submitted'
+  }).eq('id', soapState.noteId);
+  if(upd.error){ showToast(upd.error.message); return; }
+  soapState.signed = true;
+  if(!soapState.note) soapState.note = {};
+  soapState.note.signed_at = new Date().toISOString();
+  soapState.note.signed_by_name = name;
+  soapState.note.signed_by_role = role;
+  showToast('Signed and submitted for billing');
+  renderSoapEditor();
 }
 
 async function submitSession(){
