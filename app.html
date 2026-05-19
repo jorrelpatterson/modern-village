@@ -822,6 +822,15 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     <div class="overlay-inner" id="myBcbaContent" style="padding-bottom:80px"></div>
   </div>
 
+  <!-- BEHAVIOR DASHBOARD (BCBA) -->
+  <div id="behaviorDashboardPage" class="overlay-page">
+    <div class="overlay-header">
+      <button class="overlay-back" onclick="closeOverlay('behaviorDashboardPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <h2 class="overlay-title" id="bdTitle">Behavior</h2>
+    </div>
+    <div class="overlay-inner" id="behaviorDashboardContent" style="padding-bottom:80px"></div>
+  </div>
+
   <!-- BEHAVIOR SUMMARY (teachers) -->
   <div id="behaviorSummaryPage" class="overlay-page">
     <div class="overlay-hdr">
@@ -2898,7 +2907,182 @@ async function deleteLibraryItem(kind, id){
 function closeLibrariesModal(){
   document.getElementById('librariesModal').style.display = 'none';
 }
-function openBehaviorDashboard(id){ alert('Behavior dashboard lands in Task 6'); }
+var behaviorDashState = { behaviorId: null, behavior: null, tab: 'trend', combined: false };
+
+async function openBehaviorDashboard(behaviorId){
+  behaviorDashState = { behaviorId: behaviorId, behavior: null, tab: 'trend', combined: false };
+  document.getElementById('behaviorDashboardPage').classList.add('open');
+  var r = await sb.from('behavior_definitions').select('id,name,operational_definition,recording_type,classification').eq('id', behaviorId).single();
+  if(r.error){ showToast(r.error.message); return; }
+  behaviorDashState.behavior = r.data;
+  document.getElementById('bdTitle').textContent = r.data.name;
+  await renderBehaviorDashboard();
+}
+
+function switchBehaviorDashTab(tab){
+  behaviorDashState.tab = tab;
+  renderBehaviorDashboard();
+}
+
+function toggleBehaviorDashCombined(){
+  behaviorDashState.combined = !behaviorDashState.combined;
+  renderBehaviorDashboard();
+}
+
+async function renderBehaviorDashboard(){
+  var el = document.getElementById('behaviorDashboardContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
+  var combined = behaviorDashState.combined;
+  var tabBar = '<div style="max-width:880px;margin:0 auto"><div style="display:flex;gap:0;border-bottom:1px solid var(--sand);margin-bottom:14px">'+
+    ['trend','abc','recent'].map(function(t){
+      var label = t === 'trend' ? 'Trend' : t === 'abc' ? 'ABC' : 'Recent';
+      var active = behaviorDashState.tab === t;
+      return '<button onclick="switchBehaviorDashTab(\x27'+t+'\x27)" style="padding:10px 16px;background:none;border:none;border-bottom:3px solid '+(active?'var(--sage-dark)':'transparent')+';color:'+(active?'var(--sage-dark)':'var(--warm-gray)')+';font-weight:700;font-size:14px;cursor:pointer">'+label+'</button>';
+    }).join('')+
+    '</div>'+
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px"><div style="font-size:12px;color:var(--warm-gray)">View:</div>'+
+    '<button onclick="toggleBehaviorDashCombined()" style="padding:6px 12px;border-radius:14px;border:2px solid '+(!combined?'var(--sage-dark)':'var(--sand)')+';background:'+(!combined?'var(--sage-light)':'white')+';color:'+(!combined?'var(--sage-dark)':'var(--warm-gray)')+';font-size:12px;font-weight:700;cursor:pointer">This behavior</button>'+
+    '<button onclick="toggleBehaviorDashCombined()" style="padding:6px 12px;border-radius:14px;border:2px solid '+(combined?'var(--sage-dark)':'var(--sand)')+';background:'+(combined?'var(--sage-light)':'white')+';color:'+(combined?'var(--sage-dark)':'var(--warm-gray)')+';font-size:12px;font-weight:700;cursor:pointer">All challenging behaviors</button>'+
+    '</div>';
+  if(behaviorDashState.tab === 'trend'){
+    tabBar += await renderTrendTab(combined);
+  } else if(behaviorDashState.tab === 'recent'){
+    tabBar += await renderRecentTab(combined);
+  } else {
+    tabBar += '<div style="padding:30px;text-align:center;color:var(--warm-gray)">ABC charts land in Task 7.</div>';
+  }
+  tabBar += '</div>';
+  el.innerHTML = tabBar;
+}
+
+async function renderTrendTab(combined){
+  var b = behaviorDashState.behavior;
+  var defIds = combined ? null : [b.id];
+  if(combined){
+    var allR = await sb.from('behavior_definitions').select('id,name').eq('practice_client_id', currentClient.id).eq('classification', 'challenging').eq('status', 'active');
+    defIds = (allR.data || []).map(function(d){ return d.id; });
+    if(defIds.length === 0) return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">No challenging behaviors yet.</div>';
+  }
+  var recR = await sb.from('behavior_recordings')
+    .select('behavior_definition_id,recording_type,count,duration_seconds,interval_data,timestamp,session_id,behavior_definitions(name)')
+    .in('behavior_definition_id', defIds)
+    .is('superseded_by', null)
+    .order('timestamp', { ascending: true });
+  if(recR.error) return '<div style="padding:20px;color:var(--terracotta)">'+esc(recR.error.message)+'</div>';
+  if(!recR.data || recR.data.length === 0) return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">No data yet. Records collected in active sessions will appear here.</div>';
+  var bySession = {};
+  recR.data.forEach(function(r){
+    if(!bySession[r.session_id]){
+      bySession[r.session_id] = { timestamp: r.timestamp, defs: {} };
+    }
+    if(r.timestamp < bySession[r.session_id].timestamp) bySession[r.session_id].timestamp = r.timestamp;
+    var defKey = r.behavior_definition_id;
+    if(!bySession[r.session_id].defs[defKey]){
+      bySession[r.session_id].defs[defKey] = { name: r.behavior_definitions ? r.behavior_definitions.name : '', value: 0 };
+    }
+    var d = bySession[r.session_id].defs[defKey];
+    if(r.recording_type === 'frequency' || r.recording_type === 'abc') d.value += (r.count || (r.recording_type === 'abc' ? 1 : 0));
+    else if(r.recording_type === 'duration') d.value += (r.duration_seconds || 0);
+    else if(r.recording_type === 'interval' && r.interval_data) d.value += (r.interval_data.results || []).filter(function(x){ return x; }).length;
+  });
+  var sessions = Object.keys(bySession).map(function(sid){ return Object.assign({ session_id: sid }, bySession[sid]); }).sort(function(a,b){ return new Date(a.timestamp) - new Date(b.timestamp); });
+  var seriesByDef = {};
+  defIds.forEach(function(did){ seriesByDef[did] = { name: '', points: [] }; });
+  sessions.forEach(function(s){
+    defIds.forEach(function(did){
+      var d = s.defs[did];
+      if(d){ seriesByDef[did].name = d.name; seriesByDef[did].points.push({ x: new Date(s.timestamp).getTime(), y: d.value }); }
+      else { seriesByDef[did].points.push({ x: new Date(s.timestamp).getTime(), y: 0 }); }
+    });
+  });
+  var w = 760, hht = 240, padL = 40, padR = 12, padT = 16, padB = 28;
+  var allYs = [];
+  Object.keys(seriesByDef).forEach(function(did){ seriesByDef[did].points.forEach(function(p){ allYs.push(p.y); }); });
+  var maxY = Math.max.apply(null, allYs.length ? allYs : [10]);
+  if(maxY === 0) maxY = 1;
+  var allXs = sessions.map(function(s){ return new Date(s.timestamp).getTime(); });
+  var minX = Math.min.apply(null, allXs);
+  var maxX = Math.max.apply(null, allXs);
+  if(maxX === minX) maxX = minX + 1;
+  var colors = ['#7A9E7E','#C97B5C','#7B9BB8','#B59C7A','#9D7BB8'];
+  var paths = '';
+  Object.keys(seriesByDef).forEach(function(did, idx){
+    var s = seriesByDef[did];
+    var color = colors[idx % colors.length];
+    var pathD = s.points.map(function(p, i){
+      var x = padL + ((p.x - minX) / (maxX - minX)) * (w - padL - padR);
+      var y = hht - padB - ((p.y / maxY) * (hht - padT - padB));
+      return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    paths += '<path d="'+pathD+'" fill="none" stroke="'+color+'" stroke-width="2"/>';
+    s.points.forEach(function(p){
+      var x = padL + ((p.x - minX) / (maxX - minX)) * (w - padL - padR);
+      var y = hht - padB - ((p.y / maxY) * (hht - padT - padB));
+      paths += '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="'+color+'"/>';
+    });
+  });
+  var axes = '<line x1="'+padL+'" y1="'+(hht-padB)+'" x2="'+(w-padR)+'" y2="'+(hht-padB)+'" stroke="var(--warm-gray-light)" stroke-width="1"/>'+
+    '<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(hht-padB)+'" stroke="var(--warm-gray-light)" stroke-width="1"/>'+
+    '<text x="'+(padL-6)+'" y="'+padT+'" text-anchor="end" font-size="10" fill="var(--warm-gray)" alignment-baseline="middle">'+maxY+'</text>'+
+    '<text x="'+(padL-6)+'" y="'+(hht-padB)+'" text-anchor="end" font-size="10" fill="var(--warm-gray)" alignment-baseline="middle">0</text>'+
+    '<text x="'+padL+'" y="'+(hht-padB+18)+'" text-anchor="start" font-size="10" fill="var(--warm-gray)">'+new Date(minX).toLocaleDateString()+'</text>'+
+    '<text x="'+(w-padR)+'" y="'+(hht-padB+18)+'" text-anchor="end" font-size="10" fill="var(--warm-gray)">'+new Date(maxX).toLocaleDateString()+'</text>';
+  var legend = '';
+  if(combined){
+    legend = '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12px">';
+    Object.keys(seriesByDef).forEach(function(did, idx){
+      var s = seriesByDef[did];
+      var color = colors[idx % colors.length];
+      legend += '<div style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:3px;background:'+color+';display:inline-block"></span>'+esc(s.name)+'</div>';
+    });
+    legend += '</div>';
+  }
+  var yLabel = b.recording_type === 'duration' ? 'seconds' : (b.recording_type === 'interval' ? 'occurrences' : 'count');
+  return '<div style="background:white;border:1px solid var(--sand);border-radius:14px;padding:14px"><div style="font-size:12px;color:var(--warm-gray);margin-bottom:8px">'+sessions.length+' sessions · y-axis: '+yLabel+' per session</div>'+
+    '<svg width="100%" viewBox="0 0 '+w+' '+hht+'" preserveAspectRatio="xMidYMid meet">'+axes+paths+'</svg>'+
+    legend+
+    '</div>';
+}
+
+async function renderRecentTab(combined){
+  var b = behaviorDashState.behavior;
+  var defIds = combined ? null : [b.id];
+  if(combined){
+    var allR = await sb.from('behavior_definitions').select('id').eq('practice_client_id', currentClient.id).eq('classification', 'challenging').eq('status', 'active');
+    defIds = (allR.data || []).map(function(d){ return d.id; });
+    if(defIds.length === 0) return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">No challenging behaviors yet.</div>';
+  }
+  var r = await sb.from('behavior_recordings')
+    .select('id,recording_type,count,duration_seconds,interval_data,function_category,notes,timestamp,behavior_definitions(name),observer:practice_members!observer_id(profiles(name,email)),sessions(start_time)')
+    .in('behavior_definition_id', defIds)
+    .is('superseded_by', null)
+    .order('timestamp', { ascending: false })
+    .limit(30);
+  if(r.error) return '<div style="padding:20px;color:var(--terracotta)">'+esc(r.error.message)+'</div>';
+  if(!r.data || r.data.length === 0) return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">No recordings yet.</div>';
+  var h = '<div style="display:flex;flex-direction:column;gap:6px">';
+  r.data.forEach(function(rec){
+    var when = new Date(rec.timestamp).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+    var obs = rec.observer && rec.observer.profiles ? (rec.observer.profiles.name || rec.observer.profiles.email) : '';
+    var defName = rec.behavior_definitions ? rec.behavior_definitions.name : '';
+    var raw = '';
+    if(rec.recording_type === 'frequency') raw = (rec.count || 0) + ' occurrences';
+    else if(rec.recording_type === 'duration') raw = (rec.duration_seconds || 0) + ' seconds';
+    else if(rec.recording_type === 'interval' && rec.interval_data){
+      var occ = (rec.interval_data.results || []).filter(function(x){ return x; }).length;
+      raw = occ + '/' + (rec.interval_data.results || []).length + ' intervals';
+    } else if(rec.recording_type === 'abc'){
+      raw = 'ABC' + (rec.function_category ? ' · '+rec.function_category : '');
+    }
+    h += '<div style="padding:10px 14px;border:1px solid var(--sand);border-radius:10px;background:white">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:700;font-size:13px">'+esc(defName)+' · '+raw+'</div><div style="font-size:11px;color:var(--warm-gray)">'+when+'</div></div>'+
+      (rec.notes ? '<div style="font-size:11px;color:var(--warm-gray);margin-top:4px;white-space:pre-wrap">'+esc(rec.notes)+'</div>' : '')+
+      (obs ? '<div style="font-size:10px;color:var(--warm-gray-light);margin-top:4px">'+esc(obs)+'</div>' : '')+
+      '</div>';
+  });
+  h += '</div>';
+  return h;
+}
 
 function renderProgramGroup(label, list, canWrite){
   var h = '<div class="label" style="margin-top:18px;margin-bottom:8px">'+label+'</div>';
