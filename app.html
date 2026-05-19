@@ -3643,14 +3643,33 @@ function renderBehaviorOverlay(){
   } else if(behaviorOverlayState.mode === 'abc'){
     title.textContent = behaviorOverlayState.current.name;
     var bo = behaviorOverlayState;
-    if(!bo.abc) bo.abc = { antecedent: '', consequence: '', function_category: '', notes: '' };
+    if(!bo.abc) bo.abc = { antecedent_id: '', antecedent_text: '', consequence_id: '', consequence_text: '', function_category: '', notes: '' };
+    if(!bo.libraries){
+      Promise.all([
+        sb.from('behavior_antecedents').select('id,name').or('practice_id.eq.'+S.practiceMember.practice_id+',practice_client_id.eq.'+activeSession.practice_client_id).order('name'),
+        sb.from('behavior_consequences').select('id,name').or('practice_id.eq.'+S.practiceMember.practice_id+',practice_client_id.eq.'+activeSession.practice_client_id).order('name')
+      ]).then(function(rs){
+        bo.libraries = { antecedents: rs[0].data || [], consequences: rs[1].data || [] };
+        renderBehaviorOverlay();
+      });
+      el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--warm-gray)">Loading libraries…</div>';
+      return;
+    }
+    var antOpts = '<option value="">— Select —</option>' +
+      bo.libraries.antecedents.map(function(a){ return '<option value="'+a.id+'"'+(bo.abc.antecedent_id===a.id?' selected':'')+'>'+esc(a.name)+'</option>'; }).join('') +
+      '<option value="__other"'+(bo.abc.antecedent_id==='__other'?' selected':'')+'>Other (free-text)</option>';
+    var consOpts = '<option value="">— Select —</option>' +
+      bo.libraries.consequences.map(function(c){ return '<option value="'+c.id+'"'+(bo.abc.consequence_id===c.id?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('') +
+      '<option value="__other"'+(bo.abc.consequence_id==='__other'?' selected':'')+'>Other (free-text)</option>';
     el.innerHTML = '<div style="padding:0 4px">'+
       '<label class="fl">Antecedent (what happened just before)</label>'+
-      '<textarea id="boAnt" class="fi" rows="2" placeholder="e.g. Asked to come to table">'+esc(bo.abc.antecedent)+'</textarea>'+
+      '<select id="boAntPick" class="fi" onchange="onAbcAntPick(this.value)">'+antOpts+'</select>'+
+      (bo.abc.antecedent_id === '__other' ? '<textarea id="boAntText" class="fi" rows="2" style="margin-top:6px" placeholder="Describe…">'+esc(bo.abc.antecedent_text)+'</textarea>' : '')+
       '<label class="fl" style="margin-top:10px">Behavior</label>'+
       '<div style="padding:10px;background:var(--cream);border-radius:10px;font-size:13px"><strong>'+esc(bo.current.name)+'</strong><br><span style="color:var(--warm-gray);font-size:11px">'+esc(bo.current.operational_definition || '')+'</span></div>'+
       '<label class="fl" style="margin-top:10px">Consequence (what happened after)</label>'+
-      '<textarea id="boCons" class="fi" rows="2" placeholder="e.g. Given iPad to calm down">'+esc(bo.abc.consequence)+'</textarea>'+
+      '<select id="boConsPick" class="fi" onchange="onAbcConsPick(this.value)">'+consOpts+'</select>'+
+      (bo.abc.consequence_id === '__other' ? '<textarea id="boConsText" class="fi" rows="2" style="margin-top:6px" placeholder="Describe…">'+esc(bo.abc.consequence_text)+'</textarea>' : '')+
       '<label class="fl" style="margin-top:10px">Function</label>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">'+
         ['tangible','escape','attention','sensory'].map(function(f){
@@ -3805,6 +3824,18 @@ async function behaviorIntervalSave(){
   renderActiveSession();
 }
 
+function onAbcAntPick(value){
+  behaviorOverlayState.abc.antecedent_id = value;
+  if(value !== '__other') behaviorOverlayState.abc.antecedent_text = '';
+  renderBehaviorOverlay();
+}
+
+function onAbcConsPick(value){
+  behaviorOverlayState.abc.consequence_id = value;
+  if(value !== '__other') behaviorOverlayState.abc.consequence_text = '';
+  renderBehaviorOverlay();
+}
+
 function behaviorAbcFn(fn){
   behaviorOverlayState.abc.function_category = fn;
   renderBehaviorOverlay();
@@ -3812,27 +3843,34 @@ function behaviorAbcFn(fn){
 
 async function behaviorAbcSave(){
   var bo = behaviorOverlayState;
-  bo.abc.antecedent = document.getElementById('boAnt').value.trim();
-  bo.abc.consequence = document.getElementById('boCons').value.trim();
+  if(bo.abc.antecedent_id === '__other') bo.abc.antecedent_text = document.getElementById('boAntText').value.trim();
+  if(bo.abc.consequence_id === '__other') bo.abc.consequence_text = document.getElementById('boConsText').value.trim();
   bo.abc.notes = document.getElementById('boNotes').value.trim();
-  if(!bo.abc.antecedent && !bo.abc.consequence && !bo.abc.function_category){
-    showToast('Fill at least one field');
-    return;
+  var hasAny = bo.abc.antecedent_id || bo.abc.consequence_id || bo.abc.function_category;
+  if(!hasAny){ showToast('Fill at least one field'); return; }
+  var payload = {
+    session_id: activeSession.id,
+    behavior_definition_id: bo.current.id,
+    observer_id: S.practiceMember.id,
+    recording_type: 'abc',
+    function_category: bo.abc.function_category || null,
+    client_uuid: mvUuid()
+  };
+  if(bo.abc.antecedent_id && bo.abc.antecedent_id !== '__other'){
+    payload.antecedent_id = bo.abc.antecedent_id;
   }
-  mvOffline.enqueue({
-    table: 'behavior_recordings',
-    payload: {
-      session_id: activeSession.id,
-      behavior_definition_id: bo.current.id,
-      observer_id: S.practiceMember.id,
-      recording_type: 'abc',
-      function_category: bo.abc.function_category || null,
-      notes: 'A: ' + bo.abc.antecedent + '\nC: ' + bo.abc.consequence + (bo.abc.notes ? '\nNotes: ' + bo.abc.notes : ''),
-      client_uuid: mvUuid()
-    }
-  });
+  if(bo.abc.consequence_id && bo.abc.consequence_id !== '__other'){
+    payload.consequence_id = bo.abc.consequence_id;
+  }
+  var notesParts = [];
+  if(bo.abc.antecedent_id === '__other' && bo.abc.antecedent_text) notesParts.push('A: ' + bo.abc.antecedent_text);
+  if(bo.abc.consequence_id === '__other' && bo.abc.consequence_text) notesParts.push('C: ' + bo.abc.consequence_text);
+  if(bo.abc.notes) notesParts.push(bo.abc.notes);
+  if(notesParts.length) payload.notes = notesParts.join('\n');
+  mvOffline.enqueue({ table: 'behavior_recordings', payload: payload });
   activeSession.last_behavior_label = bo.current.name + ' (ABC)';
   bo.abc = null;
+  bo.libraries = null;
   closeBehaviorOverlay();
   renderActiveSession();
 }
