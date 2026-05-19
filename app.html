@@ -1277,6 +1277,14 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   </div>
 </div>
 
+<div id="practiceOnboardingPage" class="overlay-page">
+  <div class="overlay-header">
+    <button class="overlay-back" onclick="closeOverlay('practiceOnboardingPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2 class="overlay-title">Set up your practice</h2>
+  </div>
+  <div class="overlay-inner" id="practiceOnboardingContent" style="padding-bottom:80px"></div>
+</div>
+
 <script>
 // ═══ SUPABASE INIT ═══
 var SUPA_URL = "https://jrsiqjfwvunrjiihnsgc.supabase.co";
@@ -1754,7 +1762,78 @@ var BADGE_COLORS = {"Village Elder":"#7A9E7E","New Member":"#C4B8A8","Advocate":
 function showToast(m){var e=document.querySelector('.toast');if(e)e.remove();var t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.classList.add('out')},2000);setTimeout(function(){t.remove()},2500)}
 
 // ═══ BCBA PRACTICE STUBS (replaced in Tasks 5-15) ═══
-function openPracticeOnboarding(){ alert('Practice onboarding coming in Task 5'); }
+var onboardingState = { step: 1, name: '', taxId: '', groupNpi: '' };
+
+function openPracticeOnboarding(){
+  if(S.practiceMember){ showToast('You are already part of a practice.'); return; }
+  onboardingState = { step: 1, name: '', taxId: '', groupNpi: '' };
+  document.getElementById('practiceOnboardingPage').classList.add('open');
+  renderOnboardingStep();
+}
+
+function renderOnboardingStep(){
+  var el = document.getElementById('practiceOnboardingContent');
+  if(onboardingState.step === 1){
+    el.innerHTML =
+      '<div style="max-width:520px;margin:0 auto">'+
+      '<div style="font-size:13px;color:var(--warm-gray);font-weight:700;margin-bottom:8px">STEP 1 OF 2</div>'+
+      '<h3 style="font-family:Fraunces,serif;font-size:24px;margin-bottom:6px">Tell us about your practice</h3>'+
+      '<p style="color:var(--warm-gray);margin-bottom:24px">This unlocks the BCBA data collection module. 30-day free trial.</p>'+
+      '<label class="fl">Practice name *</label>'+
+      '<input id="onbName" class="fi" placeholder="e.g. Ariana Behavior Services" value="'+esc(onboardingState.name)+'">'+
+      '<label class="fl" style="margin-top:14px">Group NPI (optional)</label>'+
+      '<input id="onbNpi" class="fi" placeholder="10-digit NPI" value="'+esc(onboardingState.groupNpi)+'">'+
+      '<label class="fl" style="margin-top:14px">Tax ID / EIN (optional)</label>'+
+      '<input id="onbTax" class="fi" placeholder="XX-XXXXXXX" value="'+esc(onboardingState.taxId)+'">'+
+      '<button class="btn btn-p" style="width:100%;margin-top:24px" onclick="onboardingNext()">Continue &rarr;</button>'+
+      '</div>';
+  } else if(onboardingState.step === 2){
+    el.innerHTML =
+      '<div style="max-width:520px;margin:0 auto">'+
+      '<div style="font-size:13px;color:var(--warm-gray);font-weight:700;margin-bottom:8px">STEP 2 OF 2</div>'+
+      '<h3 style="font-family:Fraunces,serif;font-size:24px;margin-bottom:6px">Invite your team (optional)</h3>'+
+      '<p style="color:var(--warm-gray);margin-bottom:24px">You can invite BCBAs and RBTs now or later from the Members page.</p>'+
+      '<button class="btn btn-p" style="width:100%" onclick="completeOnboarding()">Finish &mdash; I\x27ll invite later</button>'+
+      '<button class="btn btn-s" style="width:100%;margin-top:10px" onclick="completeOnboarding(true)">Finish &amp; go to Members page</button>'+
+      '</div>';
+  }
+}
+
+function onboardingNext(){
+  var name = document.getElementById('onbName').value.trim();
+  if(!name){ showToast('Practice name is required'); return; }
+  onboardingState.name = name;
+  onboardingState.groupNpi = document.getElementById('onbNpi').value.trim();
+  onboardingState.taxId = document.getElementById('onbTax').value.trim();
+  onboardingState.step = 2;
+  renderOnboardingStep();
+}
+
+async function completeOnboarding(goToMembers){
+  var btns = document.querySelectorAll('#practiceOnboardingContent button');
+  for(var i=0;i<btns.length;i++) btns[i].disabled = true;
+  var pR = await sb.from('practices').insert({
+    name: onboardingState.name,
+    owner_id: S.user.id,
+    group_npi: onboardingState.groupNpi || null,
+    tax_id: onboardingState.taxId || null
+  }).select().single();
+  if(pR.error){ showToast('Could not create practice: '+pR.error.message); for(var i=0;i<btns.length;i++) btns[i].disabled = false; return; }
+  var mR = await sb.from('practice_members').insert({
+    practice_id: pR.data.id,
+    user_id: S.user.id,
+    role: 'owner_bcba',
+    active: true,
+    accepted_at: new Date().toISOString()
+  });
+  if(mR.error){ showToast('Could not add you as owner: '+mR.error.message); return; }
+  auditLog('create_practice', 'practices', pR.data.id, { name: pR.data.name });
+  await loadProfile();
+  closeOverlay('practiceOnboardingPage');
+  if(goToMembers) openPracticeMembers();
+  else openPracticeDashboard();
+  showToast('Practice created — welcome.');
+}
 function openPracticeDashboard(){ alert('Practice dashboard coming next'); }
 function openPracticeMembers(){ alert('Practice members coming next'); }
 function openPracticeClients(){ alert('Practice clients coming next'); }
