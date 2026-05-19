@@ -1,6 +1,6 @@
 # Modern Village — Complete Testing Guide
 
-**Last updated:** 2026-05-06
+**Last updated:** 2026-05-18
 **URL:** https://modernvillage.app/app.html
 **Admin:** https://modernvillage.app/admin.html
 **District Portal:** https://modernvillage.app/district-admin.html
@@ -225,6 +225,23 @@
 - [ ] Sidebar shows: Billing Dashboard, My Payers, Care Team Notes
 - [ ] Billing Dashboard: all clients' claims overview
 - [ ] My Payers: manage payer enrollments (add/remove insurance companies)
+
+### Practice (BCBA Data Collection — sub-project #1)
+
+Sign in as `testprovider@modernvillage.app` / `TestProvider123!`.
+
+- [ ] Sidebar shows "Set up Practice" highlighted (when no practice exists)
+- [ ] Onboarding wizard creates a practice; sidebar updates to show Dashboard/Members/Clients/Curriculum/Settings
+- [ ] Members page lists the owner; invite modal sends email via worker `/practice/invite-member`
+- [ ] Invite link with `?practice_invite=<token>` activates the pending member (test with `testcaregiver@modernvillage.app`)
+- [ ] Add Client searches by parent email, picks child, sets service type and primary BCBA; child_access row auto-created with practice_id
+- [ ] Discharge captures optional reason and sets practice_clients.status='discharged'
+- [ ] Client detail Programs tab adds program (skill_acquisition / behavior_reduction); archive flips status
+- [ ] Targets editor: DTT renders trials_per_session field, task_analysis reveals step builder, frequency/duration/interval render their respective configs; mastery/baseline/maintenance criteria forms write jsonb correctly
+- [ ] Curriculum browser opens from sidebar (preview only) and from a program ("Add to program" button); adding copies the curriculum_target into targets with library_source FK set
+- [ ] Practice Settings — only the owner_bcba can open it; settings persist to practices.settings jsonb
+- [ ] As testparent — open Supabase SQL editor as authenticated parent; `SELECT * FROM public.v_child_target_progress` returns rows for Maya only; `SELECT count(*) FROM public.trials` returns 0 (RLS blocks)
+- [ ] As testcaregiver (RBT after accepting invite) — INSERT INTO public.programs returns RLS violation
 
 ---
 

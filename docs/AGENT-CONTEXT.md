@@ -1,6 +1,6 @@
 # Agent Context (durable, repo-resident)
 
-**Last updated:** 2026-05-06
+**Last updated:** 2026-05-18
 **Purpose:** Mirrors the per-machine Claude memory at `~/.claude/projects/-Volumes-6268064475-Ai-Projects-modern-village/memory/` into the repo so that when the project moves to a different external drive (or a fresh machine), an incoming agent can rebuild context from this file alone. Memory does NOT travel with the repo. This file does.
 
 If an agent reads this on a new drive: the encoded path in `~/.claude/projects/...` will be different. Re-create memory entries from these contents if helpful.
@@ -47,6 +47,20 @@ ABA-powered parenting platform for neurodivergent families. 9 pillars (AI Coach,
 - Web-only Stripe (no IAP) — keeps margins.
 - California-first, neurodivergent (not autism-only) for 7x market.
 - HIPAA: Supabase BAA + RLS enforces minimum-necessary; child login is COPPA-safe (PIN, no email).
+
+## In-flight work — BCBA Data Collection (Ensora-parity initiative)
+
+**Status as of 2026-05-18:** Foundation (sub-project #1 of 6) **complete** — schema spine, 8 admin screens, RLS, parent read paths, curriculum scaffolding all merged on branch `feat/bcba-data-collection-foundation`. See `docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md` + `docs/superpowers/plans/2026-05-18-bcba-data-collection-foundation.md`.
+
+**Sequence forward:**
+1. **Mini-spec — per-patient Stripe billing** (between Foundation and #2). Wire `practices.stripe_*` fields to a real Stripe checkout + webhook, implement the $10/active-Family-subscriber credit.
+2. **Sub-project #2 — Live Data Entry.** Trial-by-trial session UI, IndexedDB offline sync, IOA collection, parent "My BCBA" read-only tab.
+3. **Sub-project #3 — Behavior Reduction** (structured behavior recording during a session).
+4. **Sub-project #4 — Analysis & Reporting** (per-target graphs with phase change lines).
+5. **Sub-project #5 — Documentation** (SOAP auto-fill from session data, timesheet signatures).
+6. **Sub-project #6 — Curriculum Libraries** (Ariana-authored Starter content drop replacing placeholders, VB-MAPP/ABLLS-R licensing).
+
+**Strategic positioning:** B2B attractor with per-patient pricing, separate Stripe product from $19.99 Family plan, RBT seats free, flywheel via $10/mo credit when a client's parent has a Family subscription. Memory: `project_bcba_data_collection.md`.
 
 ## In-flight work — Email Drips + Continual Optimization
 

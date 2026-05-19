@@ -1,17 +1,33 @@
 # Modern Village — Product Roadmap
 
-**Last updated:** 2026-05-06
+**Last updated:** 2026-05-18
 
 ---
 
-## Currently in flight (2026-05-06)
+## Currently in flight (2026-05-18)
 
+- **BCBA Data Collection — sub-project #1 (Foundation) complete (2026-05-18)** — schema spine + 8 admin screens + parent read paths shipped on branch `feat/bcba-data-collection-foundation`. Awaiting user-run RLS smoke test, parent-view verification, end-to-end smoke walkthrough, and per-patient Stripe billing mini-spec before sub-project #2 (Live Data Entry) starts. Spec: `docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md`. Plan: `docs/superpowers/plans/2026-05-18-bcba-data-collection-foundation.md`.
 - **Email Drips + Continual Optimization** — design spec + 2402-line implementation plan committed (commits `234a7fd`, `4ec6c20`). **Code not started.** Spec: `docs/superpowers/specs/2026-04-16-email-drips-and-optimization-design.md`. Plan: `docs/superpowers/plans/2026-04-16-email-drips-and-optimization.md`. This is the gating tech build before scaling cold outreach to the 16K-lead CRM. See `docs/AGENT-CONTEXT.md` for full state.
 - **Launch prep with Ariana** — testing session walkthrough at `docs/SESSION-WALKTHROUGH-ARIANA.md`, launch strategy at `docs/LAUNCH-STRATEGY.md`. Pre-launch decisions still pending (launch date, who's "the face", pricing posture, content boundaries, crisis protocol).
 
 ---
 
 ## Completed
+
+### BCBA Data Collection — Foundation (2026-05-18)
+**Sub-project #1 of 6** — full initiative: [docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md](docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md)
+
+- [x] Practice tier schema (practices, practice_members, practice_clients) + RLS
+- [x] Clinical spine schema (programs, targets, target_steps, behavior_definitions, behavior_antecedents, behavior_consequences, sessions, trials, behavior_recordings) + RLS
+- [x] Curriculum library scaffolding (curriculum_libraries, curriculum_targets, curriculum_target_steps) + Modern Village Starter seed
+- [x] Existing session_notes.session_id (nullable), child_access.practice_id (nullable)
+- [x] Parent read views (v_child_target_progress) + child_access-scoped RLS
+- [x] Practice onboarding wizard, members management with invite flow, client roster with intake/discharge, programs CRUD, targets editor (5 target types + criteria forms + task analysis), curriculum browser with "Add to program", sessions list placeholder, practice settings
+- [x] Worker endpoint /practice/invite-member + accept-invite URL handler
+
+**Next:** sub-project #2 — Live Data Entry (trial-by-trial UI, IndexedDB sync runtime, IOA collection). Sequenced after a per-patient Stripe billing mini-spec.
+
+Plan: [docs/superpowers/plans/2026-05-18-bcba-data-collection-foundation.md](docs/superpowers/plans/2026-05-18-bcba-data-collection-foundation.md)
 
 ### iOS Capacitor — Full Native Feature Set (2026-04-18)
 **Branch:** `feat/ios-capacitor` (all commits pushed to main, Vercel + Cloudflare + Supabase all live). **TestFlight build 7 live + tested on physical device.**
