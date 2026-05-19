@@ -6,13 +6,28 @@
 
 ## Currently in flight (2026-05-18)
 
-- **BCBA Data Collection — sub-projects #1 (Foundation) and #2 (Live Data Entry) both complete (2026-05-19)** — clinical data collection works end-to-end: BCBA/RBT can start a session, run trials, log behaviors, end + submit + cosign. Parents see "My BCBA" with sparklines. Offline support via IndexedDB. **Next: per-patient Stripe billing mini-spec + sub-project #3 (Behavior Reduction — dedicated ABC graphs, frequency rate trends, behavior dashboard per client).** Spec: `docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md`. Plan: `docs/superpowers/plans/2026-05-18-bcba-live-data-entry.md`.
+- **BCBA Data Collection — sub-projects #1 (Foundation), #2 (Live Data Entry), and #3 (Behavior Reduction) all complete** — clinical workflow end-to-end: setup → live session → trial entry → behavior tracking → per-behavior dashboard with ABC analytics. Parents see "My BCBA" with sparklines. Offline support via IndexedDB. **Next: per-patient Stripe billing mini-spec + sub-project #4 (Analysis & Reporting — the iconic per-target line graphs with phase change lines, technical indicators, annotations).** Spec: `docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md`. Plan: `docs/superpowers/plans/2026-05-18-bcba-live-data-entry.md`.
 - **Email Drips + Continual Optimization** — design spec + 2402-line implementation plan committed (commits `234a7fd`, `4ec6c20`). **Code not started.** Spec: `docs/superpowers/specs/2026-04-16-email-drips-and-optimization-design.md`. Plan: `docs/superpowers/plans/2026-04-16-email-drips-and-optimization.md`. This is the gating tech build before scaling cold outreach to the 16K-lead CRM. See `docs/AGENT-CONTEXT.md` for full state.
 - **Launch prep with Ariana** — testing session walkthrough at `docs/SESSION-WALKTHROUGH-ARIANA.md`, launch strategy at `docs/LAUNCH-STRATEGY.md`. Pre-launch decisions still pending (launch date, who's "the face", pricing posture, content boundaries, crisis protocol).
 
 ---
 
 ## Completed
+
+### BCBA Data Collection — Behavior Reduction (2026-05-20)
+**Sub-project #3 of 6** — spec: [docs/superpowers/specs/2026-05-19-bcba-behavior-reduction-design.md](docs/superpowers/specs/2026-05-19-bcba-behavior-reduction-design.md)
+
+- [x] Migration — 3 indexes for behavior chart queries (no new tables)
+- [x] Client detail tab switcher (Programs / Behaviors)
+- [x] Behaviors list + add/edit/archive modal (challenging vs replacement, optional "pairs with")
+- [x] Antecedent + Consequence library management (practice-wide vs client-scoped)
+- [x] ABC entry upgrade — FK pickers replace #2's free-text inputs; backward-compatible with legacy free-text rows
+- [x] Behavior Dashboard — Trend SVG chart, Recent recordings list, ABC bar charts (top antecedents/consequences/function)
+- [x] Combined view toggle aggregates across challenging behaviors
+
+**Next:** sub-project #4 — Analysis & Reporting (the iconic per-target line graphs with phase change lines, technical indicators, annotations).
+
+Plan: [docs/superpowers/plans/2026-05-19-bcba-behavior-reduction.md](docs/superpowers/plans/2026-05-19-bcba-behavior-reduction.md)
 
 ### BCBA Data Collection — Live Data Entry (2026-05-19)
 **Sub-project #2 of 6** — full initiative spec: [docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md](docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md)

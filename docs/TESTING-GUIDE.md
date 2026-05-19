@@ -286,6 +286,19 @@ Sign in as `testprovider@modernvillage.app` / `TestProvider123!` (must have set 
 - [ ] Page shows: practice/BCBA header, programs in treatment with targets + % correct, SVG sparklines per target, recent sessions list (aggregate)
 - [ ] DevTools `await sb.from('trials').select('*')` returns empty array (RLS blocks row-level access)
 
+### Behavior Reduction (BCBA Data Collection — sub-project #3)
+
+Sign in as `testprovider@modernvillage.app`.
+
+- [ ] Client detail shows tab switcher (Programs / Behaviors)
+- [ ] Behaviors tab: list grouped by classification, "Triggers/consequences" + "+ Add behavior" buttons visible for BCBA
+- [ ] Add behavior modal: name, operational def (≥20), recording type, classification; replacement type shows optional "Pairs with"
+- [ ] Triggers/consequences modal: add/delete antecedents + consequences with practice-wide or client-only scope
+- [ ] In a live session, ABC overlay now shows FK dropdowns + "Other (free-text)" fallback
+- [ ] Saving an ABC entry with library pick → `antecedent_id` / `consequence_id` set on recording row
+- [ ] Behavior Dashboard opens; Trend tab shows line chart; Recent tab lists last 30; ABC tab shows three bar charts
+- [ ] Combined view toggle aggregates across challenging behaviors (multiple chart lines)
+
 ---
 
 ## 3. CAREGIVER TESTING (testcaregiver@modernvillage.app)

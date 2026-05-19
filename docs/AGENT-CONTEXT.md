@@ -50,16 +50,15 @@ ABA-powered parenting platform for neurodivergent families. 9 pillars (AI Coach,
 
 ## In-flight work — BCBA Data Collection (Ensora-parity initiative)
 
-**Status as of 2026-05-19:** Sub-projects #1 (Foundation) and #2 (Live Data Entry) both **complete**. Clinical data collection works end-to-end: BCBA/RBT can start a session, run trials, log behaviors, end + submit + cosign. Parents see "My BCBA" with sparklines. Offline support via IndexedDB.
+**Status as of 2026-05-20:** Sub-projects #1 (Foundation), #2 (Live Data Entry), and #3 (Behavior Reduction) **complete and merged**. Clinical workflow end-to-end: setup → live session → trial entry → behavior tracking → per-behavior dashboard with ABC analytics. Parents see "My BCBA" with sparklines.
 
 **Sequence forward:**
-1. **Mini-spec — per-patient Stripe billing** (before users sign up). Wire `practices.stripe_*` fields to a real Stripe checkout + webhook, implement the $10/active-Family-subscriber credit.
-2. **Sub-project #3 — Behavior Reduction.** Dedicated ABC graphs, frequency rate trends, behavior dashboard per client.
-3. **Sub-project #4 — Analysis & Reporting.** Per-target line graphs with phase change lines, technical indicators (avg, trend line, std dev), annotations. The iconic BCBA chart.
-4. **Sub-project #5 — Documentation.** SOAP note auto-fill from session data; timesheet signatures.
-5. **Sub-project #6 — Curriculum Libraries.** Ariana-authored Starter content replacing placeholders; VB-MAPP / ABLLS-R / PEAK / AFLS licensing.
+1. **Mini-spec — per-patient Stripe billing** (before users sign up).
+2. **Sub-project #4 — Analysis & Reporting.** Per-target line graphs with phase change lines, technical indicators (avg, trend line, std dev), annotations. The iconic BCBA chart.
+3. **Sub-project #5 — Documentation.** SOAP note auto-fill from session data; timesheet signatures.
+4. **Sub-project #6 — Curriculum Libraries.** Ariana-authored Starter content; VB-MAPP / ABLLS-R / PEAK / AFLS licensing.
 
-**Coverage vs Ensora (after #2):** ~85% data model, ~50% UI surface. Setup + live data entry pipeline complete. What's missing: dedicated analysis/reporting screens, SOAP auto-fill, licensed curricula. Approximately 8-10 weeks of build remaining for full parity.
+**Coverage vs Ensora (after #3):** ~90% data model, ~65% UI surface. Behavior reduction workflow now complete: BCBAs can define behaviors, manage antecedent/consequence libraries, see ABC analytics, view per-behavior trends. What's missing for full parity: skill-target line graphs with phase change lines, SOAP auto-fill, licensed curricula.
 
 Memory: `project_bcba_data_collection.md`.
 
