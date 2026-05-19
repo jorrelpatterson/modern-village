@@ -1465,6 +1465,14 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   <div class="overlay-inner" id="sessionSummaryContent" style="padding-bottom:80px"></div>
 </div>
 
+<div id="targetGraphPage" class="overlay-page">
+  <div class="overlay-header">
+    <button class="overlay-back" onclick="closeOverlay('targetGraphPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2 class="overlay-title" id="tgTitle">Target graph</h2>
+  </div>
+  <div class="overlay-inner" id="targetGraphContent" style="padding-bottom:80px"></div>
+</div>
+
 <div id="targetPickerSheet" style="display:none;position:fixed;left:0;right:0;bottom:0;background:white;border-radius:18px 18px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,0.15);padding:20px;z-index:1100;max-height:60vh;overflow-y:auto">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
     <h3 style="font-family:Fraunces,serif;font-size:18px;font-weight:700">Switch target</h3>
@@ -4181,13 +4189,153 @@ async function renderTargets(){
         '<span class="log-tag">'+t.status.replace(/_/g,' ')+'</span>'+
         (t.library_source ? '<span class="log-tag" style="background:var(--lavender)">from library</span>' : '')+
         '</div></div>'+
+        '<div style="display:flex;flex-direction:column;gap:4px">'+
+        '<button class="btn btn-s" style="padding:6px 10px;font-size:11px" onclick="openTargetGraph(\x27'+t.id+'\x27)">Graph &rarr;</button>'+
         (canWrite ? '<button class="btn btn-s" style="padding:6px 10px;font-size:11px" onclick="editTarget(\x27'+t.id+'\x27)">Edit</button>' : '')+
-        '</div></div>';
+        '</div></div></div>';
     });
   }
   h += '</div>';
   el.innerHTML = h;
 }
+
+var targetGraphState = { targetId: null, showAverage: true, showMeanOfDay: false };
+
+async function openTargetGraph(targetId){
+  targetGraphState = { targetId: targetId, showAverage: true, showMeanOfDay: false };
+  document.getElementById('targetGraphPage').classList.add('open');
+  await renderTargetGraph();
+}
+
+async function renderTargetGraph(){
+  var el = document.getElementById('targetGraphContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
+  var tR = await sb.from('targets').select('id,name,target_type,programs(name)').eq('id', targetGraphState.targetId).single();
+  if(tR.error){ el.innerHTML = '<div style="padding:20px;color:var(--terracotta)">'+esc(tR.error.message)+'</div>'; return; }
+  var t = tR.data;
+  document.getElementById('tgTitle').textContent = t.name;
+  var trR = await sb.from('trials')
+    .select('response,prompt_level,timestamp,session_id,sessions(start_time)')
+    .eq('target_id', targetGraphState.targetId)
+    .is('superseded_by', null)
+    .is('ioa_observer_id', null)
+    .order('timestamp', { ascending: true });
+  var pcR = await sb.from('phase_changes').select('id,occurred_at,label,notes').eq('target_id', targetGraphState.targetId).order('occurred_at');
+  var canWrite = S.practiceMember.role === 'owner_bcba' || S.practiceMember.role === 'supervising_bcba';
+  if(trR.error || pcR.error){ el.innerHTML = '<div style="padding:20px;color:var(--terracotta)">'+esc((trR.error||pcR.error).message)+'</div>'; return; }
+  var trials = trR.data || [];
+  var phaseChanges = pcR.data || [];
+  var bySession = {};
+  trials.forEach(function(tr){
+    var sid = tr.session_id;
+    if(!bySession[sid]) bySession[sid] = { date: tr.sessions && tr.sessions.start_time ? new Date(tr.sessions.start_time) : new Date(tr.timestamp), total: 0, correct: 0 };
+    bySession[sid].total += 1;
+    if(tr.response === 'correct') bySession[sid].correct += 1;
+  });
+  var sessions = Object.keys(bySession).map(function(sid){
+    var s = bySession[sid];
+    return { date: s.date, pct: s.total > 0 ? (s.correct / s.total) * 100 : 0 };
+  }).sort(function(a,b){ return a.date - b.date; });
+  var hdr = '<div style="max-width:920px;margin:0 auto">'+
+    '<div style="font-family:Fraunces,serif;font-size:20px;font-weight:700">'+esc(t.name)+'</div>'+
+    '<div style="font-size:13px;color:var(--warm-gray);margin-bottom:14px">'+esc((t.programs && t.programs.name) || '')+' · '+sessions.length+' sessions · '+trials.length+' trials</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'+
+    '<button onclick="toggleGraphAverage()" style="padding:6px 12px;border-radius:14px;border:2px solid '+(targetGraphState.showAverage?'var(--sage-dark)':'var(--sand)')+';background:'+(targetGraphState.showAverage?'var(--sage-light)':'white')+';color:'+(targetGraphState.showAverage?'var(--sage-dark)':'var(--warm-gray)')+';font-size:12px;font-weight:700;cursor:pointer">'+(targetGraphState.showAverage?'✓ ':'')+'Average</button>'+
+    '<button onclick="toggleGraphMeanOfDay()" style="padding:6px 12px;border-radius:14px;border:2px solid '+(targetGraphState.showMeanOfDay?'var(--sage-dark)':'var(--sand)')+';background:'+(targetGraphState.showMeanOfDay?'var(--sage-light)':'white')+';color:'+(targetGraphState.showMeanOfDay?'var(--sage-dark)':'var(--warm-gray)')+';font-size:12px;font-weight:700;cursor:pointer">'+(targetGraphState.showMeanOfDay?'✓ ':'')+'Mean-of-day</button>'+
+    '<span style="padding:6px 12px;border-radius:14px;border:2px solid var(--sand);color:var(--warm-gray-light);font-size:12px">Trend line — coming soon</span>'+
+    '</div>';
+  var chart = renderTargetGraphSvg(sessions, phaseChanges);
+  var pcList = '<div class="label" style="margin-top:18px;margin-bottom:8px">Phase changes</div>';
+  if(phaseChanges.length === 0){
+    pcList += '<div style="padding:10px;background:var(--cream);border-radius:10px;font-size:13px;color:var(--warm-gray)">None. '+(canWrite?'Click "+ Add phase change" to mark a clinical event (BIP change, target promoted, etc.).':'')+'</div>';
+  } else {
+    pcList += '<div style="display:flex;flex-direction:column;gap:6px">';
+    phaseChanges.forEach(function(pc){
+      pcList += '<div style="padding:10px 14px;border:1px solid var(--sand);border-radius:10px;background:white;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:13px">'+esc(pc.label)+'</div><div style="font-size:11px;color:var(--warm-gray);margin-top:2px">'+new Date(pc.occurred_at).toLocaleDateString()+(pc.notes?' · '+esc(pc.notes):'')+'</div></div>'+
+        (canWrite ? '<div style="display:flex;gap:4px"><button class="btn btn-s" style="padding:4px 8px;font-size:11px" onclick="editPhaseChange(\x27'+pc.id+'\x27)">Edit</button><button class="btn btn-s" style="padding:4px 8px;font-size:11px" onclick="deletePhaseChange(\x27'+pc.id+'\x27)">×</button></div>' : '')+
+        '</div>';
+    });
+    pcList += '</div>';
+  }
+  if(canWrite) pcList += '<button class="btn btn-s" style="margin-top:8px;font-size:12px;padding:6px 12px" onclick="openPhaseChangeModal(null)">+ Add phase change</button>';
+  el.innerHTML = hdr + chart + pcList + '</div>';
+}
+
+function renderTargetGraphSvg(sessions, phaseChanges){
+  if(sessions.length === 0){
+    return '<div style="background:white;border:1px solid var(--sand);border-radius:14px;padding:30px;text-align:center;color:var(--warm-gray)">No session data yet.</div>';
+  }
+  var w = 880, hht = 320, padL = 44, padR = 16, padT = 18, padB = 36;
+  var minDate = sessions[0].date.getTime();
+  var maxDate = sessions[sessions.length-1].date.getTime();
+  if(maxDate === minDate) maxDate = minDate + 1;
+  var pathParts = [];
+  var circles = '';
+  sessions.forEach(function(s, i){
+    var x = padL + ((s.date.getTime() - minDate) / (maxDate - minDate)) * (w - padL - padR);
+    var y = hht - padB - (s.pct / 100) * (hht - padT - padB);
+    pathParts.push((i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1));
+    circles += '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.5" fill="#7B9BB8"><title>'+s.date.toLocaleDateString()+': '+Math.round(s.pct)+'%</title></circle>';
+  });
+  var path = '<path d="'+pathParts.join(' ')+'" fill="none" stroke="#7B9BB8" stroke-width="2"/>';
+  var phaseLines = '';
+  phaseChanges.forEach(function(pc){
+    var d = new Date(pc.occurred_at).getTime();
+    if(d < minDate || d > maxDate) return;
+    var x = padL + ((d - minDate) / (maxDate - minDate)) * (w - padL - padR);
+    phaseLines += '<line x1="'+x.toFixed(1)+'" y1="'+padT+'" x2="'+x.toFixed(1)+'" y2="'+(hht-padB)+'" stroke="var(--terracotta)" stroke-width="1.5" stroke-dasharray="4 4"/>'+
+      '<text x="'+x.toFixed(1)+'" y="'+(padT - 4)+'" text-anchor="middle" font-size="10" fill="var(--terracotta)" font-weight="700">'+esc(pc.label).slice(0, 16)+'</text>';
+  });
+  var avgLine = '';
+  if(targetGraphState.showAverage && sessions.length > 0){
+    var avg = sessions.reduce(function(a,s){ return a + s.pct; }, 0) / sessions.length;
+    var ay = hht - padB - (avg / 100) * (hht - padT - padB);
+    avgLine = '<line x1="'+padL+'" y1="'+ay.toFixed(1)+'" x2="'+(w-padR)+'" y2="'+ay.toFixed(1)+'" stroke="var(--sage-dark)" stroke-width="1" stroke-dasharray="2 4"/>'+
+      '<text x="'+(w-padR-2)+'" y="'+(ay - 4).toFixed(1)+'" text-anchor="end" font-size="10" fill="var(--sage-dark)">avg '+Math.round(avg)+'%</text>';
+  }
+  var meanLine = '';
+  if(targetGraphState.showMeanOfDay){
+    var byDay = {};
+    sessions.forEach(function(s){
+      var key = s.date.toDateString();
+      if(!byDay[key]) byDay[key] = { date: s.date, total: 0, count: 0 };
+      byDay[key].total += s.pct;
+      byDay[key].count += 1;
+    });
+    var dayPoints = Object.keys(byDay).map(function(k){
+      var dd = byDay[k];
+      return { date: dd.date, pct: dd.total / dd.count };
+    }).sort(function(a,b){ return a.date - b.date; });
+    if(dayPoints.length > 1){
+      var meanPath = dayPoints.map(function(s, i){
+        var x = padL + ((s.date.getTime() - minDate) / (maxDate - minDate)) * (w - padL - padR);
+        var y = hht - padB - (s.pct / 100) * (hht - padT - padB);
+        return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+      }).join(' ');
+      meanLine = '<path d="'+meanPath+'" fill="none" stroke="#C97B5C" stroke-width="2" stroke-dasharray="6 3"/>';
+    }
+  }
+  var axes = '';
+  [0, 25, 50, 75, 100].forEach(function(pct){
+    var y = hht - padB - (pct / 100) * (hht - padT - padB);
+    axes += '<line x1="'+padL+'" y1="'+y+'" x2="'+(w-padR)+'" y2="'+y+'" stroke="var(--warm-gray-light)" stroke-width="0.5" stroke-dasharray="2 4" opacity="0.5"/>'+
+      '<text x="'+(padL-6)+'" y="'+y+'" text-anchor="end" font-size="10" fill="var(--warm-gray)" alignment-baseline="middle">'+pct+'%</text>';
+  });
+  var midDate = new Date((minDate + maxDate) / 2);
+  axes += '<line x1="'+padL+'" y1="'+(hht-padB)+'" x2="'+(w-padR)+'" y2="'+(hht-padB)+'" stroke="var(--warm-gray-light)" stroke-width="1"/>'+
+    '<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(hht-padB)+'" stroke="var(--warm-gray-light)" stroke-width="1"/>'+
+    '<text x="'+padL+'" y="'+(hht-padB+18)+'" text-anchor="start" font-size="10" fill="var(--warm-gray)">'+new Date(minDate).toLocaleDateString()+'</text>'+
+    '<text x="'+((padL+w-padR)/2)+'" y="'+(hht-padB+18)+'" text-anchor="middle" font-size="10" fill="var(--warm-gray)">'+midDate.toLocaleDateString()+'</text>'+
+    '<text x="'+(w-padR)+'" y="'+(hht-padB+18)+'" text-anchor="end" font-size="10" fill="var(--warm-gray)">'+new Date(maxDate).toLocaleDateString()+'</text>';
+  return '<div style="background:white;border:1px solid var(--sand);border-radius:14px;padding:14px"><svg width="100%" viewBox="0 0 '+w+' '+hht+'" preserveAspectRatio="xMidYMid meet">'+axes+phaseLines+avgLine+meanLine+path+circles+'</svg></div>';
+}
+
+function toggleGraphAverage(){ targetGraphState.showAverage = !targetGraphState.showAverage; renderTargetGraph(); }
+function toggleGraphMeanOfDay(){ targetGraphState.showMeanOfDay = !targetGraphState.showMeanOfDay; renderTargetGraph(); }
+
+function openPhaseChangeModal(id){ alert('Phase change modal lands in Task 3'); }
+function editPhaseChange(id){ openPhaseChangeModal(id); }
+async function deletePhaseChange(id){ alert('Delete lands in Task 3'); }
 
 function openTargetModal(){
   targetEditing = null;
