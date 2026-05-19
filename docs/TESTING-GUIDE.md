@@ -313,6 +313,23 @@ Sign in as `testprovider@modernvillage.app`.
 - [ ] Click a target row in any card → opens that target's graph
 - [ ] Switch to Behaviors tab → cross-client line chart over last 90 days, color-coded per client
 
+### SOAP Auto-fill (BCBA Data Collection — sub-project #5)
+
+Apply migration: `supabase/migrations/20260522_bcba_soap_autofill.sql` before testing.
+
+Sign in as `testprovider@modernvillage.app`.
+
+- [ ] Complete a session via the live data entry flow (see sub-project #2 walkthrough)
+- [ ] On the end-of-session summary screen, click "Write / view SOAP note" — overlay opens with 4 empty SOAP sections
+- [ ] Click "Generate from session data" — Claude returns a structured S/O/A/P draft, fills all 4 textareas. Takes ~5-15 seconds.
+- [ ] Edit any section directly. Click "Save draft" — toast confirms, can close and re-open later
+- [ ] Click "Sign & submit" — prompt asks for name, type it, click OK
+- [ ] Page now shows "Signed by [name] (role) on [datetime]. Locked." All 4 textareas are read-only.
+- [ ] Return to client detail → session row shows green "SOAP ✓" badge
+- [ ] Sessions without SOAP yet show terracotta "No SOAP" badge with a "Write SOAP" button
+- [ ] Sessions with unsigned SOAP show amber "SOAP draft" badge with an "Edit SOAP" button
+- [ ] SQL check: `SELECT id, signed_at, signed_by_name, billing_status FROM public.session_notes WHERE session_id IS NOT NULL ORDER BY created_at DESC LIMIT 5;` — signed rows have billing_status='submitted' (ready for the claims module)
+
 ---
 
 ## 3. CAREGIVER TESTING (testcaregiver@modernvillage.app)

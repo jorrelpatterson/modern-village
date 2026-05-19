@@ -50,14 +50,22 @@ ABA-powered parenting platform for neurodivergent families. 9 pillars (AI Coach,
 
 ## In-flight work — BCBA Data Collection (Ensora-parity initiative)
 
-**Status as of 2026-05-21:** Sub-projects #1, #2, #3, #4 **complete and merged**. End-to-end clinical workflow + iconic BCBA chart shipped.
+**Status as of 2026-05-22:** Sub-projects #1-#5 **complete and merged**. End-to-end clinical workflow + iconic BCBA chart + SOAP auto-fill all shipped. This is now a functionally usable Ensora alternative for solo/small-practice BCBAs.
 
 **Sequence forward:**
 1. **Mini-spec — per-patient Stripe billing** (before users sign up).
-2. **Sub-project #5 — Documentation.** SOAP note auto-fill from session data; timesheet signatures.
-3. **Sub-project #6 — Curriculum Libraries.** Ariana-authored Starter content; VB-MAPP / ABLLS-R licensing.
+2. **Sub-project #6 — Curriculum Libraries.** Ariana-authored Starter content; VB-MAPP / ABLLS-R licensing.
 
-**Coverage vs Ensora (after #4):** ~92% data model, ~80% UI surface. Skill-target line graphs with phase change lines ship; the iconic Ensora chart is now in Modern Village. What's missing: SOAP auto-fill, licensed curricula, polish indicators (trend line, std dev, annotations, PDF export).
+**Coverage vs Ensora (after #5):** ~95% data model, ~90% UI surface. The remaining 10% UI is licensed curriculum content (multi-month negotiation), polish chart indicators (trend line, std dev, annotations, PDF export), and document storage for BIPs/PDFs.
+
+**Critical missing pieces for full Ensora head-to-head:**
+- VB-MAPP / ABLLS-R / PEAK / AFLS licensed content
+- Trend line regression, std dev band, cumulative count overlays
+- Click-to-annotate data points on graphs
+- PDF export of charts and signed SOAP notes
+- Document storage (BIPs, assessment reports per client)
+
+**What Modern Village has that Ensora doesn't:** parent-side flywheel via "My BCBA" tab, per-patient pricing (not per-seat), mobile-first UX, IndexedDB offline sync, integration with existing parent behavior_logs.
 
 Memory: `project_bcba_data_collection.md`.
 

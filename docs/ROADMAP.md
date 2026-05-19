@@ -6,13 +6,24 @@
 
 ## Currently in flight (2026-05-21)
 
-- **BCBA Data Collection — sub-projects #1–#4 all complete** — clinical workflow end-to-end: setup → live session → trial entry → behavior tracking → per-behavior dashboard with ABC analytics → skill-target line graphs with phase change lines. Parents see "My BCBA" with sparklines. Offline support via IndexedDB. **Next: per-patient Stripe billing mini-spec + sub-project #5 (Documentation — SOAP note auto-fill from session data; timesheet signatures).** Spec: `docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md`. Plan: `docs/superpowers/plans/2026-05-18-bcba-live-data-entry.md`.
+- **BCBA Data Collection — sub-projects #1–#5 all complete** — clinical workflow end-to-end: setup → live session → trial entry → behavior tracking → per-behavior dashboard with ABC analytics → skill-target line graphs with phase change lines → SOAP auto-fill with AI generation + signing + billing_status flip. Parents see "My BCBA" with sparklines. Offline support via IndexedDB. **Next: per-patient Stripe billing mini-spec + sub-project #6 (Curriculum Libraries — Ariana-authored Starter content; VB-MAPP / ABLLS-R licensing).** Spec: `docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md`. Plan: `docs/superpowers/plans/2026-05-18-bcba-live-data-entry.md`.
 - **Email Drips + Continual Optimization** — design spec + 2402-line implementation plan committed (commits `234a7fd`, `4ec6c20`). **Code not started.** Spec: `docs/superpowers/specs/2026-04-16-email-drips-and-optimization-design.md`. Plan: `docs/superpowers/plans/2026-04-16-email-drips-and-optimization.md`. This is the gating tech build before scaling cold outreach to the 16K-lead CRM. See `docs/AGENT-CONTEXT.md` for full state.
 - **Launch prep with Ariana** — testing session walkthrough at `docs/SESSION-WALKTHROUGH-ARIANA.md`, launch strategy at `docs/LAUNCH-STRATEGY.md`. Pre-launch decisions still pending (launch date, who's "the face", pricing posture, content boundaries, crisis protocol).
 
 ---
 
 ## Completed
+
+### BCBA Data Collection — SOAP Auto-fill (2026-05-22)
+**Sub-project #5 of 6** — closes the "no SOAP auto-fill" gap that was the biggest blocker vs Ensora.
+
+- [x] session_notes extended with soap_subjective / soap_objective / soap_assessment / soap_plan + signed_at, signed_by_name, signed_by_role
+- [x] SOAP editor overlay with 4 section textareas, opens from session summary or sessions list
+- [x] "Generate from session data" button: pulls trials + behaviors + targets into a structured Claude prompt, parses back into 4 SOAP sections
+- [x] Save draft → re-edit later. Sign & submit → typed-name signature, locks the row, flips billing_status to 'submitted' so it flows into the existing medical billing claims surface
+- [x] Status badges on session list: green "SOAP ✓" / amber "SOAP draft" / terracotta "No SOAP" with contextual Write / Edit / View button
+
+**Next:** sub-project #6 — Curriculum Libraries (Ariana-authored Starter content; VB-MAPP / ABLLS-R licensing conversations). Plus per-patient Stripe billing mini-spec.
 
 ### BCBA Data Collection — Analysis & Reporting (2026-05-21)
 **Sub-project #4 of 6** — spec: [docs/superpowers/specs/2026-05-20-bcba-analysis-reporting-design.md](docs/superpowers/specs/2026-05-20-bcba-analysis-reporting-design.md)
