@@ -1440,6 +1440,14 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   <div class="overlay-inner" id="activeSessionContent" style="padding:0;height:100vh;display:flex;flex-direction:column;overflow:hidden"></div>
 </div>
 
+<div id="sessionSummaryPage" class="overlay-page">
+  <div class="overlay-header">
+    <button class="overlay-back" onclick="closeSessionSummary()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2 class="overlay-title">Session summary</h2>
+  </div>
+  <div class="overlay-inner" id="sessionSummaryContent" style="padding-bottom:80px"></div>
+</div>
+
 <div id="targetPickerSheet" style="display:none;position:fixed;left:0;right:0;bottom:0;background:white;border-radius:18px 18px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,0.15);padding:20px;z-index:1100;max-height:60vh;overflow-y:auto">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
     <h3 style="font-family:Fraunces,serif;font-size:18px;font-weight:700">Switch target</h3>
@@ -2606,7 +2614,186 @@ async function archiveProgram(programId){
   renderClientPrograms();
 }
 
-function openSessionSummary(sessionId){ alert('Session summary opens in Task 8'); }
+function confirmEndSession(){
+  if(!activeSession) return;
+  if(!confirm('End session? You\x27ll see a summary before it\x27s saved.')) return;
+  mvOffline.flush().finally(function(){
+    setTimeout(function(){ openSessionSummary(activeSession.id, true); }, 600);
+  });
+}
+
+var summaryState = { sessionId: null, fromActive: false, ioaByTarget: null };
+
+async function openSessionSummary(sessionId, fromActive){
+  summaryState = { sessionId: sessionId, fromActive: !!fromActive, ioaByTarget: null };
+  document.getElementById('sessionSummaryPage').classList.add('open');
+  await renderSessionSummary();
+}
+
+function closeSessionSummary(){
+  document.getElementById('sessionSummaryPage').classList.remove('open');
+  if(summaryState.fromActive){
+    summaryState.fromActive = false;
+    if(activeSession){ document.getElementById('activeSessionPage').classList.add('open'); }
+  }
+}
+
+async function renderSessionSummary(){
+  var el = document.getElementById('sessionSummaryContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading summary…</div>';
+  var sR = await sb.from('sessions')
+    .select('id,start_time,end_time,location,cpt_code,status,parent_present,practice_clients(child_id,children(name)),provider:practice_members!provider_id(profiles(name,email))')
+    .eq('id', summaryState.sessionId)
+    .single();
+  if(sR.error){ el.innerHTML = '<div style="padding:20px;color:var(--terracotta)">'+esc(sR.error.message)+'</div>'; return; }
+  var session = sR.data;
+  var stR = await sb.from('session_targets')
+    .select('target_id,planned_trials,targets(id,name,target_type)')
+    .eq('session_id', summaryState.sessionId);
+  var trR = await sb.from('trials')
+    .select('target_id,prompt_level,response,ioa_observer_id')
+    .eq('session_id', summaryState.sessionId)
+    .is('superseded_by', null);
+  var brR = await sb.from('behavior_recordings')
+    .select('behavior_definition_id,recording_type,count,duration_seconds,interval_data,behavior_definitions(name)')
+    .eq('session_id', summaryState.sessionId)
+    .is('superseded_by', null);
+  var trialsByTarget = {};
+  var ioaTrialsByTarget = {};
+  (trR.data || []).forEach(function(t){
+    if(t.ioa_observer_id){
+      if(!ioaTrialsByTarget[t.target_id]) ioaTrialsByTarget[t.target_id] = [];
+      ioaTrialsByTarget[t.target_id].push(t);
+    } else {
+      if(!trialsByTarget[t.target_id]) trialsByTarget[t.target_id] = [];
+      trialsByTarget[t.target_id].push(t);
+    }
+  });
+  var ioaByTarget = {};
+  Object.keys(ioaTrialsByTarget).forEach(function(tid){
+    var primary = trialsByTarget[tid] || [];
+    var ioa = ioaTrialsByTarget[tid];
+    var n = Math.min(primary.length, ioa.length);
+    var match = 0;
+    for(var i=0;i<n;i++){
+      if(primary[i].response === ioa[i].response) match++;
+    }
+    ioaByTarget[tid] = n > 0 ? Math.round((match/n)*100) : null;
+  });
+  summaryState.ioaByTarget = ioaByTarget;
+  var behaviorsByDef = {};
+  (brR.data || []).forEach(function(br){
+    var key = br.behavior_definition_id;
+    if(!behaviorsByDef[key]){
+      behaviorsByDef[key] = { name: (br.behavior_definitions && br.behavior_definitions.name) || '(unnamed)', frequency: 0, duration: 0, interval_occurred: 0, interval_total: 0, abc_count: 0 };
+    }
+    var entry = behaviorsByDef[key];
+    if(br.recording_type === 'frequency') entry.frequency += (br.count || 0);
+    else if(br.recording_type === 'duration') entry.duration += (br.duration_seconds || 0);
+    else if(br.recording_type === 'interval' && br.interval_data){
+      entry.interval_occurred += (br.interval_data.results || []).filter(function(x){ return x; }).length;
+      entry.interval_total += (br.interval_data.results || []).length;
+    } else if(br.recording_type === 'abc') entry.abc_count += 1;
+  });
+  var startedAt = new Date(session.start_time);
+  var endedAt = session.end_time ? new Date(session.end_time) : new Date();
+  var durMin = Math.round((endedAt - startedAt) / 60000);
+  var providerName = session.provider && session.provider.profiles ? (session.provider.profiles.name || session.provider.profiles.email) : '';
+  var h = '<div style="max-width:760px;margin:0 auto">';
+  h += '<div style="font-family:Fraunces,serif;font-size:22px;font-weight:700">'+esc(session.practice_clients.children.name)+' &middot; '+startedAt.toLocaleDateString()+'</div>'+
+    '<div style="font-size:13px;color:var(--warm-gray);margin-bottom:18px">'+esc(providerName)+' &middot; '+durMin+' min &middot; '+esc(session.location || '')+' &middot; CPT '+esc(session.cpt_code || '')+' &middot; status: '+session.status+'</div>';
+  h += '<div class="label" style="margin-bottom:8px">Trials</div>';
+  if(!stR.data || stR.data.length === 0){
+    h += '<div style="padding:14px;background:var(--cream);border-radius:12px;font-size:13px;color:var(--warm-gray)">No targets in this session.</div>';
+  } else {
+    h += '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:18px"><thead><tr style="border-bottom:1px solid var(--sand);text-align:left"><th style="padding:6px 4px">Target</th><th style="padding:6px 4px;text-align:right">Run/Plan</th><th style="padding:6px 4px;text-align:right">% correct</th><th style="padding:6px 4px;text-align:right">% indep</th><th style="padding:6px 4px;text-align:right">IOA</th></tr></thead><tbody>';
+    stR.data.forEach(function(row){
+      var t = row.targets || {};
+      var trials = trialsByTarget[row.target_id] || [];
+      var total = trials.length;
+      var correct = trials.filter(function(x){ return x.response === 'correct'; }).length;
+      var indep = trials.filter(function(x){ return x.prompt_level === 'independent'; }).length;
+      var pctCorrect = total > 0 ? Math.round((correct/total)*100) : 0;
+      var pctIndep = total > 0 ? Math.round((indep/total)*100) : 0;
+      var ioaPct = ioaByTarget[row.target_id];
+      var ioaCell = ioaPct === undefined || ioaPct === null ? '—' : (ioaPct >= 80 ? '<span style="color:var(--sage-dark);font-weight:700">'+ioaPct+'%</span>' : '<span style="color:#7A6A10;font-weight:700">'+ioaPct+'%</span>');
+      h += '<tr style="border-bottom:1px solid var(--sand)"><td style="padding:8px 4px">'+esc(t.name)+'</td><td style="padding:8px 4px;text-align:right">'+total+'/'+(row.planned_trials||'?')+'</td><td style="padding:8px 4px;text-align:right">'+pctCorrect+'%</td><td style="padding:8px 4px;text-align:right">'+pctIndep+'%</td><td style="padding:8px 4px;text-align:right">'+ioaCell+'</td></tr>';
+    });
+    h += '</tbody></table>';
+  }
+  h += '<div class="label" style="margin-bottom:8px;margin-top:16px">Behaviors</div>';
+  var defs = Object.keys(behaviorsByDef);
+  if(defs.length === 0){
+    h += '<div style="padding:14px;background:var(--cream);border-radius:12px;font-size:13px;color:var(--warm-gray)">No behaviors recorded.</div>';
+  } else {
+    h += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:18px">';
+    defs.forEach(function(key){
+      var b = behaviorsByDef[key];
+      var parts = [];
+      if(b.frequency) parts.push(b.frequency + ' occurrences');
+      if(b.duration) parts.push((b.duration/60).toFixed(1) + ' min total');
+      if(b.interval_total) parts.push(b.interval_occurred + '/' + b.interval_total + ' intervals');
+      if(b.abc_count) parts.push(b.abc_count + ' ABC entries');
+      h += '<div style="padding:10px 14px;border:1px solid var(--sand);border-radius:10px"><div style="font-weight:700;font-size:14px">'+esc(b.name)+'</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">'+parts.join(' &middot; ')+'</div></div>';
+    });
+    h += '</div>';
+  }
+  var canEdit = session.status === 'in_progress' && summaryState.fromActive;
+  if(canEdit){
+    h += '<div class="label" style="margin-bottom:8px">Session details</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'+
+      '<div><label class="fl">CPT</label><select id="ssCpt" class="fi"><option value="97153"'+(session.cpt_code==='97153'?' selected':'')+'>97153</option><option value="97155"'+(session.cpt_code==='97155'?' selected':'')+'>97155</option><option value="97156"'+(session.cpt_code==='97156'?' selected':'')+'>97156</option></select></div>'+
+      '<div style="display:flex;align-items:flex-end"><label style="display:flex;gap:6px;font-size:13px"><input id="ssParentPresent" type="checkbox"'+(session.parent_present?' checked':'')+'> Parent present</label></div>'+
+      '</div>'+
+      '<label class="fl">Notes (placeholder — full SOAP in sub-project #5)</label>'+
+      '<textarea id="ssNotes" class="fi" rows="3" placeholder="Brief session notes"></textarea>'+
+      '<div style="display:flex;gap:8px;margin-top:18px">'+
+      '<button class="btn btn-s" style="flex:1" onclick="closeSessionSummary()">Save &amp; continue editing</button>'+
+      '<button class="btn btn-p" style="flex:1" onclick="submitSession()">Submit session</button>'+
+      '</div>';
+  } else {
+    h += '<div style="padding:14px;background:var(--sage-light);border-radius:12px;font-size:13px;color:var(--sage-dark)">Session is <strong>'+session.status+'</strong>. Read-only view.</div>';
+  }
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+async function submitSession(){
+  var cpt = document.getElementById('ssCpt').value;
+  var parentPresent = document.getElementById('ssParentPresent').checked;
+  var notesText = document.getElementById('ssNotes').value.trim();
+  var upd = await sb.from('sessions').update({
+    status: 'completed',
+    end_time: new Date().toISOString(),
+    cpt_code: cpt,
+    parent_present: parentPresent
+  }).eq('id', summaryState.sessionId);
+  if(upd.error){ showToast(upd.error.message); return; }
+  if(notesText){
+    var pcR = await sb.from('practice_clients').select('child_id').eq('id', activeSession ? activeSession.practice_client_id : null).single();
+    var childId = pcR && pcR.data ? pcR.data.child_id : null;
+    if(childId){
+      await sb.from('session_notes').insert({
+        provider_id: S.user.id,
+        child_id: childId,
+        session_id: summaryState.sessionId,
+        session_date: new Date().toISOString().slice(0,10),
+        duration_minutes: Math.round((new Date() - activeSession.started_at)/60000),
+        cpt_code: cpt,
+        session_type: 'session',
+        interventions: notesText,
+        shared_with_parent: false,
+        billing_status: 'draft'
+      });
+    }
+  }
+  if(window._activeSessionTimer){ clearInterval(window._activeSessionTimer); window._activeSessionTimer = null; }
+  activeSession = null;
+  closeSessionSummary();
+  document.getElementById('activeSessionPage').classList.remove('open');
+  showToast('Session submitted');
+  if(currentClient) renderClientPrograms();
+}
 
 var preSessionState = { client: null, targets: [] };
 
@@ -3171,8 +3358,6 @@ async function behaviorAbcSave(){
   closeBehaviorOverlay();
   renderActiveSession();
 }
-
-function confirmEndSession(){ alert('End session flow lands in Task 8'); }
 
 var currentProgram = null;
 var targetEditing = null;
