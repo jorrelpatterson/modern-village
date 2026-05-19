@@ -308,10 +308,16 @@ $$;
 ALTER TABLE public.practices ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Members read their practice" ON public.practices
   FOR SELECT USING (public.is_practice_member(id) OR public.is_admin());
+-- Owner can also read their own practice (needed for the onboarding wizard's
+-- practices.insert().select() chain — runs BEFORE the owner is a practice_members row)
+CREATE POLICY "Owner reads their practice" ON public.practices
+  FOR SELECT USING (owner_id = auth.uid() OR public.is_admin());
 CREATE POLICY "Owner updates practice" ON public.practices
   FOR UPDATE USING (owner_id = auth.uid() OR public.is_admin());
+-- INSERT is loose by design: the practice_members "Owner bootstraps own
+-- member row" policy below restricts who can actually claim ownership.
 CREATE POLICY "Authenticated creates practice" ON public.practices
-  FOR INSERT WITH CHECK (auth.uid() = owner_id);
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
 -- practice_members
 ALTER TABLE public.practice_members ENABLE ROW LEVEL SECURITY;
