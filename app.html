@@ -1448,6 +1448,14 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   <div id="targetPickerList"></div>
 </div>
 
+<div id="behaviorOverlay" style="display:none;position:fixed;left:0;right:0;bottom:0;top:auto;background:white;border-radius:18px 18px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,0.2);max-height:80vh;overflow-y:auto;z-index:1100">
+  <div style="position:sticky;top:0;background:white;padding:14px 16px;border-bottom:1px solid var(--sand);display:flex;justify-content:space-between;align-items:center;z-index:2">
+    <h3 id="boTitle" style="font-family:Fraunces,serif;font-size:18px;font-weight:700">Log a behavior</h3>
+    <button class="btn btn-s" style="padding:6px 12px;font-size:12px" onclick="closeBehaviorOverlay()">Close</button>
+  </div>
+  <div id="boContent" style="padding:16px"></div>
+</div>
+
 <div id="targetModal" class="modal-overlay" style="display:none">
   <div class="modal-content" style="max-width:640px;max-height:90vh;overflow-y:auto">
     <h3 id="tmTitle" style="font-family:Fraunces,serif;font-size:22px;margin-bottom:12px">New target</h3>
@@ -2862,7 +2870,194 @@ async function addAdHocTarget(){
   switchTarget(activeSession.targets.length - 1);
 }
 
-function openBehaviorOverlay(){ alert('Behavior overlay lands in Task 6'); }
+var behaviorOverlayState = { mode: 'list', definitions: [], current: null, count: 0, durationStart: null, durationElapsed: 0, durationTimer: null };
+
+async function openBehaviorOverlay(){
+  if(!activeSession){ return; }
+  var r = await sb.from('behavior_definitions')
+    .select('id,name,recording_type,classification,operational_definition')
+    .eq('practice_client_id', activeSession.practice_client_id)
+    .eq('status', 'active')
+    .order('name');
+  behaviorOverlayState.definitions = r.data || [];
+  behaviorOverlayState.mode = 'list';
+  behaviorOverlayState.current = null;
+  document.getElementById('behaviorOverlay').style.display = 'block';
+  renderBehaviorOverlay();
+}
+
+function closeBehaviorOverlay(){
+  if(behaviorOverlayState.durationTimer){ clearInterval(behaviorOverlayState.durationTimer); behaviorOverlayState.durationTimer = null; }
+  document.getElementById('behaviorOverlay').style.display = 'none';
+}
+
+function renderBehaviorOverlay(){
+  var el = document.getElementById('boContent');
+  var title = document.getElementById('boTitle');
+  if(behaviorOverlayState.mode === 'list'){
+    title.textContent = 'Log a behavior';
+    if(behaviorOverlayState.definitions.length === 0){
+      el.innerHTML = '<div style="padding:30px 16px;text-align:center;color:var(--warm-gray);font-size:13px">No behaviors defined for this client yet. A BCBA can add them from the Client → Behaviors tab (sub-project #3). For now, define one quickly:</div>'+
+        '<div style="padding:0 16px"><label class="fl">Behavior name</label><input id="boQuickName" class="fi" placeholder="e.g. Aggression — hitting">'+
+        '<label class="fl" style="margin-top:8px">Recording type</label><select id="boQuickType" class="fi"><option value="frequency">Frequency</option><option value="duration">Duration</option></select>'+
+        '<label class="fl" style="margin-top:8px">Operational definition</label><textarea id="boQuickDef" class="fi" rows="3"></textarea>'+
+        '<button class="btn btn-p" style="width:100%;margin-top:12px" onclick="quickAddBehavior()">Add behavior</button></div>';
+      return;
+    }
+    var h = '<div style="display:flex;flex-direction:column;gap:6px">';
+    behaviorOverlayState.definitions.forEach(function(b){
+      var typeLabel = {frequency:'Frequency',duration:'Duration',interval:'Interval',abc:'ABC',rate:'Rate'}[b.recording_type] || b.recording_type;
+      h += '<button onclick="behaviorPick(\x27'+b.id+'\x27)" style="text-align:left;padding:14px;border:1px solid var(--sand);border-radius:12px;background:white;cursor:pointer;display:flex;justify-content:space-between;align-items:center">'+
+        '<div style="flex:1"><div style="font-weight:700;font-size:14px">'+esc(b.name)+'</div>'+
+        '<div style="font-size:11px;color:var(--warm-gray);margin-top:2px">'+esc((b.operational_definition || '').slice(0, 100))+(b.operational_definition && b.operational_definition.length > 100 ? '…' : '')+'</div></div>'+
+        '<span class="log-tag" style="background:var(--sage-light)">'+typeLabel+'</span>'+
+        '</button>';
+    });
+    h += '</div>';
+    el.innerHTML = h;
+  } else if(behaviorOverlayState.mode === 'frequency'){
+    title.textContent = behaviorOverlayState.current.name;
+    el.innerHTML = '<div style="text-align:center;padding:20px 0">'+
+      '<div style="font-family:Fraunces,serif;font-size:64px;font-weight:800;color:var(--terracotta);line-height:1">'+behaviorOverlayState.count+'</div>'+
+      '<div style="font-size:13px;color:var(--warm-gray);margin-top:4px">occurrences</div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:400px;margin:0 auto">'+
+      '<button onclick="behaviorFreqDelta(-1)" style="padding:24px;background:var(--cream);border:2px solid var(--warm-gray);border-radius:14px;font-size:24px;font-weight:700;cursor:pointer">−</button>'+
+      '<button onclick="behaviorFreqDelta(1)" style="padding:24px;background:var(--terracotta-light);border:2px solid var(--terracotta);color:var(--terracotta);border-radius:14px;font-size:24px;font-weight:700;cursor:pointer">+</button>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;margin-top:20px;max-width:400px;margin-left:auto;margin-right:auto">'+
+      '<button class="btn btn-s" style="flex:1" onclick="behaviorBackToList()">Back</button>'+
+      '<button class="btn btn-p" style="flex:1" onclick="behaviorFreqSave()">Save</button>'+
+      '</div>';
+  } else if(behaviorOverlayState.mode === 'duration'){
+    title.textContent = behaviorOverlayState.current.name;
+    var elapsed = Math.floor(behaviorOverlayState.durationElapsed / 1000);
+    var mm = Math.floor(elapsed / 60);
+    var ss = (elapsed % 60).toString().padStart(2, '0');
+    el.innerHTML = '<div style="text-align:center;padding:20px 0">'+
+      '<div style="font-family:Fraunces,serif;font-size:56px;font-weight:800;color:var(--terracotta);line-height:1">'+mm+':'+ss+'</div>'+
+      '<div style="font-size:13px;color:var(--warm-gray);margin-top:4px">'+(behaviorOverlayState.durationStart ? 'running' : 'paused')+'</div>'+
+      '</div>'+
+      '<div style="max-width:400px;margin:0 auto">'+
+      (behaviorOverlayState.durationStart
+        ? '<button onclick="behaviorDurationToggle()" style="width:100%;padding:24px;background:var(--sage-light);color:var(--sage-dark);border:2px solid var(--sage-dark);border-radius:14px;font-size:18px;font-weight:700;cursor:pointer">Pause</button>'
+        : '<button onclick="behaviorDurationToggle()" style="width:100%;padding:24px;background:var(--terracotta-light);color:var(--terracotta);border:2px solid var(--terracotta);border-radius:14px;font-size:18px;font-weight:700;cursor:pointer">Start</button>')+
+      '<div style="display:flex;gap:8px;margin-top:14px">'+
+      '<button class="btn btn-s" style="flex:1" onclick="behaviorBackToList()">Back</button>'+
+      '<button class="btn btn-p" style="flex:1" onclick="behaviorDurationSave()">Save</button>'+
+      '</div></div>';
+  } else if(behaviorOverlayState.mode === 'abc' || behaviorOverlayState.mode === 'interval'){
+    // Task 7 implements these — temporary fallback
+    title.textContent = behaviorOverlayState.current.name + ' (Task 7)';
+    el.innerHTML = '<div style="padding:30px 16px;text-align:center;color:var(--warm-gray);font-size:13px">'+behaviorOverlayState.current.recording_type+' entry lands in Task 7.</div>'+
+      '<div style="padding:0 16px"><button class="btn btn-s" style="width:100%" onclick="behaviorBackToList()">Back</button></div>';
+  }
+}
+
+function behaviorPick(id){
+  behaviorOverlayState.current = behaviorOverlayState.definitions.find(function(b){ return b.id === id; });
+  behaviorOverlayState.count = 0;
+  behaviorOverlayState.durationStart = null;
+  behaviorOverlayState.durationElapsed = 0;
+  if(behaviorOverlayState.durationTimer){ clearInterval(behaviorOverlayState.durationTimer); behaviorOverlayState.durationTimer = null; }
+  behaviorOverlayState.mode = behaviorOverlayState.current.recording_type;
+  renderBehaviorOverlay();
+}
+
+function behaviorBackToList(){
+  if(behaviorOverlayState.durationTimer){ clearInterval(behaviorOverlayState.durationTimer); behaviorOverlayState.durationTimer = null; }
+  behaviorOverlayState.mode = 'list';
+  behaviorOverlayState.current = null;
+  renderBehaviorOverlay();
+}
+
+function behaviorFreqDelta(delta){
+  behaviorOverlayState.count = Math.max(0, behaviorOverlayState.count + delta);
+  renderBehaviorOverlay();
+}
+
+async function behaviorFreqSave(){
+  if(behaviorOverlayState.count === 0){ showToast('Count is 0 — increment first'); return; }
+  mvOffline.enqueue({
+    table: 'behavior_recordings',
+    payload: {
+      session_id: activeSession.id,
+      behavior_definition_id: behaviorOverlayState.current.id,
+      observer_id: S.practiceMember.id,
+      recording_type: 'frequency',
+      count: behaviorOverlayState.count,
+      client_uuid: mvUuid()
+    }
+  });
+  activeSession.last_behavior_label = behaviorOverlayState.current.name + ' (' + behaviorOverlayState.count + ')';
+  closeBehaviorOverlay();
+  renderActiveSession();
+}
+
+function behaviorDurationToggle(){
+  if(behaviorOverlayState.durationStart){
+    behaviorOverlayState.durationElapsed += new Date() - behaviorOverlayState.durationStart;
+    behaviorOverlayState.durationStart = null;
+    if(behaviorOverlayState.durationTimer){ clearInterval(behaviorOverlayState.durationTimer); behaviorOverlayState.durationTimer = null; }
+  } else {
+    behaviorOverlayState.durationStart = new Date();
+    if(behaviorOverlayState.durationTimer) clearInterval(behaviorOverlayState.durationTimer);
+    behaviorOverlayState.durationTimer = setInterval(function(){
+      var d = behaviorOverlayState.durationElapsed + (behaviorOverlayState.durationStart ? (new Date() - behaviorOverlayState.durationStart) : 0);
+      var el = document.querySelector('#boContent div:first-child div:first-child');
+      if(el){
+        var elapsed = Math.floor(d / 1000);
+        var mm = Math.floor(elapsed / 60);
+        var ss = (elapsed % 60).toString().padStart(2, '0');
+        el.textContent = mm+':'+ss;
+      }
+    }, 1000);
+  }
+  renderBehaviorOverlay();
+}
+
+async function behaviorDurationSave(){
+  var d = behaviorOverlayState.durationElapsed;
+  if(behaviorOverlayState.durationStart) d += new Date() - behaviorOverlayState.durationStart;
+  var seconds = Math.round(d / 1000);
+  if(seconds === 0){ showToast('Timer not started'); return; }
+  if(behaviorOverlayState.durationTimer){ clearInterval(behaviorOverlayState.durationTimer); behaviorOverlayState.durationTimer = null; }
+  mvOffline.enqueue({
+    table: 'behavior_recordings',
+    payload: {
+      session_id: activeSession.id,
+      behavior_definition_id: behaviorOverlayState.current.id,
+      observer_id: S.practiceMember.id,
+      recording_type: 'duration',
+      duration_seconds: seconds,
+      client_uuid: mvUuid()
+    }
+  });
+  activeSession.last_behavior_label = behaviorOverlayState.current.name + ' (' + seconds + 's)';
+  closeBehaviorOverlay();
+  renderActiveSession();
+}
+
+async function quickAddBehavior(){
+  var name = document.getElementById('boQuickName').value.trim();
+  var recordingType = document.getElementById('boQuickType').value;
+  var def = document.getElementById('boQuickDef').value.trim();
+  if(!name || !def){ showToast('Name and definition required'); return; }
+  var r = await sb.from('behavior_definitions').insert({
+    practice_client_id: activeSession.practice_client_id,
+    name: name,
+    operational_definition: def,
+    recording_type: recordingType,
+    classification: 'challenging',
+    status: 'active'
+  }).select().single();
+  if(r.error){ showToast(r.error.message); return; }
+  behaviorOverlayState.definitions.push(r.data);
+  behaviorOverlayState.current = r.data;
+  behaviorOverlayState.count = 0;
+  behaviorOverlayState.mode = recordingType;
+  renderBehaviorOverlay();
+}
 function confirmEndSession(){ alert('End session flow lands in Task 8'); }
 
 var currentProgram = null;
