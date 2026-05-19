@@ -260,6 +260,87 @@ export default {
       return new Response('{"error":"Method not allowed"}', { status: 405, headers: h });
     }
 
+    // ═══ STRIPE WEBHOOK — handle BEFORE body JSON-parse since we need raw body for signature ═══
+    if (url.pathname === '/stripe/webhook') {
+      if (!env.STRIPE_WEBHOOK_SECRET) {
+        return new Response('{"error":"Stripe webhook secret not configured"}', { status: 500, headers: h });
+      }
+      const rawBody = await request.text();
+      const sigHeader = request.headers.get('stripe-signature') || '';
+      // Parse signature: t=timestamp,v1=hash
+      let ts = '', sig = '';
+      sigHeader.split(',').forEach(function(part){
+        const eq = part.indexOf('=');
+        if (eq < 0) return;
+        const k = part.substring(0, eq), v = part.substring(eq + 1);
+        if (k === 't') ts = v;
+        else if (k === 'v1') sig = v;
+      });
+      if (!ts || !sig) return new Response('{"error":"Missing signature"}', { status: 400, headers: h });
+      const encoder = new TextEncoder();
+      const key = await crypto.subtle.importKey('raw', encoder.encode(env.STRIPE_WEBHOOK_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      const signed = await crypto.subtle.sign('HMAC', key, encoder.encode(ts + '.' + rawBody));
+      const expected = Array.from(new Uint8Array(signed)).map(function(b){ return b.toString(16).padStart(2, '0'); }).join('');
+      if (expected !== sig) return new Response('{"error":"Bad signature"}', { status: 400, headers: h });
+      // Verified. Parse event.
+      let event;
+      try { event = JSON.parse(rawBody); } catch { return new Response('{"error":"Invalid JSON"}', { status: 400, headers: h }); }
+      const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+      const obj = event.data && event.data.object || {};
+      // Handlers
+      if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
+        const practiceId = (obj.metadata && obj.metadata.practice_id) || null;
+        if (practiceId) {
+          const status = obj.status; // 'active', 'trialing', 'past_due', 'canceled', 'unpaid', 'incomplete'
+          // Normalize to our internal status set
+          let internalStatus = 'past_due';
+          if (status === 'active' || status === 'trialing') internalStatus = 'active';
+          else if (status === 'canceled' || status === 'incomplete_expired') internalStatus = 'cancelled';
+          const periodEnd = obj.current_period_end ? new Date(obj.current_period_end * 1000).toISOString() : null;
+          const quantity = (obj.items && obj.items.data && obj.items.data[0] && obj.items.data[0].quantity) || 0;
+          const patch = {
+            stripe_subscription_id: obj.id,
+            subscription_status: internalStatus,
+            subscription_period_end: periodEnd,
+            subscription_current_quantity: quantity
+          };
+          if (internalStatus !== 'past_due') patch.past_due_since = null;
+          await fetch(env.SUPABASE_URL + '/rest/v1/practices?id=eq.' + practiceId, {
+            method: 'PATCH', headers: supaH, body: JSON.stringify(patch)
+          });
+        }
+      } else if (event.type === 'customer.subscription.deleted') {
+        const practiceId = (obj.metadata && obj.metadata.practice_id) || null;
+        if (practiceId) {
+          await fetch(env.SUPABASE_URL + '/rest/v1/practices?id=eq.' + practiceId, {
+            method: 'PATCH', headers: supaH, body: JSON.stringify({ subscription_status: 'cancelled' })
+          });
+        }
+      } else if (event.type === 'invoice.payment_failed') {
+        // Mark past_due_since on first failure if not already set
+        const subId = obj.subscription;
+        if (subId) {
+          const prR = await fetch(env.SUPABASE_URL + '/rest/v1/practices?stripe_subscription_id=eq.' + encodeURIComponent(subId) + '&select=id,past_due_since', {
+            headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+          });
+          const rows = await prR.json();
+          if (rows.length && !rows[0].past_due_since) {
+            await fetch(env.SUPABASE_URL + '/rest/v1/practices?id=eq.' + rows[0].id, {
+              method: 'PATCH', headers: supaH, body: JSON.stringify({ subscription_status: 'past_due', past_due_since: new Date().toISOString() })
+            });
+          }
+        }
+      } else if (event.type === 'invoice.payment_succeeded') {
+        const subId = obj.subscription;
+        if (subId) {
+          await fetch(env.SUPABASE_URL + '/rest/v1/practices?stripe_subscription_id=eq.' + encodeURIComponent(subId), {
+            method: 'PATCH', headers: supaH, body: JSON.stringify({ subscription_status: 'active', past_due_since: null })
+          });
+        }
+      }
+      return new Response('{"received":true}', { headers: h });
+    }
+
     let body;
     if (request.method === 'POST') {
       try { body = await request.json(); } catch { return new Response('{"error":"Invalid JSON"}', { status: 400, headers: h }); }
@@ -718,6 +799,129 @@ export default {
       }
 
       return new Response('{"success":true}', { headers: h });
+    }
+
+    // ═══ STRIPE: CREATE CHECKOUT SESSION ═══
+    // Authenticated. Caller must be owner_bcba of the practice.
+    // Creates (or reuses) a Stripe customer for the practice, creates a Checkout session
+    // for a $29/patient subscription with quantity = current active patient_count.
+    if (url.pathname === '/stripe/create-checkout') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PRICE_ID) {
+        return new Response('{"error":"Stripe not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID worker secrets."}', { status: 500, headers: h });
+      }
+      const practiceId = body.practice_id;
+      if (!practiceId) return new Response('{"error":"Missing practice_id"}', { status: 400, headers: h });
+      // Verify caller is owner_bcba of this practice
+      const memberCheck = await fetch(env.SUPABASE_URL + '/rest/v1/practice_members?practice_id=eq.' + practiceId + '&user_id=eq.' + user.id + '&active=eq.true&select=role', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const membership = await memberCheck.json();
+      if (!membership.length || membership[0].role !== 'owner_bcba') {
+        return new Response('{"error":"Only the practice owner can manage billing"}', { status: 403, headers: h });
+      }
+      // Fetch practice
+      const prR = await fetch(env.SUPABASE_URL + '/rest/v1/practices?id=eq.' + practiceId + '&select=name,owner_id,stripe_customer_id,patient_count', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const prRows = await prR.json();
+      if (!prRows.length) return new Response('{"error":"Practice not found"}', { status: 404, headers: h });
+      const practice = prRows[0];
+      // Look up owner email
+      const ownerR = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + practice.owner_id + '&select=email,name', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const owner = (await ownerR.json())[0] || {};
+      let customerId = practice.stripe_customer_id;
+      // Create Stripe customer if not yet
+      if (!customerId) {
+        const custForm = new URLSearchParams();
+        custForm.append('email', owner.email || user.email || '');
+        if (owner.name) custForm.append('name', owner.name);
+        custForm.append('metadata[practice_id]', practiceId);
+        custForm.append('metadata[modern_village_owner_id]', practice.owner_id);
+        const custR = await fetch('https://api.stripe.com/v1/customers', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + env.STRIPE_SECRET_KEY, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: custForm.toString()
+        });
+        if (!custR.ok) {
+          const errText = await custR.text();
+          return new Response(JSON.stringify({ error: 'Stripe customer create failed: ' + errText }), { status: 500, headers: h });
+        }
+        const custData = await custR.json();
+        customerId = custData.id;
+        await fetch(env.SUPABASE_URL + '/rest/v1/practices?id=eq.' + practiceId, {
+          method: 'PATCH',
+          headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ stripe_customer_id: customerId })
+        });
+      }
+      // Quantity = active patient count (min 1 so Stripe accepts the line)
+      const quantity = Math.max(1, practice.patient_count || 1);
+      // Create Checkout session
+      const ckForm = new URLSearchParams();
+      ckForm.append('mode', 'subscription');
+      ckForm.append('customer', customerId);
+      ckForm.append('line_items[0][price]', env.STRIPE_PRICE_ID);
+      ckForm.append('line_items[0][quantity]', String(quantity));
+      ckForm.append('success_url', (body.return_url || 'https://modernvillage.app/app.html') + '?stripe_status=success');
+      ckForm.append('cancel_url', (body.return_url || 'https://modernvillage.app/app.html') + '?stripe_status=cancelled');
+      ckForm.append('subscription_data[metadata][practice_id]', practiceId);
+      ckForm.append('allow_promotion_codes', 'true');
+      const ckR = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + env.STRIPE_SECRET_KEY, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: ckForm.toString()
+      });
+      if (!ckR.ok) {
+        const errText = await ckR.text();
+        return new Response(JSON.stringify({ error: 'Stripe checkout create failed: ' + errText }), { status: 500, headers: h });
+      }
+      const ckData = await ckR.json();
+      return new Response(JSON.stringify({ url: ckData.url }), { headers: h });
+    }
+
+    // ═══ STRIPE: CUSTOMER PORTAL ═══
+    // Authenticated. Generates a one-time customer portal link so the owner can
+    // update payment method, cancel, view invoices, etc.
+    if (url.pathname === '/stripe/portal') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      if (!env.STRIPE_SECRET_KEY) {
+        return new Response('{"error":"Stripe not configured"}', { status: 500, headers: h });
+      }
+      const practiceId = body.practice_id;
+      if (!practiceId) return new Response('{"error":"Missing practice_id"}', { status: 400, headers: h });
+      const memberCheck = await fetch(env.SUPABASE_URL + '/rest/v1/practice_members?practice_id=eq.' + practiceId + '&user_id=eq.' + user.id + '&active=eq.true&select=role', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const membership = await memberCheck.json();
+      if (!membership.length || membership[0].role !== 'owner_bcba') {
+        return new Response('{"error":"Only the practice owner can manage billing"}', { status: 403, headers: h });
+      }
+      const prR = await fetch(env.SUPABASE_URL + '/rest/v1/practices?id=eq.' + practiceId + '&select=stripe_customer_id', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const prRows = await prR.json();
+      if (!prRows.length || !prRows[0].stripe_customer_id) {
+        return new Response('{"error":"No Stripe customer yet. Upgrade first."}', { status: 400, headers: h });
+      }
+      const portalForm = new URLSearchParams();
+      portalForm.append('customer', prRows[0].stripe_customer_id);
+      portalForm.append('return_url', body.return_url || 'https://modernvillage.app/app.html');
+      const portalR = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + env.STRIPE_SECRET_KEY, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: portalForm.toString()
+      });
+      if (!portalR.ok) {
+        const errText = await portalR.text();
+        return new Response(JSON.stringify({ error: 'Stripe portal failed: ' + errText }), { status: 500, headers: h });
+      }
+      const portalData = await portalR.json();
+      return new Response(JSON.stringify({ url: portalData.url }), { headers: h });
     }
 
     // ═══ SEND CAMPAIGN (admin only) ═══
