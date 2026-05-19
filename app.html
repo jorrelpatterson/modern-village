@@ -1323,6 +1323,40 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   </div>
 </div>
 
+<div id="practiceClientsPage" class="overlay-page">
+  <div class="overlay-header">
+    <button class="overlay-back" onclick="closeOverlay('practiceClientsPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2 class="overlay-title">Clients</h2>
+  </div>
+  <div class="overlay-inner" id="practiceClientsContent" style="padding-bottom:80px"></div>
+</div>
+
+<div id="addClientModal" class="modal-overlay" style="display:none">
+  <div class="modal-content" style="max-width:520px">
+    <h3 style="font-family:Fraunces,serif;font-size:22px;margin-bottom:12px">Add a client</h3>
+    <p style="color:var(--warm-gray);font-size:13px;margin-bottom:14px">Add a child whose parent is already on Modern Village (search by parent email), or create a new child and invite the parent.</p>
+    <label class="fl">Parent email</label>
+    <input id="addClientParentEmail" class="fi" placeholder="parent@example.com" oninput="searchParentByEmail()">
+    <div id="addClientChildPicker" style="margin-top:14px;display:none"></div>
+    <label class="fl" style="margin-top:14px">Service type</label>
+    <select id="addClientService" class="fi">
+      <option value="97153">97153 — Adaptive behavior treatment (direct)</option>
+      <option value="97155">97155 — Adaptive behavior treatment (supervised by BCBA)</option>
+      <option value="97156" selected>97156 — Family adaptive behavior treatment guidance (PC)</option>
+    </select>
+    <label class="fl" style="margin-top:14px">Primary BCBA</label>
+    <select id="addClientPrimary" class="fi"></select>
+    <label class="fl" style="margin-top:14px">Weekly hours authorized</label>
+    <input id="addClientHours" class="fi" type="number" min="0" step="0.5" placeholder="e.g. 10">
+    <label class="fl" style="margin-top:14px">Prior authorization #</label>
+    <input id="addClientPa" class="fi" placeholder="optional">
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button class="btn btn-s" style="flex:1" onclick="closeAddClientModal()">Cancel</button>
+      <button class="btn btn-p" style="flex:1" onclick="submitAddClient()">Add client</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══ SUPABASE INIT ═══
 var SUPA_URL = "https://jrsiqjfwvunrjiihnsgc.supabase.co";
@@ -2028,7 +2062,164 @@ async function deactivateMember(memberId){
   if(upd.error){ showToast(upd.error.message); return; }
   loadPracticeMembers();
 }
-function openPracticeClients(){ alert('Practice clients coming next'); }
+var addClientState = { parentId: null, childId: null };
+
+async function openPracticeClients(){
+  if(!S.practiceMember){ showToast('Set up your practice first'); return; }
+  document.getElementById('practiceClientsPage').classList.add('open');
+  await loadPracticeClients();
+}
+
+async function loadPracticeClients(){
+  var el = document.getElementById('practiceClientsContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
+  var r = await sb.from('practice_clients')
+    .select('id,status,service_type,prior_auth_number,weekly_hours_authorized,intake_date,children(id,name,age,diagnosis),primary_bcba:practice_members!primary_bcba_id(profiles(name,email))')
+    .eq('practice_id', S.practiceMember.practice_id)
+    .order('intake_date', { ascending: false, nullsLast: true });
+  if(r.error){ el.innerHTML = '<div style="padding:20px;color:var(--terracotta)">'+esc(r.error.message)+'</div>'; return; }
+  var rows = r.data || [];
+  var canWrite = S.practiceMember.role === 'owner_bcba' || S.practiceMember.role === 'supervising_bcba';
+  var h = '<div style="max-width:880px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+    '<div style="font-family:Fraunces,serif;font-size:22px;font-weight:700">'+rows.length+' client'+(rows.length!==1?'s':'')+'</div>'+
+    (canWrite ? '<button class="btn btn-p" onclick="openAddClientModal()">+ Add client</button>' : '')+
+    '</div>';
+  if(rows.length === 0){
+    h += '<div style="padding:40px;text-align:center;color:var(--warm-gray);border:1px dashed var(--sand);border-radius:14px">No clients yet. Click "Add client" to get started.</div>';
+  } else {
+    for(var i=0;i<rows.length;i++){
+      var c = rows[i];
+      var child = c.children || {};
+      var statusColor = { active:'var(--sage-light)', intake:'var(--sky)', discharged:'var(--sand)', on_hold:'var(--lavender)' }[c.status] || 'var(--sand)';
+      h += '<div class="client-row" onclick="openClientDetailFromRoster(\\x27'+c.id+'\\x27)" style="border:1px solid var(--sand);border-radius:14px;padding:14px 16px;margin-bottom:10px;background:white;cursor:pointer">'+
+        '<div style="display:flex;justify-content:space-between;align-items:start;gap:10px">'+
+        '<div style="flex:1"><div style="font-weight:700;font-size:16px">'+esc(child.name||'(unnamed)')+'</div>'+
+        '<div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Age '+(child.age||'?')+' &middot; '+esc(child.diagnosis||'No diagnosis on file')+'</div>'+
+        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+
+        '<span class="log-tag" style="background:'+statusColor+'">'+c.status+'</span>'+
+        (c.service_type ? '<span class="log-tag">CPT '+c.service_type+'</span>' : '')+
+        (c.weekly_hours_authorized ? '<span class="log-tag">'+c.weekly_hours_authorized+'h/wk auth</span>' : '')+
+        '</div></div>';
+      if(canWrite && c.status !== 'discharged'){
+        h += '<button class="btn btn-s" style="padding:6px 10px;font-size:11px" onclick="event.stopPropagation();dischargeClient(\\x27'+c.id+'\\x27)">Discharge</button>';
+      }
+      h += '</div></div>';
+    }
+  }
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+async function openAddClientModal(){
+  addClientState = { parentId: null, childId: null };
+  document.getElementById('addClientParentEmail').value = '';
+  document.getElementById('addClientChildPicker').innerHTML = '';
+  document.getElementById('addClientChildPicker').style.display = 'none';
+  document.getElementById('addClientHours').value = '';
+  document.getElementById('addClientPa').value = '';
+  var r = await sb.from('practice_members')
+    .select('id,profiles(name,email)')
+    .eq('practice_id', S.practiceMember.practice_id)
+    .in('role', ['owner_bcba','supervising_bcba'])
+    .eq('active', true);
+  var opts = '';
+  (r.data || []).forEach(function(m){
+    var p = m.profiles || {};
+    opts += '<option value="'+m.id+'">'+esc(p.name||p.email||'(BCBA)')+'</option>';
+  });
+  document.getElementById('addClientPrimary').innerHTML = opts;
+  document.getElementById('addClientModal').style.display = 'flex';
+}
+
+function closeAddClientModal(){
+  document.getElementById('addClientModal').style.display = 'none';
+}
+
+var searchDebounce = null;
+function searchParentByEmail(){
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(doSearchParent, 250);
+}
+
+async function doSearchParent(){
+  var email = document.getElementById('addClientParentEmail').value.trim().toLowerCase();
+  var picker = document.getElementById('addClientChildPicker');
+  if(email.length < 3){ picker.style.display = 'none'; return; }
+  var r = await sb.from('profiles').select('id,name,email,children(id,name,age,diagnosis)').eq('email', email).maybeSingle();
+  if(!r.data){
+    picker.innerHTML = '<div style="background:var(--cream);padding:10px;border-radius:10px;font-size:13px;color:var(--warm-gray)">No Modern Village account for that email. Ask the parent to sign up first, then re-add.</div>';
+    picker.style.display = 'block';
+    addClientState.parentId = null;
+    addClientState.childId = null;
+    return;
+  }
+  addClientState.parentId = r.data.id;
+  var kids = r.data.children || [];
+  if(kids.length === 0){
+    picker.innerHTML = '<div style="background:var(--cream);padding:10px;border-radius:10px;font-size:13px;color:var(--warm-gray)">Parent found, but they haven\\x27t added a child yet. Ask them to add a child in their profile, then re-add.</div>';
+    picker.style.display = 'block';
+    addClientState.childId = null;
+    return;
+  }
+  var h = '<label class="fl">Which child?</label><div style="display:flex;flex-direction:column;gap:6px">';
+  kids.forEach(function(k){
+    h += '<label style="display:flex;gap:8px;padding:10px;border:1px solid var(--sand);border-radius:10px;cursor:pointer"><input type="radio" name="childPick" value="'+k.id+'" onchange="addClientState.childId=this.value"> <span><strong>'+esc(k.name)+'</strong><span style="color:var(--warm-gray);font-size:12px"> &middot; age '+(k.age||'?')+'</span></span></label>';
+  });
+  h += '</div>';
+  picker.innerHTML = h;
+  picker.style.display = 'block';
+}
+
+async function submitAddClient(){
+  if(!addClientState.parentId){ showToast('Find a parent first'); return; }
+  if(!addClientState.childId){ showToast('Pick a child'); return; }
+  var service = document.getElementById('addClientService').value;
+  var primary = document.getElementById('addClientPrimary').value;
+  var hours = parseFloat(document.getElementById('addClientHours').value) || null;
+  var pa = document.getElementById('addClientPa').value.trim() || null;
+  var ins = await sb.from('practice_clients').insert({
+    practice_id: S.practiceMember.practice_id,
+    child_id: addClientState.childId,
+    primary_bcba_id: primary,
+    service_type: service,
+    weekly_hours_authorized: hours,
+    prior_auth_number: pa,
+    status: 'intake',
+    intake_date: new Date().toISOString().slice(0,10)
+  });
+  if(ins.error){ showToast(ins.error.message); return; }
+  await sb.from('child_access').upsert({
+    child_id: addClientState.childId,
+    user_id: addClientState.parentId,
+    granted_by: S.user.id,
+    access_level: 'full',
+    practice_id: S.practiceMember.practice_id,
+    granted_at: new Date().toISOString()
+  }, { onConflict: 'child_id,user_id' });
+  closeAddClientModal();
+  showToast('Client added — intake status. Set to active when ready.');
+  loadPracticeClients();
+}
+
+async function dischargeClient(practiceClientId){
+  var reason = prompt('Discharge reason (optional):');
+  if(reason === null) return;
+  var upd = await sb.from('practice_clients').update({
+    status: 'discharged',
+    discharge_date: new Date().toISOString().slice(0,10),
+    discharge_reason: reason || null
+  }).eq('id', practiceClientId);
+  if(upd.error){ showToast(upd.error.message); return; }
+  showToast('Client discharged');
+  loadPracticeClients();
+}
+
+function openClientDetailFromRoster(practiceClientId){
+  openPracticeClientDetail(practiceClientId);
+}
+
+function openPracticeClientDetail(id){ alert('Client detail (programs tab) coming in Task 11'); }
 function openCurriculumBrowser(){ alert('Curriculum browser coming next'); }
 function openPracticeSettings(){ alert('Practice settings coming next'); }
 
