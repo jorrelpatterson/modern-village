@@ -2589,9 +2589,10 @@ async function openPracticeClientDetail(practiceClientId){
   await renderClientPrograms();
 }
 
-async function renderClientPrograms(){
+var clientDetailTab = 'programs'; // 'programs' | 'behaviors'
+
+async function renderClientProgramsTab(tabBar){
   var el = document.getElementById('practiceClientDetailContent');
-  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
   var pgR = await sb.from('programs')
     .select('id,name,category,domain,description,status,created_at,targets(id,name,status)')
     .eq('practice_client_id', currentClient.id)
@@ -2633,7 +2634,31 @@ async function renderClientPrograms(){
     }
   }
   h += '</div>';
-  el.innerHTML = h;
+  el.innerHTML = tabBar + h;
+}
+
+async function renderClientPrograms(){
+  var el = document.getElementById('practiceClientDetailContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
+  var tabBar = '<div style="display:flex;gap:0;border-bottom:1px solid var(--sand);margin:-20px -20px 16px -20px;padding:0 20px">'+
+    '<button onclick="switchClientDetailTab(\x27programs\x27)" style="padding:10px 16px;background:none;border:none;border-bottom:3px solid '+(clientDetailTab==='programs'?'var(--sage-dark)':'transparent')+';color:'+(clientDetailTab==='programs'?'var(--sage-dark)':'var(--warm-gray)')+';font-weight:700;font-size:14px;cursor:pointer">Programs</button>'+
+    '<button onclick="switchClientDetailTab(\x27behaviors\x27)" style="padding:10px 16px;background:none;border:none;border-bottom:3px solid '+(clientDetailTab==='behaviors'?'var(--sage-dark)':'transparent')+';color:'+(clientDetailTab==='behaviors'?'var(--sage-dark)':'var(--warm-gray)')+';font-weight:700;font-size:14px;cursor:pointer">Behaviors</button>'+
+    '</div>';
+  if(clientDetailTab === 'programs'){
+    await renderClientProgramsTab(tabBar);
+  } else {
+    await renderClientBehaviorsTab(tabBar);
+  }
+}
+
+function switchClientDetailTab(tab){
+  clientDetailTab = tab;
+  renderClientPrograms();
+}
+
+async function renderClientBehaviorsTab(tabBar){
+  var el = document.getElementById('practiceClientDetailContent');
+  el.innerHTML = tabBar + '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Behaviors tab content lands in Task 3.</div>';
 }
 
 function renderProgramGroup(label, list, canWrite){
