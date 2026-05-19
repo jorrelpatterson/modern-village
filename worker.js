@@ -621,6 +621,100 @@ export default {
       return new Response(JSON.stringify({ success: true, child_id: invite.child_id, role: invite.role }), { headers: h });
     }
 
+    if (url.pathname === '/practice/invite-member') {
+      if (!checkRate(ip, 'email')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+
+      const email = (body.email || '').toLowerCase().trim();
+      const role = body.role;
+      const supervisorId = body.supervisor_id || null;
+      const practiceId = body.practice_id;
+      if (!email || !email.includes('@')) return new Response('{"error":"Invalid email"}', { status: 400, headers: h });
+      if (!['rbt','supervising_bcba','admin'].includes(role)) return new Response('{"error":"Invalid role"}', { status: 400, headers: h });
+      if (!practiceId) return new Response('{"error":"Missing practice_id"}', { status: 400, headers: h });
+      if (role === 'rbt' && !supervisorId) return new Response('{"error":"RBT requires supervisor"}', { status: 400, headers: h });
+
+      // Verify caller is an active owner_bcba or supervising_bcba of the practice
+      const memberCheck = await fetch(env.SUPABASE_URL + '/rest/v1/practice_members?practice_id=eq.' + practiceId + '&user_id=eq.' + user.id + '&active=eq.true&select=role', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const membership = await memberCheck.json();
+      if (!membership.length || !['owner_bcba','supervising_bcba'].includes(membership[0].role)) {
+        return new Response('{"error":"Not authorized to invite"}', { status: 403, headers: h });
+      }
+
+      // Look up invitee by email
+      const profR = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?email=eq.' + encodeURIComponent(email) + '&select=id', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const profs = await profR.json();
+      if (!profs.length) {
+        return new Response('{"error":"Invitee must create a Modern Village account first. Ask them to sign up at https://modernvillage.app, then re-invite."}', { status: 400, headers: h });
+      }
+      const inviteeId = profs[0].id;
+
+      // Generate invite token
+      const inviteToken = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+
+      // Insert pending practice_members row
+      const insertR = await fetch(env.SUPABASE_URL + '/rest/v1/practice_members', {
+        method: 'POST',
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          practice_id: practiceId,
+          user_id: inviteeId,
+          role: role,
+          supervisor_id: supervisorId,
+          active: false,
+          invite_token: inviteToken
+        })
+      });
+      if (!insertR.ok) {
+        const errText = await insertR.text();
+        return new Response(JSON.stringify({ error: 'Could not create invite: ' + errText }), { status: 500, headers: h });
+      }
+
+      // Fetch practice name for the email
+      const prR = await fetch(env.SUPABASE_URL + '/rest/v1/practices?id=eq.' + practiceId + '&select=name', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const prData = await prR.json();
+      const practiceName = (prData[0] && prData[0].name) || 'a Modern Village practice';
+
+      // Send invite email
+      const acceptUrl = 'https://modernvillage.app/app.html?practice_invite=' + inviteToken;
+      const roleLabel = role === 'rbt' ? 'Registered Behavior Technician' : role === 'supervising_bcba' ? 'Supervising BCBA' : 'Practice Admin';
+      const inviteBody = (
+        '<h1 style="font-size:24px;font-weight:800;color:#2D2D2D;margin:0 0 8px">You\'re invited to ' + practiceName + ' &#127807;</h1>' +
+        '<p style="color:#6B6560;font-size:15px;line-height:1.6;margin:0 0 20px">' +
+        'You have been invited to join <strong style="color:#2D2D2D">' + practiceName + '</strong> on Modern Village as a <strong style="color:#2D2D2D">' + roleLabel + '</strong>.</p>' +
+        '<div style="background:#FDF8F0;border-radius:12px;padding:16px;margin:16px 0;border-left:4px solid #7A9E7E">' +
+        '<p style="margin:0;color:#2D2D2D;font-size:14px;line-height:1.6">Modern Village is the BCBA data collection platform that competes with Ensora on a per-patient (not per-seat) model. Accept the invite to start collecting clinical data with your team.</p>' +
+        '</div>' +
+        '<div style="text-align:center;margin:24px 0">' +
+        '<a href="' + acceptUrl + '" style="display:inline-block;padding:14px 32px;background:#7A9E7E;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px;margin:16px 0">Accept invite</a>' +
+        '</div>' +
+        '<p style="font-size:13px;color:#9E9790;text-align:center;margin:0">Or open this link: <a href="' + acceptUrl + '" style="color:#7A9E7E;text-decoration:none">' + acceptUrl + '</a></p>'
+      );
+      try {
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: 'Modern Village <hello@modernvillage.app>',
+            to: email,
+            subject: 'You\'re invited to ' + practiceName + ' on Modern Village',
+            html: emailWrapper(inviteBody)
+          })
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: 'Email send failed' }), { status: 500, headers: h });
+      }
+
+      return new Response('{"success":true}', { headers: h });
+    }
+
     // ═══ SEND CAMPAIGN (admin only) ═══
     if (url.pathname === '/send-campaign') {
       const user = await verifyToken(authToken, env);
