@@ -2723,7 +2723,7 @@ async function loadPracticeClients(){
       var c = rows[i];
       var child = c.children || {};
       var statusColor = { active:'var(--sage-light)', intake:'var(--sky)', discharged:'var(--sand)', on_hold:'var(--lavender)' }[c.status] || 'var(--sand)';
-      h += '<div class="client-row" onclick="openClientDetailFromRoster(\\x27'+c.id+'\\x27)" style="border:1px solid var(--sand);border-radius:14px;padding:14px 16px;margin-bottom:10px;background:white;cursor:pointer">'+
+      h += '<div class="client-row" onclick="openClientDetailFromRoster(\x27'+c.id+'\x27)" style="border:1px solid var(--sand);border-radius:14px;padding:14px 16px;margin-bottom:10px;background:white;cursor:pointer">'+
         '<div style="display:flex;justify-content:space-between;align-items:start;gap:10px">'+
         '<div style="flex:1"><div style="font-weight:700;font-size:16px">'+esc(child.name||'(unnamed)')+'</div>'+
         '<div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Age '+(child.age||'?')+' &middot; '+esc(child.diagnosis||'No diagnosis on file')+'</div>'+
@@ -2740,7 +2740,7 @@ async function loadPracticeClients(){
         (c.weekly_hours_authorized ? '<span class="log-tag">'+c.weekly_hours_authorized+'h/wk auth</span>' : '')+
         '</div></div>';
       if(canWrite && c.status !== 'discharged'){
-        h += '<button class="btn btn-s" style="padding:6px 10px;font-size:11px" onclick="event.stopPropagation();dischargeClient(\\x27'+c.id+'\\x27)">Discharge</button>';
+        h += '<button class="btn btn-s" style="padding:6px 10px;font-size:11px" onclick="event.stopPropagation();dischargeClient(\x27'+c.id+'\x27)">Discharge</button>';
       }
       h += '</div></div>';
     }
@@ -2807,7 +2807,7 @@ async function doSearchParent(){
   addClientState.parentId = profile.id;
   var kids = profile.children || [];
   if(kids.length === 0){
-    picker.innerHTML = '<div style="background:var(--cream);padding:10px;border-radius:10px;font-size:13px;color:var(--warm-gray)">Found <strong>'+esc(profile.name || profile.email)+'</strong>, but they haven\\x27t added a child to their profile yet. Ask them to add a child in Modern Village, then re-add.</div>';
+    picker.innerHTML = '<div style="background:var(--cream);padding:10px;border-radius:10px;font-size:13px;color:var(--warm-gray)">Found <strong>'+esc(profile.name || profile.email)+'</strong>, but they haven\x27t added a child to their profile yet. Ask them to add a child in Modern Village, then re-add.</div>';
     picker.style.display = 'block';
     addClientState.childId = null;
     return;
@@ -6387,7 +6387,7 @@ function updateSubSt(){
     el.style.borderColor='var(--sage)';
     el.style.background='var(--sage-light)';
     if(S.sharedPro){
-      el.innerHTML='<div style="font-size:12px;color:var(--sage-dark);font-weight:600">MODERN VILLAGE COACH</div><div style="font-weight:700;font-size:15px;margin-top:2px">Active \u2014 Family Access</div><div style="font-size:11px;color:var(--warm-gray);margin-top:2px">Shared via '+esc(S.sharedProFrom||'co-parent')+'\\x27s subscription</div>';
+      el.innerHTML='<div style="font-size:12px;color:var(--sage-dark);font-weight:600">MODERN VILLAGE COACH</div><div style="font-weight:700;font-size:15px;margin-top:2px">Active \u2014 Family Access</div><div style="font-size:11px;color:var(--warm-gray);margin-top:2px">Shared via '+esc(S.sharedProFrom||'co-parent')+'\x27s subscription</div>';
     }else{
       el.innerHTML='<div style="font-size:12px;color:var(--sage-dark);font-weight:600">MODERN VILLAGE COACH</div><div style="font-weight:700;font-size:15px;margin-top:2px">Active \u2014 $19.99/mo</div>';
     }
@@ -7619,7 +7619,7 @@ async function loadVillageEvents(){
       var isHost=e.creator_id===S.user.id;
       var dist=e._dist!==undefined?e._dist.toFixed(1)+' mi':'';
 
-      h+='<div class="vill-event-card" onclick="openEventDetail(\\x27'+e.id+'\\x27)">';
+      h+='<div class="vill-event-card" onclick="openEventDetail(\x27'+e.id+'\x27)">';
       h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:18px">'+emoji+'</span><span class="vill-type-badge">'+esc(typeLabel)+'</span></div>';
       h+='<div style="font-weight:700;font-size:15px;margin-bottom:4px">'+esc(e.title)+'</div>';
       h+='<div style="font-size:13px;color:var(--warm-gray);margin-bottom:2px">'+dateStr+'</div>';
@@ -7628,7 +7628,7 @@ async function loadVillageEvents(){
       h+='<span style="color:var(--warm-gray)">Hosted by '+esc(creator)+'</span>';
       h+='<span style="color:var(--warm-gray-light)">'+(e.max_attendees?rsvpCount+'/'+e.max_attendees+' spots':rsvpCount+' going')+(dist?' \u00b7 '+dist:'')+'</span>';
       h+='</div>';
-      if(myStatus==='approved')h+='<div style="margin-top:8px;font-size:12px;font-weight:600;color:var(--sage-dark)">\u2705 You\\x27re going!</div>';
+      if(myStatus==='approved')h+='<div style="margin-top:8px;font-size:12px;font-weight:600;color:var(--sage-dark)">\u2705 You\x27re going!</div>';
       else if(myStatus==='pending')h+='<div style="margin-top:8px;font-size:12px;font-weight:600;color:var(--sunflower-dark)">\u23F3 Waiting for approval</div>';
       else if(isHost)h+='<div style="margin-top:8px;font-size:12px;font-weight:600;color:var(--sage-dark)">Your event</div>';
       h+='</div>';
@@ -7749,11 +7749,11 @@ async function openEventDetail(eventId){
 
   if(!isHost){
     if(!myStatus){
-      h+='<button class="btn btn-p" style="width:100%;margin-bottom:16px" onclick="rsvpEvent(\\x27'+eventId+'\\x27)">RSVP</button>';
+      h+='<button class="btn btn-p" style="width:100%;margin-bottom:16px" onclick="rsvpEvent(\x27'+eventId+'\x27)">RSVP</button>';
     } else if(myStatus==='approved'){
-      h+='<div style="display:flex;gap:8px;margin-bottom:16px"><div style="flex:1;padding:12px;background:var(--sage-light);border-radius:12px;text-align:center;font-size:14px;font-weight:700;color:var(--sage-dark)">\u2705 You\\x27re going!</div><button class="btn btn-s" style="font-size:12px" onclick="cancelRsvp(\\x27'+eventId+'\\x27)">Cancel RSVP</button></div>';
+      h+='<div style="display:flex;gap:8px;margin-bottom:16px"><div style="flex:1;padding:12px;background:var(--sage-light);border-radius:12px;text-align:center;font-size:14px;font-weight:700;color:var(--sage-dark)">\u2705 You\x27re going!</div><button class="btn btn-s" style="font-size:12px" onclick="cancelRsvp(\x27'+eventId+'\x27)">Cancel RSVP</button></div>';
     } else if(myStatus==='pending'){
-      h+='<div style="display:flex;gap:8px;margin-bottom:16px"><div style="flex:1;padding:12px;background:var(--cream);border-radius:12px;text-align:center;font-size:14px;font-weight:600;color:var(--warm-gray)">\u23F3 Waiting for host approval</div><button class="btn btn-s" style="font-size:12px" onclick="cancelRsvp(\\x27'+eventId+'\\x27)">Cancel</button></div>';
+      h+='<div style="display:flex;gap:8px;margin-bottom:16px"><div style="flex:1;padding:12px;background:var(--cream);border-radius:12px;text-align:center;font-size:14px;font-weight:600;color:var(--warm-gray)">\u23F3 Waiting for host approval</div><button class="btn btn-s" style="font-size:12px" onclick="cancelRsvp(\x27'+eventId+'\x27)">Cancel</button></div>';
     }
   }
 
@@ -7774,11 +7774,11 @@ async function openEventDetail(eventId){
         var name=attendeeNames[r.user_id]||'Someone';
         h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:white;border-radius:12px;border:1px solid var(--sand);margin-bottom:6px">';
         h+='<div style="display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:8px;background:var(--cream);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800">'+esc(name[0].toUpperCase())+'</div><span style="font-size:13px;font-weight:600">'+esc(name)+'</span></div>';
-        h+='<div style="display:flex;gap:6px"><button class="btn btn-p" style="font-size:11px;padding:6px 12px" onclick="approveRsvp(\\x27'+r.user_id+'\\x27,\\x27'+eventId+'\\x27)">Approve</button><button class="btn btn-s" style="font-size:11px;padding:6px 12px" onclick="declineRsvp(\\x27'+r.user_id+'\\x27,\\x27'+eventId+'\\x27)">Decline</button></div>';
+        h+='<div style="display:flex;gap:6px"><button class="btn btn-p" style="font-size:11px;padding:6px 12px" onclick="approveRsvp(\x27'+r.user_id+'\x27,\x27'+eventId+'\x27)">Approve</button><button class="btn btn-s" style="font-size:11px;padding:6px 12px" onclick="declineRsvp(\x27'+r.user_id+'\x27,\x27'+eventId+'\x27)">Decline</button></div>';
         h+='</div>';
       });
     }
-    h+='<div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-s" style="flex:1;color:var(--terracotta);border-color:var(--terracotta)" onclick="cancelEvent(\\x27'+eventId+'\\x27)">Cancel Event</button></div>';
+    h+='<div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-s" style="flex:1;color:var(--terracotta);border-color:var(--terracotta)" onclick="cancelEvent(\x27'+eventId+'\x27)">Cancel Event</button></div>';
   }
   var commentsHtml=await loadEventComments(eventId);
   h+=commentsHtml;
@@ -7792,7 +7792,7 @@ async function rsvpEvent(eventId){
   var status=ev&&ev.requires_approval?'pending':'approved';
   try{
     await sb.from('village_rsvps').upsert({event_id:eventId,user_id:S.user.id,status:status},{onConflict:'event_id,user_id'});
-    showToast(status==='approved'?'You\\x27re in!':'RSVP sent \u2014 waiting for approval');
+    showToast(status==='approved'?'You\x27re in!':'RSVP sent \u2014 waiting for approval');
     openEventDetail(eventId);
   }catch(e){console.error('RSVP:',e);showToast('Could not RSVP')}
 }
