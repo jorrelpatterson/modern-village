@@ -644,31 +644,36 @@ export default {
         return new Response('{"error":"Not authorized to invite"}', { status: 403, headers: h });
       }
 
-      // Look up invitee by email
+      // Look up invitee by email (may not exist yet — that's fine, we create a pending invite)
       const profR = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?email=eq.' + encodeURIComponent(email) + '&select=id', {
         headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
       });
       const profs = await profR.json();
-      if (!profs.length) {
-        return new Response('{"error":"Invitee must create a Modern Village account first. Ask them to sign up at https://modernvillage.app, then re-invite."}', { status: 400, headers: h });
-      }
-      const inviteeId = profs[0].id;
+      const inviteeId = profs.length ? profs[0].id : null;
 
       // Generate invite token
       const inviteToken = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
 
-      // Insert pending practice_members row
+      // Insert practice_members row.
+      // - If invitee has a Modern Village account: link user_id; they accept via token.
+      // - If invitee is brand new: leave user_id null + store pending_email. When they sign up,
+      //   the app auto-claims this row by matching pending_email to their auth email.
+      const memberPayload = {
+        practice_id: practiceId,
+        role: role,
+        supervisor_id: supervisorId,
+        active: false,
+        invite_token: inviteToken
+      };
+      if (inviteeId) {
+        memberPayload.user_id = inviteeId;
+      } else {
+        memberPayload.pending_email = email;
+      }
       const insertR = await fetch(env.SUPABASE_URL + '/rest/v1/practice_members', {
         method: 'POST',
         headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({
-          practice_id: practiceId,
-          user_id: inviteeId,
-          role: role,
-          supervisor_id: supervisorId,
-          active: false,
-          invite_token: inviteToken
-        })
+        body: JSON.stringify(memberPayload)
       });
       if (!insertR.ok) {
         const errText = await insertR.text();

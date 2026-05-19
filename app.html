@@ -2409,26 +2409,65 @@ async function handlePracticeInviteToken(){
   var token = params.get('practice_invite');
   if(!token || !S.user) return;
   var r = await sb.from('practice_members')
-    .select('id,practice_id,user_id,practices(name)')
+    .select('id,practice_id,user_id,pending_email,practices(name)')
     .eq('invite_token', token)
     .maybeSingle();
   if(r.error || !r.data){
     showToast('Invite link invalid or expired');
     return;
   }
-  if(r.data.user_id !== S.user.id){
-    showToast('This invite was for a different account. Sign in with the invited email.');
-    return;
+  var row = r.data;
+  var update;
+  if(row.user_id === null){
+    // Pending-email invite — claim it if email matches
+    var caller = (S.user.email || '').toLowerCase();
+    var invited = (row.pending_email || '').toLowerCase();
+    if(!invited || invited !== caller){
+      showToast('This invite was sent to '+(row.pending_email || 'another email')+'. Sign in with that email.');
+      return;
+    }
+    update = { user_id: S.user.id, pending_email: null, active: true, accepted_at: new Date().toISOString(), invite_token: null };
+  } else {
+    if(row.user_id !== S.user.id){
+      showToast('This invite was for a different account. Sign in with the invited email.');
+      return;
+    }
+    update = { active: true, accepted_at: new Date().toISOString(), invite_token: null };
   }
-  var upd = await sb.from('practice_members')
-    .update({ active: true, accepted_at: new Date().toISOString(), invite_token: null })
-    .eq('id', r.data.id);
+  var upd = await sb.from('practice_members').update(update).eq('id', row.id);
   if(upd.error){ showToast(upd.error.message); return; }
-  // Strip token from URL
   window.history.replaceState({}, '', window.location.pathname);
   await loadProfile();
-  showToast('Welcome to '+(r.data.practices && r.data.practices.name || 'your practice'));
+  renderSb();
+  showToast('Welcome to '+(row.practices && row.practices.name || 'your practice'));
   openPracticeDashboard();
+}
+
+// On every profile load, auto-claim any pending practice invitations sent to this user's email.
+// Lets BCBAs invite teammates by email before the teammate has an account — when the teammate
+// signs up (or signs in), their pending row gets linked automatically.
+async function autoLinkPendingPracticeInvites(){
+  if(!S.user || !S.user.email) return false;
+  var r = await sb.from('practice_members')
+    .select('id,practice_id,role,practices(name)')
+    .is('user_id', null)
+    .ilike('pending_email', S.user.email);
+  if(r.error || !r.data || r.data.length === 0) return false;
+  for(var i=0;i<r.data.length;i++){
+    var row = r.data[i];
+    await sb.from('practice_members').update({
+      user_id: S.user.id,
+      pending_email: null,
+      active: true,
+      accepted_at: new Date().toISOString(),
+      invite_token: null
+    }).eq('id', row.id);
+  }
+  var label = r.data.length === 1
+    ? 'Joined '+(r.data[0].practices && r.data[0].practices.name || 'a practice')
+    : 'Joined '+r.data.length+' practices';
+  showToast(label);
+  return true;
 }
 async function openPracticeMembers(){
   if(!S.practiceMember){ showToast('Set up your practice first'); return; }
@@ -5204,6 +5243,9 @@ async function loadChildren(){
   S.practiceMember = null;
   S.practice = null;
   if(S.user){
+    // First: auto-claim any pending invites that were sent to this user's email
+    // before they had an account. Quietly skips if there are none.
+    try { await autoLinkPendingPracticeInvites(); } catch(e){ console.error('autoLink failed', e); }
     var pmR = await sb.from('practice_members')
       .select('id,practice_id,role,supervisor_id,credentials,practices(id,name,owner_id,subscription_status,trial_ends_at,patient_count)')
       .eq('user_id', S.user.id)
