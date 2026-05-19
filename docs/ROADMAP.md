@@ -4,15 +4,32 @@
 
 ---
 
-## Currently in flight (2026-05-18)
+## Currently in flight (2026-05-21)
 
-- **BCBA Data Collection — sub-projects #1 (Foundation), #2 (Live Data Entry), and #3 (Behavior Reduction) all complete** — clinical workflow end-to-end: setup → live session → trial entry → behavior tracking → per-behavior dashboard with ABC analytics. Parents see "My BCBA" with sparklines. Offline support via IndexedDB. **Next: per-patient Stripe billing mini-spec + sub-project #4 (Analysis & Reporting — the iconic per-target line graphs with phase change lines, technical indicators, annotations).** Spec: `docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md`. Plan: `docs/superpowers/plans/2026-05-18-bcba-live-data-entry.md`.
+- **BCBA Data Collection — sub-projects #1–#4 all complete** — clinical workflow end-to-end: setup → live session → trial entry → behavior tracking → per-behavior dashboard with ABC analytics → skill-target line graphs with phase change lines. Parents see "My BCBA" with sparklines. Offline support via IndexedDB. **Next: per-patient Stripe billing mini-spec + sub-project #5 (Documentation — SOAP note auto-fill from session data; timesheet signatures).** Spec: `docs/superpowers/specs/2026-05-18-bcba-data-collection-foundation-design.md`. Plan: `docs/superpowers/plans/2026-05-18-bcba-live-data-entry.md`.
 - **Email Drips + Continual Optimization** — design spec + 2402-line implementation plan committed (commits `234a7fd`, `4ec6c20`). **Code not started.** Spec: `docs/superpowers/specs/2026-04-16-email-drips-and-optimization-design.md`. Plan: `docs/superpowers/plans/2026-04-16-email-drips-and-optimization.md`. This is the gating tech build before scaling cold outreach to the 16K-lead CRM. See `docs/AGENT-CONTEXT.md` for full state.
 - **Launch prep with Ariana** — testing session walkthrough at `docs/SESSION-WALKTHROUGH-ARIANA.md`, launch strategy at `docs/LAUNCH-STRATEGY.md`. Pre-launch decisions still pending (launch date, who's "the face", pricing posture, content boundaries, crisis protocol).
 
 ---
 
 ## Completed
+
+### BCBA Data Collection — Analysis & Reporting (2026-05-21)
+**Sub-project #4 of 6** — spec: [docs/superpowers/specs/2026-05-20-bcba-analysis-reporting-design.md](docs/superpowers/specs/2026-05-20-bcba-analysis-reporting-design.md)
+
+- [x] phase_changes table + index for "targets needing reassessment" query
+- [x] Per-target line graph (SVG) with axes, gridlines, point markers, hover tooltips
+- [x] Vertical dashed phase change lines with labels
+- [x] Average overlay + mean-of-day connector toggles
+- [x] Phase change CRUD modal (date, label, notes)
+- [x] Analysis sidebar item + Skill targets tab (4 cards: needs reassessment, best, worst, team activity)
+- [x] Cross-client behavior trends — daily occurrences per client over 90 days, color-coded SVG lines
+
+**Deferred to polish pass:** trend line regression, std dev band, cumulative count, annotations, PDF export.
+
+**Next:** sub-project #5 — Documentation (SOAP note auto-fill from session data; timesheet signatures).
+
+Plan: [docs/superpowers/plans/2026-05-20-bcba-analysis-reporting.md](docs/superpowers/plans/2026-05-20-bcba-analysis-reporting.md)
 
 ### BCBA Data Collection — Behavior Reduction (2026-05-20)
 **Sub-project #3 of 6** — spec: [docs/superpowers/specs/2026-05-19-bcba-behavior-reduction-design.md](docs/superpowers/specs/2026-05-19-bcba-behavior-reduction-design.md)

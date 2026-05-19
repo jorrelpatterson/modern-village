@@ -299,6 +299,20 @@ Sign in as `testprovider@modernvillage.app`.
 - [ ] Behavior Dashboard opens; Trend tab shows line chart; Recent tab lists last 30; ABC tab shows three bar charts
 - [ ] Combined view toggle aggregates across challenging behaviors (multiple chart lines)
 
+### Analysis & Reporting (BCBA Data Collection — sub-project #4)
+
+Sign in as `testprovider@modernvillage.app`.
+
+- [ ] Open a target (Clients → Maya → program → "Graph →" button on a target card)
+- [ ] Target graph shows axes (0/25/50/75/100% gridlines, date axis), session points, line
+- [ ] Toggle Average — sage dashed line appears at running mean
+- [ ] Toggle Mean-of-day — terracotta dashed line connects daily averages
+- [ ] Add a phase change with a past date → vertical dashed red line appears with label
+- [ ] Edit a phase change → updates inline; delete → confirms and removes
+- [ ] Sidebar → Analysis → Skill targets tab shows 4 cards (reassessment / best / worst / team activity)
+- [ ] Click a target row in any card → opens that target's graph
+- [ ] Switch to Behaviors tab → cross-client line chart over last 90 days, color-coded per client
+
 ---
 
 ## 3. CAREGIVER TESTING (testcaregiver@modernvillage.app)

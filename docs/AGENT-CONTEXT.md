@@ -50,15 +50,14 @@ ABA-powered parenting platform for neurodivergent families. 9 pillars (AI Coach,
 
 ## In-flight work — BCBA Data Collection (Ensora-parity initiative)
 
-**Status as of 2026-05-20:** Sub-projects #1 (Foundation), #2 (Live Data Entry), and #3 (Behavior Reduction) **complete and merged**. Clinical workflow end-to-end: setup → live session → trial entry → behavior tracking → per-behavior dashboard with ABC analytics. Parents see "My BCBA" with sparklines.
+**Status as of 2026-05-21:** Sub-projects #1, #2, #3, #4 **complete and merged**. End-to-end clinical workflow + iconic BCBA chart shipped.
 
 **Sequence forward:**
 1. **Mini-spec — per-patient Stripe billing** (before users sign up).
-2. **Sub-project #4 — Analysis & Reporting.** Per-target line graphs with phase change lines, technical indicators (avg, trend line, std dev), annotations. The iconic BCBA chart.
-3. **Sub-project #5 — Documentation.** SOAP note auto-fill from session data; timesheet signatures.
-4. **Sub-project #6 — Curriculum Libraries.** Ariana-authored Starter content; VB-MAPP / ABLLS-R / PEAK / AFLS licensing.
+2. **Sub-project #5 — Documentation.** SOAP note auto-fill from session data; timesheet signatures.
+3. **Sub-project #6 — Curriculum Libraries.** Ariana-authored Starter content; VB-MAPP / ABLLS-R licensing.
 
-**Coverage vs Ensora (after #3):** ~90% data model, ~65% UI surface. Behavior reduction workflow now complete: BCBAs can define behaviors, manage antecedent/consequence libraries, see ABC analytics, view per-behavior trends. What's missing for full parity: skill-target line graphs with phase change lines, SOAP auto-fill, licensed curricula.
+**Coverage vs Ensora (after #4):** ~92% data model, ~80% UI surface. Skill-target line graphs with phase change lines ship; the iconic Ensora chart is now in Modern Village. What's missing: SOAP auto-fill, licensed curricula, polish indicators (trend line, std dev, annotations, PDF export).
 
 Memory: `project_bcba_data_collection.md`.
 
