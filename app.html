@@ -2948,8 +2948,8 @@ async function renderBehaviorDashboard(){
     tabBar += await renderTrendTab(combined);
   } else if(behaviorDashState.tab === 'recent'){
     tabBar += await renderRecentTab(combined);
-  } else {
-    tabBar += '<div style="padding:30px;text-align:center;color:var(--warm-gray)">ABC charts land in Task 7.</div>';
+  } else if(behaviorDashState.tab === 'abc'){
+    tabBar += await renderAbcTab(combined);
   }
   tabBar += '</div>';
   el.innerHTML = tabBar;
@@ -3078,6 +3078,87 @@ async function renderRecentTab(combined){
       '<div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:700;font-size:13px">'+esc(defName)+' · '+raw+'</div><div style="font-size:11px;color:var(--warm-gray)">'+when+'</div></div>'+
       (rec.notes ? '<div style="font-size:11px;color:var(--warm-gray);margin-top:4px;white-space:pre-wrap">'+esc(rec.notes)+'</div>' : '')+
       (obs ? '<div style="font-size:10px;color:var(--warm-gray-light);margin-top:4px">'+esc(obs)+'</div>' : '')+
+      '</div>';
+  });
+  h += '</div>';
+  return h;
+}
+
+async function renderAbcTab(combined){
+  var b = behaviorDashState.behavior;
+  var defIds = combined ? null : [b.id];
+  if(combined){
+    var allR = await sb.from('behavior_definitions').select('id').eq('practice_client_id', currentClient.id).eq('classification', 'challenging').eq('status', 'active');
+    defIds = (allR.data || []).map(function(d){ return d.id; });
+    if(defIds.length === 0) return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">No challenging behaviors yet.</div>';
+  }
+  var r = await sb.from('behavior_recordings')
+    .select('antecedent_id,consequence_id,function_category,recording_type,notes,behavior_antecedents(name),behavior_consequences(name)')
+    .in('behavior_definition_id', defIds)
+    .is('superseded_by', null);
+  if(r.error) return '<div style="padding:20px;color:var(--terracotta)">'+esc(r.error.message)+'</div>';
+  var data = r.data || [];
+  if(data.length === 0) return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">No recordings yet.</div>';
+  var antCount = {};
+  var consCount = {};
+  var funcCount = { tangible:0, escape:0, attention:0, sensory:0 };
+  data.forEach(function(rec){
+    if(rec.behavior_antecedents){
+      var n = rec.behavior_antecedents.name;
+      antCount[n] = (antCount[n] || 0) + 1;
+    } else if(rec.recording_type === 'abc' && rec.notes){
+      var m = rec.notes.match(/^A:\s*(.+?)(\n|$)/);
+      if(m){
+        var legacyAnt = m[1].trim().slice(0, 60) + ' (free-text)';
+        antCount[legacyAnt] = (antCount[legacyAnt] || 0) + 1;
+      }
+    }
+    if(rec.behavior_consequences){
+      var nc = rec.behavior_consequences.name;
+      consCount[nc] = (consCount[nc] || 0) + 1;
+    } else if(rec.recording_type === 'abc' && rec.notes){
+      var mc = rec.notes.match(/\nC:\s*(.+?)(\n|$)/);
+      if(mc){
+        var legacyCons = mc[1].trim().slice(0, 60) + ' (free-text)';
+        consCount[legacyCons] = (consCount[legacyCons] || 0) + 1;
+      }
+    }
+    if(rec.function_category && funcCount[rec.function_category] !== undefined){
+      funcCount[rec.function_category] += 1;
+    }
+  });
+  function topN(map, n){
+    return Object.entries(map).sort(function(a,b){ return b[1] - a[1]; }).slice(0, n);
+  }
+  var topAnt = topN(antCount, 5);
+  var topCons = topN(consCount, 5);
+  var funcBars = Object.entries(funcCount).sort(function(a,b){ return b[1] - a[1]; });
+  var html = '<div style="display:grid;grid-template-columns:1fr;gap:14px;max-width:760px">';
+  html += renderAbcBarBlock('Top antecedents', topAnt, data.length);
+  html += renderAbcBarBlock('Top consequences', topCons, data.length);
+  html += renderAbcBarBlock('By function', funcBars, data.length);
+  html += '</div>';
+  return html;
+}
+
+function renderAbcBarBlock(title, entries, totalRecords){
+  if(entries.length === 0 || entries.every(function(e){ return e[1] === 0; })){
+    return '<div style="background:white;border:1px solid var(--sand);border-radius:14px;padding:14px"><div style="font-weight:700;font-size:14px;margin-bottom:8px">'+title+'</div>'+
+      '<div style="color:var(--warm-gray);font-size:12px">No data yet.</div></div>';
+  }
+  var maxCount = Math.max.apply(null, entries.map(function(e){ return e[1]; }));
+  if(maxCount === 0) maxCount = 1;
+  var h = '<div style="background:white;border:1px solid var(--sand);border-radius:14px;padding:14px"><div style="font-weight:700;font-size:14px;margin-bottom:10px">'+title+'</div>';
+  entries.forEach(function(e){
+    var name = e[0];
+    var count = e[1];
+    if(count === 0) return;
+    var pct = Math.round((count / maxCount) * 100);
+    var pctTotal = totalRecords > 0 ? Math.round((count / totalRecords) * 100) : 0;
+    h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+      '<div style="width:140px;font-size:12px;color:var(--warm-gray);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(name)+'">'+esc(name)+'</div>'+
+      '<div style="flex:1;height:22px;background:var(--cream);border-radius:6px;position:relative;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:var(--sage-light);border-radius:6px"></div></div>'+
+      '<div style="width:80px;font-size:12px;font-weight:700">'+count+' &middot; '+pctTotal+'%</div>'+
       '</div>';
   });
   h += '</div>';
