@@ -814,6 +814,14 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     </div>
   </div>
 
+  <div id="myBcbaPage" class="overlay-page">
+    <div class="overlay-header">
+      <button class="overlay-back" onclick="closeOverlay('myBcbaPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <h2 class="overlay-title">My BCBA</h2>
+    </div>
+    <div class="overlay-inner" id="myBcbaContent" style="padding-bottom:80px"></div>
+  </div>
+
   <!-- BEHAVIOR SUMMARY (teachers) -->
   <div id="behaviorSummaryPage" class="overlay-page">
     <div class="overlay-hdr">
@@ -4157,6 +4165,7 @@ async function loadProfile(){
 async function loadChildren(){
   if(!S.user)return;
   S.role=S.profile&&S.profile.role||'parent';
+  S.hasMyBcba = false;
 
   // Fetch active practice membership (BCBA data collection module)
   S.practiceMember = null;
@@ -4183,6 +4192,11 @@ async function loadChildren(){
   if(S.role==='parent'){
     var r=await sb.from('children').select('*').eq('user_id',S.user.id).order('created_at',{ascending:true});
     S.children=r.data||[];
+    if(S.children.length > 0){
+      var childIds = S.children.map(function(c){ return c.id; });
+      var pcCount = await sb.from('practice_clients').select('id', { count:'exact', head:true }).in('child_id', childIds);
+      S.hasMyBcba = (pcCount.count || 0) > 0;
+    }
     // Also load children this parent has full access to (co-parent)
     var coAccessR=await sb.from('child_access').select('child_id').eq('user_id',S.user.id).eq('access_level','full').is('revoked_at',null);
     var coChildIds=(coAccessR.data||[]).map(function(a){return a.child_id}).filter(function(id){return !S.children.some(function(c){return c.id===id})});
@@ -4634,11 +4648,12 @@ function renderSb(){
   var displayName=S.name||( S.user?S.user.email:'Guest');
   document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Signed in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+displayName+'</div>'+(S.child?'<div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Parent of '+S.child+(S.age?', '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'')+'</div>':'');
   updateSubSt();
-  var allItems=[{label:"\u26a0\ufe0f Crisis Support",action:"openCrisis()",roles:['parent','caregiver','provider','teacher'],highlight:true},{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"Behavior Summary",action:"openBehaviorSummary()",roles:['teacher']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"My Milestones",action:"openMilestones()",roles:['parent']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver','teacher']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver','teacher']},{label:"Session Notes",action:"openParentSessionNotes()",roles:['parent']},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Billing Dashboard",action:"openBillingDashboard()",roles:['provider']},{label:"My Payers",action:"openPayerManagement()",roles:['provider']},{label:"Practice Dashboard",action:"openPracticeDashboard()",roles:['provider'],requiresPractice:true},{label:"Practice Members",action:"openPracticeMembers()",roles:['provider'],requiresPractice:true},{label:"Clients (Practice)",action:"openPracticeClients()",roles:['provider'],requiresPractice:true},{label:"Curriculum Library",action:"openCurriculumBrowser()",roles:['provider'],requiresPractice:true},{label:"Practice Settings",action:"openPracticeSettings()",roles:['provider'],requiresPractice:true},{label:"Set up Practice",action:"openPracticeOnboarding()",roles:['provider'],requiresNoPractice:true,highlight:true},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
+  var allItems=[{label:"\u26a0\ufe0f Crisis Support",action:"openCrisis()",roles:['parent','caregiver','provider','teacher'],highlight:true},{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"Behavior Summary",action:"openBehaviorSummary()",roles:['teacher']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"My Milestones",action:"openMilestones()",roles:['parent']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver','teacher']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver','teacher']},{label:"Session Notes",action:"openParentSessionNotes()",roles:['parent']},{label:"My BCBA",action:"openMyBcba()",roles:['parent'],requiresMyBcba:true,highlight:true},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Billing Dashboard",action:"openBillingDashboard()",roles:['provider']},{label:"My Payers",action:"openPayerManagement()",roles:['provider']},{label:"Practice Dashboard",action:"openPracticeDashboard()",roles:['provider'],requiresPractice:true},{label:"Practice Members",action:"openPracticeMembers()",roles:['provider'],requiresPractice:true},{label:"Clients (Practice)",action:"openPracticeClients()",roles:['provider'],requiresPractice:true},{label:"Curriculum Library",action:"openCurriculumBrowser()",roles:['provider'],requiresPractice:true},{label:"Practice Settings",action:"openPracticeSettings()",roles:['provider'],requiresPractice:true},{label:"Set up Practice",action:"openPracticeOnboarding()",roles:['provider'],requiresNoPractice:true,highlight:true},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
   var items=allItems.filter(function(item){
     if(item.roles && item.roles.indexOf(S.role) < 0) return false;
     if(item.requiresPractice && !S.practiceMember) return false;
     if(item.requiresNoPractice && S.practiceMember) return false;
+    if(item.requiresMyBcba && !S.hasMyBcba) return false;
     return true;
   });
   var h='';for(var i=0;i<items.length;i++){var item=items[i];if(item.soon){h+='<div class="sb-item" onclick="showToast(\'Coming soon!\')"><span>'+item.label+'</span><span class="sb-soon">Soon</span></div>'}else{h+='<div class="sb-item'+(item.highlight?' sb-highlight':'')+'" onclick="closeSb();'+item.action+'"><span>'+item.label+'</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray-light)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>'}}
@@ -9163,6 +9178,119 @@ function toggleRecentLogs(){
 function openParentSessionNotes(){
   document.getElementById('parentSessionNotesPage').classList.add('open');
   loadParentSessionNotes&&loadParentSessionNotes();
+}
+
+async function openMyBcba(){
+  if(!S.hasMyBcba){ showToast('Your BCBA hasn\x27t set up a practice for you yet.'); return; }
+  document.getElementById('myBcbaPage').classList.add('open');
+  var el = document.getElementById('myBcbaContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
+  var activeChild = S.activeChild;
+  if(!activeChild && S.children && S.children.length > 0) activeChild = S.children[0];
+  if(!activeChild){ el.innerHTML = '<div style="padding:20px;color:var(--warm-gray)">No child on file.</div>'; return; }
+  var pcR = await sb.from('practice_clients')
+    .select('id,status,service_type,intake_date,practices(name),primary_bcba:practice_members!primary_bcba_id(profiles(name,email))')
+    .eq('child_id', activeChild.id)
+    .limit(1)
+    .maybeSingle();
+  if(pcR.error || !pcR.data){ el.innerHTML = '<div style="padding:20px;color:var(--terracotta)">'+esc((pcR.error && pcR.error.message) || 'No practice link found')+'</div>'; return; }
+  var pc = pcR.data;
+  var bcbaName = pc.primary_bcba && pc.primary_bcba.profiles ? (pc.primary_bcba.profiles.name || pc.primary_bcba.profiles.email) : 'Your BCBA';
+  var progR = await sb.from('v_child_target_progress')
+    .select('*')
+    .eq('child_id', activeChild.id);
+  var sessR = await sb.from('v_child_sessions')
+    .select('*')
+    .eq('child_id', activeChild.id)
+    .order('start_time', { ascending: false })
+    .limit(10);
+  var h = '<div style="max-width:760px;margin:0 auto">';
+  h += '<div style="padding:14px;background:var(--sage-light);border-radius:14px;margin-bottom:18px">'+
+    '<div style="font-family:Fraunces,serif;font-size:18px;font-weight:700">'+esc(activeChild.name || 'Your child')+' is working with '+esc(bcbaName)+'</div>'+
+    '<div style="font-size:12px;color:var(--sage-dark);margin-top:4px">at '+esc((pc.practices && pc.practices.name) || 'their practice')+' &middot; status: '+pc.status+(pc.service_type ? ' &middot; CPT '+pc.service_type : '')+'</div>'+
+    '</div>';
+  h += '<div class="label" style="margin-bottom:8px">Programs in treatment</div>';
+  var progs = progR.data || [];
+  if(progs.length === 0){
+    h += '<div style="padding:14px;background:var(--cream);border-radius:12px;color:var(--warm-gray);font-size:13px">No programs yet.</div>';
+  } else {
+    var byProgram = {};
+    progs.forEach(function(p){
+      if(!byProgram[p.program_id]) byProgram[p.program_id] = { name: p.program_name, category: p.program_category, domain: p.program_domain, targets: [] };
+      byProgram[p.program_id].targets.push(p);
+    });
+    Object.keys(byProgram).forEach(function(pid){
+      var prog = byProgram[pid];
+      h += '<div style="border:1px solid var(--sand);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:white">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:700;font-size:14px">'+esc(prog.name)+'</div>'+
+        '<div style="font-size:11px;color:var(--warm-gray)">'+prog.targets.length+' target'+(prog.targets.length!==1?'s':'')+'</div></div>';
+      prog.targets.forEach(function(t){
+        var pct = t.trial_count > 0 ? Math.round((t.correct_count / t.trial_count) * 100) : 0;
+        h += '<div style="margin-top:10px;padding:10px;background:var(--cream);border-radius:10px"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px;font-weight:700">'+esc(t.target_name)+'</div><span class="log-tag">'+t.target_status.replace(/_/g,' ')+'</span></div>'+
+          '<div style="font-size:11px;color:var(--warm-gray);margin-top:4px">'+t.trial_count+' trials &middot; '+pct+'% correct</div></div>';
+      });
+      h += '</div>';
+    });
+  }
+  h += '<div class="label" style="margin-top:18px;margin-bottom:8px">Progress charts</div>';
+  if(progs.length === 0){
+    h += '<div style="padding:14px;background:var(--cream);border-radius:12px;color:var(--warm-gray);font-size:13px">No charts yet.</div>';
+  } else {
+    h += '<div style="display:flex;flex-direction:column;gap:8px">';
+    progs.forEach(function(t){
+      h += '<div id="sparkWrap_'+t.target_id+'" style="border:1px solid var(--sand);border-radius:12px;padding:10px 14px;background:white"><div style="font-size:13px;font-weight:700;margin-bottom:6px">'+esc(t.target_name)+'</div><div id="spark_'+t.target_id+'" style="height:48px">loading…</div></div>';
+    });
+    h += '</div>';
+  }
+  h += '<div class="label" style="margin-top:18px;margin-bottom:8px">Recent sessions</div>';
+  if(!sessR.data || sessR.data.length === 0){
+    h += '<div style="padding:14px;background:var(--cream);border-radius:12px;color:var(--warm-gray);font-size:13px">No sessions yet.</div>';
+  } else {
+    h += '<div style="display:flex;flex-direction:column;gap:6px">';
+    sessR.data.forEach(function(s){
+      var when = new Date(s.start_time).toLocaleDateString();
+      h += '<div style="padding:10px 14px;border:1px solid var(--sand);border-radius:10px;background:white;display:flex;justify-content:space-between;align-items:center">'+
+        '<div><div style="font-weight:700;font-size:13px">'+when+'</div>'+
+        '<div style="font-size:11px;color:var(--warm-gray);margin-top:2px">'+esc(s.location || '')+(s.cpt_code ? ' &middot; CPT '+s.cpt_code : '')+' &middot; '+(s.duration_minutes ? Math.round(s.duration_minutes)+' min' : '')+'</div></div>'+
+        '<div style="font-size:11px;color:var(--warm-gray)">'+s.trial_count+' trials</div>'+
+        '</div>';
+    });
+    h += '</div>';
+  }
+  h += '</div>';
+  el.innerHTML = h;
+  progs.forEach(function(t){ renderTargetSparkline(t.target_id); });
+}
+
+async function renderTargetSparkline(targetId){
+  var wrap = document.getElementById('spark_' + targetId);
+  if(!wrap) return;
+  var r = await sb.from('trials')
+    .select('session_id,response')
+    .eq('target_id', targetId)
+    .is('superseded_by', null)
+    .order('timestamp', { ascending: true });
+  if(r.error || !r.data || r.data.length === 0){
+    wrap.innerHTML = '<div style="font-size:11px;color:var(--warm-gray)">No data yet.</div>';
+    return;
+  }
+  var bySession = {};
+  r.data.forEach(function(t){
+    if(!bySession[t.session_id]) bySession[t.session_id] = { total: 0, correct: 0 };
+    bySession[t.session_id].total += 1;
+    if(t.response === 'correct') bySession[t.session_id].correct += 1;
+  });
+  var points = Object.keys(bySession).map(function(sid){
+    var s = bySession[sid];
+    return s.total > 0 ? (s.correct / s.total) * 100 : 0;
+  });
+  if(points.length === 1) points = [points[0], points[0]];
+  var w = 280, hht = 48;
+  var step = w / (points.length - 1);
+  var pathD = points.map(function(y, i){ return (i === 0 ? 'M' : 'L') + (i*step).toFixed(1) + ',' + ((100-y)/100 * hht).toFixed(1); }).join(' ');
+  var lastPct = Math.round(points[points.length-1]);
+  wrap.innerHTML = '<svg width="100%" height="'+hht+'" viewBox="0 0 '+w+' '+hht+'" preserveAspectRatio="none"><path d="'+pathD+'" fill="none" stroke="var(--sage-dark)" stroke-width="2"/></svg>'+
+    '<div style="font-size:11px;color:var(--warm-gray);text-align:right">latest: '+lastPct+'% correct</div>';
 }
 
 function openSessionNoteForm(){
