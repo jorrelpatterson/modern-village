@@ -1472,6 +1472,37 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   <div id="boContent" style="padding:16px"></div>
 </div>
 
+<div id="behaviorDefModal" class="modal-overlay" style="display:none">
+  <div class="modal-content" style="max-width:560px;max-height:90vh;overflow-y:auto">
+    <h3 id="bdmTitle" style="font-family:Fraunces,serif;font-size:22px;margin-bottom:12px">New behavior</h3>
+    <label class="fl">Name *</label>
+    <input id="bdmName" class="fi" placeholder="e.g. Aggression — open-hand hitting">
+    <label class="fl" style="margin-top:12px">Operational definition * <span style="color:var(--warm-gray);font-weight:400;font-size:11px">(measurable, observable)</span></label>
+    <textarea id="bdmDef" class="fi" rows="3" placeholder="Open-hand contact with another person's body with sufficient force to make an audible sound."></textarea>
+    <label class="fl" style="margin-top:12px">Recording type *</label>
+    <select id="bdmType" class="fi">
+      <option value="frequency">Frequency (tally count)</option>
+      <option value="duration">Duration (timer)</option>
+      <option value="interval">Interval (sample over time)</option>
+      <option value="abc">ABC (incidents with context)</option>
+      <option value="rate">Rate (count per unit time)</option>
+    </select>
+    <label class="fl" style="margin-top:12px">Classification *</label>
+    <select id="bdmClass" class="fi">
+      <option value="challenging">Challenging (reduce)</option>
+      <option value="replacement">Replacement (build up)</option>
+    </select>
+    <div id="bdmPairsWrap" style="display:none;margin-top:12px">
+      <label class="fl">Pairs with (optional — challenging behavior this replaces)</label>
+      <select id="bdmPairs" class="fi"><option value="">— None —</option></select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button class="btn btn-s" style="flex:1" onclick="closeBehaviorDefModal()">Cancel</button>
+      <button class="btn btn-p" style="flex:1" onclick="submitBehaviorDef()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div id="targetModal" class="modal-overlay" style="display:none">
   <div class="modal-content" style="max-width:640px;max-height:90vh;overflow-y:auto">
     <h3 id="tmTitle" style="font-family:Fraunces,serif;font-size:22px;margin-bottom:12px">New target</h3>
@@ -2656,10 +2687,139 @@ function switchClientDetailTab(tab){
   renderClientPrograms();
 }
 
+var behaviorDefEditing = null;
+
 async function renderClientBehaviorsTab(tabBar){
   var el = document.getElementById('practiceClientDetailContent');
-  el.innerHTML = tabBar + '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Behaviors tab content lands in Task 3.</div>';
+  var defR = await sb.from('behavior_definitions')
+    .select('id,name,operational_definition,recording_type,classification,status,created_at')
+    .eq('practice_client_id', currentClient.id)
+    .order('created_at', { ascending: false });
+  if(defR.error){ el.innerHTML = tabBar + '<div style="padding:20px;color:var(--terracotta)">'+esc(defR.error.message)+'</div>'; return; }
+  var monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+  var defIds = (defR.data || []).map(function(d){ return d.id; });
+  var recR = { data: [] };
+  if(defIds.length > 0){
+    recR = await sb.from('behavior_recordings')
+      .select('behavior_definition_id,recording_type,count,duration_seconds,interval_data')
+      .gte('timestamp', monthStart.toISOString())
+      .is('superseded_by', null)
+      .in('behavior_definition_id', defIds);
+  }
+  var recsByDef = {};
+  (recR.data || []).forEach(function(r){
+    if(!recsByDef[r.behavior_definition_id]) recsByDef[r.behavior_definition_id] = { count: 0, duration: 0, intervals: 0 };
+    var b = recsByDef[r.behavior_definition_id];
+    if(r.recording_type === 'frequency') b.count += (r.count || 0);
+    else if(r.recording_type === 'duration') b.duration += (r.duration_seconds || 0);
+    else if(r.recording_type === 'interval' && r.interval_data) b.intervals += (r.interval_data.results || []).filter(function(x){ return x; }).length;
+    else if(r.recording_type === 'abc') b.count += 1;
+  });
+  var canWrite = S.practiceMember.role === 'owner_bcba' || S.practiceMember.role === 'supervising_bcba';
+  var defs = (defR.data || []).filter(function(d){ return d.status === 'active'; });
+  var challenging = defs.filter(function(d){ return d.classification === 'challenging'; });
+  var replacement = defs.filter(function(d){ return d.classification === 'replacement'; });
+  var h = '<div style="max-width:880px;margin:0 auto">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+    '<div style="font-family:Fraunces,serif;font-size:18px;font-weight:700">'+defs.length+' behavior'+(defs.length!==1?'s':'')+' defined</div>'+
+    (canWrite ? '<div style="display:flex;gap:6px"><button class="btn btn-s" onclick="openLibrariesModal()">Triggers/consequences</button><button class="btn btn-p" onclick="openBehaviorDefModal()">+ Add behavior</button></div>' : '')+
+    '</div>';
+  h += renderBehaviorGroup('Challenging behaviors', challenging, recsByDef, canWrite);
+  h += renderBehaviorGroup('Replacement behaviors', replacement, recsByDef, canWrite);
+  h += '</div>';
+  el.innerHTML = tabBar + h;
 }
+
+function renderBehaviorGroup(label, list, recsByDef, canWrite){
+  var h = '<div class="label" style="margin-top:18px;margin-bottom:8px">'+label+'</div>';
+  if(list.length === 0){
+    h += '<div style="padding:14px;background:var(--cream);border-radius:12px;color:var(--warm-gray);font-size:13px">None yet.</div>';
+    return h;
+  }
+  list.forEach(function(b){
+    var rec = recsByDef[b.id] || {};
+    var statParts = [];
+    if(b.recording_type === 'frequency' || b.recording_type === 'abc') statParts.push((rec.count || 0) + ' this month');
+    if(b.recording_type === 'duration') statParts.push((rec.duration / 60).toFixed(1) + ' min this month');
+    if(b.recording_type === 'interval') statParts.push((rec.intervals || 0) + ' occurrences this month');
+    h += '<div style="border:1px solid var(--sand);border-radius:12px;padding:12px 14px;margin-bottom:6px;background:white">'+
+      '<div style="display:flex;justify-content:space-between;align-items:start;gap:10px">'+
+      '<div style="flex:1"><div style="font-weight:700;font-size:15px">'+esc(b.name)+'</div>'+
+      '<div style="font-size:12px;color:var(--warm-gray);margin-top:4px">'+esc((b.operational_definition || '').slice(0, 140))+(b.operational_definition && b.operational_definition.length > 140 ? '…' : '')+'</div>'+
+      '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+
+      '<span class="log-tag" style="background:var(--sage-light)">'+b.recording_type+'</span>'+
+      (statParts.length ? '<span class="log-tag">'+statParts[0]+'</span>' : '')+
+      '</div></div>'+
+      '<div style="display:flex;flex-direction:column;gap:4px">'+
+      '<button class="btn btn-s" style="padding:6px 10px;font-size:11px" onclick="openBehaviorDashboard(\x27'+b.id+'\x27)">Dashboard &rarr;</button>'+
+      (canWrite ? '<button class="btn btn-s" style="padding:6px 10px;font-size:11px" onclick="editBehaviorDef(\x27'+b.id+'\x27)">Edit</button>' : '')+
+      '</div></div></div>';
+  });
+  return h;
+}
+
+async function openBehaviorDefModal(){
+  behaviorDefEditing = null;
+  document.getElementById('bdmTitle').textContent = 'New behavior';
+  document.getElementById('bdmName').value = '';
+  document.getElementById('bdmDef').value = '';
+  document.getElementById('bdmType').value = 'frequency';
+  document.getElementById('bdmClass').value = 'challenging';
+  document.getElementById('bdmPairsWrap').style.display = 'none';
+  document.getElementById('bdmPairs').value = '';
+  document.getElementById('bdmClass').onchange = onClassChange;
+  document.getElementById('behaviorDefModal').style.display = 'flex';
+}
+
+async function editBehaviorDef(id){
+  var r = await sb.from('behavior_definitions').select('*').eq('id', id).single();
+  if(r.error){ showToast(r.error.message); return; }
+  behaviorDefEditing = r.data;
+  document.getElementById('bdmTitle').textContent = 'Edit behavior';
+  document.getElementById('bdmName').value = r.data.name;
+  document.getElementById('bdmDef').value = r.data.operational_definition;
+  document.getElementById('bdmType').value = r.data.recording_type;
+  document.getElementById('bdmClass').value = r.data.classification || 'challenging';
+  document.getElementById('bdmPairsWrap').style.display = (r.data.classification === 'replacement' ? 'block' : 'none');
+  document.getElementById('bdmClass').onchange = onClassChange;
+  document.getElementById('behaviorDefModal').style.display = 'flex';
+}
+
+function onClassChange(){
+  var v = document.getElementById('bdmClass').value;
+  document.getElementById('bdmPairsWrap').style.display = (v === 'replacement' ? 'block' : 'none');
+}
+
+function closeBehaviorDefModal(){
+  document.getElementById('behaviorDefModal').style.display = 'none';
+}
+
+async function submitBehaviorDef(){
+  var name = document.getElementById('bdmName').value.trim();
+  var def = document.getElementById('bdmDef').value.trim();
+  if(!name || def.length < 20){ showToast('Name and operational definition (≥20 chars) required'); return; }
+  var payload = {
+    practice_client_id: currentClient.id,
+    name: name,
+    operational_definition: def,
+    recording_type: document.getElementById('bdmType').value,
+    classification: document.getElementById('bdmClass').value,
+    status: 'active'
+  };
+  if(behaviorDefEditing){
+    var upd = await sb.from('behavior_definitions').update(payload).eq('id', behaviorDefEditing.id);
+    if(upd.error){ showToast(upd.error.message); return; }
+  } else {
+    var ins = await sb.from('behavior_definitions').insert(payload);
+    if(ins.error){ showToast(ins.error.message); return; }
+  }
+  closeBehaviorDefModal();
+  showToast('Behavior saved');
+  renderClientPrograms();
+}
+
+function openLibrariesModal(){ alert('Libraries modal lands in Task 4'); }
+function openBehaviorDashboard(id){ alert('Behavior dashboard lands in Task 6'); }
 
 function renderProgramGroup(label, list, canWrite){
   var h = '<div class="label" style="margin-top:18px;margin-bottom:8px">'+label+'</div>';
