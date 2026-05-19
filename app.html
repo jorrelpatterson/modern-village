@@ -1293,6 +1293,14 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   <div class="overlay-inner" id="practiceMembersContent" style="padding-bottom:80px"></div>
 </div>
 
+<div id="practiceDashboardPage" class="overlay-page">
+  <div class="overlay-header">
+    <button class="overlay-back" onclick="closeOverlay('practiceDashboardPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2 class="overlay-title">Practice Dashboard</h2>
+  </div>
+  <div class="overlay-inner" id="practiceDashboardContent" style="padding-bottom:80px"></div>
+</div>
+
 <div id="inviteMemberModal" class="modal-overlay" style="display:none">
   <div class="modal-content" style="max-width:480px">
     <h3 style="font-family:Fraunces,serif;font-size:22px;margin-bottom:12px">Invite a team member</h3>
@@ -1864,7 +1872,39 @@ async function completeOnboarding(goToMembers){
   else openPracticeDashboard();
   showToast('Practice created — welcome.');
 }
-function openPracticeDashboard(){ alert('Practice dashboard coming next'); }
+async function openPracticeDashboard(){
+  if(!S.practiceMember){ showToast('Set up your practice first'); return; }
+  document.getElementById('practiceDashboardPage').classList.add('open');
+  var el = document.getElementById('practiceDashboardContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
+  var cR = await sb.from('practice_clients').select('id,status').eq('practice_id', S.practiceMember.practice_id);
+  var mR = await sb.from('practice_members').select('id', { count:'exact', head:true }).eq('practice_id', S.practiceMember.practice_id).eq('active', true);
+  var clients = cR.data || [];
+  var active = clients.filter(function(c){ return c.status === 'active'; }).length;
+  var intake = clients.filter(function(c){ return c.status === 'intake'; }).length;
+  var p = S.practice;
+  var trialDaysLeft = p.trial_ends_at ? Math.max(0, Math.ceil((new Date(p.trial_ends_at) - new Date()) / 86400000)) : 0;
+  var h = '<div style="max-width:760px;margin:0 auto">'+
+    '<div style="font-family:Fraunces,serif;font-size:28px;font-weight:700;margin-bottom:4px">'+esc(p.name)+'</div>'+
+    '<div style="font-size:13px;color:var(--warm-gray);margin-bottom:20px">'+
+      (p.subscription_status === 'trialing' ? trialDaysLeft+' days left in trial' : esc(p.subscription_status || ''))+
+      ' &middot; '+(p.patient_count || 0)+' active patients'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">'+
+      '<div class="billing-stat"><div class="bs-num">'+active+'</div><div class="bs-lbl">Active clients</div></div>'+
+      '<div class="billing-stat"><div class="bs-num">'+intake+'</div><div class="bs-lbl">In intake</div></div>'+
+      '<div class="billing-stat"><div class="bs-num">'+(mR.count || 0)+'</div><div class="bs-lbl">Team members</div></div>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+      '<button class="btn btn-p" onclick="openPracticeClients()">Manage clients</button>'+
+      '<button class="btn btn-s" onclick="openPracticeMembers()">Team</button>'+
+      '<button class="btn btn-s" onclick="openCurriculumBrowser()">Curriculum library</button>'+
+      '<button class="btn btn-s" onclick="openPracticeSettings()">Settings</button>'+
+    '</div>'+
+    '<div style="margin-top:24px;padding:14px;background:var(--sage-light);border-radius:14px;font-size:13px;color:var(--sage-dark)">Live data entry, graphs, and SOAP auto-fill ship in the next sub-projects. This is the foundation.</div>'+
+    '</div>';
+  el.innerHTML = h;
+}
 async function handlePracticeInviteToken(){
   var params = new URLSearchParams(window.location.search);
   var token = params.get('practice_invite');
