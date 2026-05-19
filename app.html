@@ -1752,6 +1752,15 @@ var BADGE_COLORS = {"Village Elder":"#7A9E7E","New Member":"#C4B8A8","Advocate":
 
 // ═══ HELPERS ═══
 function showToast(m){var e=document.querySelector('.toast');if(e)e.remove();var t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.classList.add('out')},2000);setTimeout(function(){t.remove()},2500)}
+
+// ═══ BCBA PRACTICE STUBS (replaced in Tasks 5-15) ═══
+function openPracticeOnboarding(){ alert('Practice onboarding coming in Task 5'); }
+function openPracticeDashboard(){ alert('Practice dashboard coming next'); }
+function openPracticeMembers(){ alert('Practice members coming next'); }
+function openPracticeClients(){ alert('Practice clients coming next'); }
+function openCurriculumBrowser(){ alert('Curriculum browser coming next'); }
+function openPracticeSettings(){ alert('Practice settings coming next'); }
+
 function esc(t){if(!t)return '';return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;').replace(/\n/g,'<br>')}
 function now(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
 
@@ -2009,6 +2018,28 @@ async function loadProfile(){
 async function loadChildren(){
   if(!S.user)return;
   S.role=S.profile&&S.profile.role||'parent';
+
+  // Fetch active practice membership (BCBA data collection module)
+  S.practiceMember = null;
+  S.practice = null;
+  if(S.user){
+    var pmR = await sb.from('practice_members')
+      .select('id,practice_id,role,supervisor_id,credentials,practices(id,name,owner_id,subscription_status,trial_ends_at,patient_count)')
+      .eq('user_id', S.user.id)
+      .eq('active', true)
+      .limit(1)
+      .maybeSingle();
+    if(pmR.data){
+      S.practiceMember = {
+        id: pmR.data.id,
+        practice_id: pmR.data.practice_id,
+        role: pmR.data.role,
+        supervisor_id: pmR.data.supervisor_id,
+        credentials: pmR.data.credentials
+      };
+      S.practice = pmR.data.practices;
+    }
+  }
 
   if(S.role==='parent'){
     var r=await sb.from('children').select('*').eq('user_id',S.user.id).order('created_at',{ascending:true});
@@ -2462,8 +2493,13 @@ function renderSb(){
   var displayName=S.name||( S.user?S.user.email:'Guest');
   document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Signed in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+displayName+'</div>'+(S.child?'<div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Parent of '+S.child+(S.age?', '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'')+'</div>':'');
   updateSubSt();
-  var allItems=[{label:"\u26a0\ufe0f Crisis Support",action:"openCrisis()",roles:['parent','caregiver','provider','teacher'],highlight:true},{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"Behavior Summary",action:"openBehaviorSummary()",roles:['teacher']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"My Milestones",action:"openMilestones()",roles:['parent']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver','teacher']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver','teacher']},{label:"Session Notes",action:"openParentSessionNotes()",roles:['parent']},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Billing Dashboard",action:"openBillingDashboard()",roles:['provider']},{label:"My Payers",action:"openPayerManagement()",roles:['provider']},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
-  var items=allItems.filter(function(item){return !item.roles||item.roles.indexOf(S.role)>=0});
+  var allItems=[{label:"\u26a0\ufe0f Crisis Support",action:"openCrisis()",roles:['parent','caregiver','provider','teacher'],highlight:true},{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"Behavior Summary",action:"openBehaviorSummary()",roles:['teacher']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"My Milestones",action:"openMilestones()",roles:['parent']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver','teacher']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver','teacher']},{label:"Session Notes",action:"openParentSessionNotes()",roles:['parent']},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Billing Dashboard",action:"openBillingDashboard()",roles:['provider']},{label:"My Payers",action:"openPayerManagement()",roles:['provider']},{label:"Practice Dashboard",action:"openPracticeDashboard()",roles:['provider'],requiresPractice:true},{label:"Practice Members",action:"openPracticeMembers()",roles:['provider'],requiresPractice:true},{label:"Clients (Practice)",action:"openPracticeClients()",roles:['provider'],requiresPractice:true},{label:"Curriculum Library",action:"openCurriculumBrowser()",roles:['provider'],requiresPractice:true},{label:"Practice Settings",action:"openPracticeSettings()",roles:['provider'],requiresPractice:true},{label:"Set up Practice",action:"openPracticeOnboarding()",roles:['provider'],requiresNoPractice:true,highlight:true},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
+  var items=allItems.filter(function(item){
+    if(item.roles && item.roles.indexOf(S.role) < 0) return false;
+    if(item.requiresPractice && !S.practiceMember) return false;
+    if(item.requiresNoPractice && S.practiceMember) return false;
+    return true;
+  });
   var h='';for(var i=0;i<items.length;i++){var item=items[i];if(item.soon){h+='<div class="sb-item" onclick="showToast(\'Coming soon!\')"><span>'+item.label+'</span><span class="sb-soon">Soon</span></div>'}else{h+='<div class="sb-item'+(item.highlight?' sb-highlight':'')+'" onclick="closeSb();'+item.action+'"><span>'+item.label+'</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray-light)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>'}}
   if(S.user)h+='<div class="sb-logout" onclick="logout()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out</div>';
   document.getElementById('sbMenu').innerHTML=h;
