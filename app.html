@@ -1385,8 +1385,19 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     <select id="addClientPrimary" class="fi"></select>
     <label class="fl" style="margin-top:14px">Weekly hours authorized</label>
     <input id="addClientHours" class="fi" type="number" min="0" step="0.5" placeholder="e.g. 10">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+      <div>
+        <label class="fl">Insurance payer</label>
+        <input id="addClientPayer" class="fi" placeholder="e.g. Blue Shield CA">
+      </div>
+      <div>
+        <label class="fl">Client ID (insurance) *</label>
+        <input id="addClientCid" class="fi" placeholder="member / subscriber #">
+      </div>
+    </div>
     <label class="fl" style="margin-top:14px">Prior authorization #</label>
-    <input id="addClientPa" class="fi" placeholder="optional">
+    <input id="addClientPa" class="fi" placeholder="from insurance auth letter">
+    <div style="font-size:11px;color:var(--warm-gray);margin-top:4px">Both numbers appear on every claim, SOAP note, and authorization document.</div>
     <div style="display:flex;gap:8px;margin-top:20px">
       <button class="btn btn-s" style="flex:1" onclick="closeAddClientModal()">Cancel</button>
       <button class="btn btn-p" style="flex:1" onclick="submitAddClient()">Add client</button>
@@ -2694,7 +2705,7 @@ async function loadPracticeClients(){
   var el = document.getElementById('practiceClientsContent');
   el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
   var r = await sb.from('practice_clients')
-    .select('id,status,service_type,prior_auth_number,weekly_hours_authorized,intake_date,children(id,name,age,diagnosis),primary_bcba:practice_members!primary_bcba_id(profiles(name,email))')
+    .select('id,status,service_type,prior_auth_number,insurance_client_id,payer_name,weekly_hours_authorized,intake_date,children(id,name,age,diagnosis),primary_bcba:practice_members!primary_bcba_id(profiles(name,email))')
     .eq('practice_id', S.practiceMember.practice_id)
     .order('intake_date', { ascending: false, nullsLast: true });
   if(r.error){ el.innerHTML = '<div style="padding:20px;color:var(--terracotta)">'+esc(r.error.message)+'</div>'; return; }
@@ -2716,6 +2727,13 @@ async function loadPracticeClients(){
         '<div style="display:flex;justify-content:space-between;align-items:start;gap:10px">'+
         '<div style="flex:1"><div style="font-weight:700;font-size:16px">'+esc(child.name||'(unnamed)')+'</div>'+
         '<div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Age '+(child.age||'?')+' &middot; '+esc(child.diagnosis||'No diagnosis on file')+'</div>'+
+        (c.payer_name || c.insurance_client_id || c.prior_auth_number
+          ? '<div style="font-size:11px;color:var(--warm-gray);margin-top:4px;font-family:ui-monospace,Menlo,monospace">'+
+            (c.payer_name ? esc(c.payer_name)+' &middot; ' : '')+
+            (c.insurance_client_id ? 'CID '+esc(c.insurance_client_id) : '')+
+            (c.prior_auth_number ? (c.insurance_client_id ? ' &middot; ' : '')+'Auth '+esc(c.prior_auth_number) : '')+
+            '</div>'
+          : '')+
         '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+
         '<span class="log-tag" style="background:'+statusColor+'">'+c.status+'</span>'+
         (c.service_type ? '<span class="log-tag">CPT '+c.service_type+'</span>' : '')+
@@ -2738,6 +2756,8 @@ async function openAddClientModal(){
   document.getElementById('addClientChildPicker').style.display = 'none';
   document.getElementById('addClientHours').value = '';
   document.getElementById('addClientPa').value = '';
+  document.getElementById('addClientCid').value = '';
+  document.getElementById('addClientPayer').value = '';
   var r = await sb.from('practice_members')
     .select('id,profiles(name,email)')
     .eq('practice_id', S.practiceMember.practice_id)
@@ -2798,12 +2818,16 @@ async function submitAddClient(){
   var primary = document.getElementById('addClientPrimary').value;
   var hours = parseFloat(document.getElementById('addClientHours').value) || null;
   var pa = document.getElementById('addClientPa').value.trim() || null;
+  var cid = document.getElementById('addClientCid').value.trim() || null;
+  var payer = document.getElementById('addClientPayer').value.trim() || null;
   var ins = await sb.from('practice_clients').insert({
     practice_id: S.practiceMember.practice_id,
     child_id: addClientState.childId,
     primary_bcba_id: primary,
     service_type: service,
     weekly_hours_authorized: hours,
+    insurance_client_id: cid,
+    payer_name: payer,
     prior_auth_number: pa,
     status: 'intake',
     intake_date: new Date().toISOString().slice(0,10)
@@ -3586,7 +3610,7 @@ async function renderSessionSummary(){
   var el = document.getElementById('sessionSummaryContent');
   el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading summary…</div>';
   var sR = await sb.from('sessions')
-    .select('id,start_time,end_time,location,cpt_code,status,parent_present,practice_clients(child_id,children(name)),provider:practice_members!provider_id(profiles(name,email))')
+    .select('id,start_time,end_time,location,cpt_code,status,parent_present,practice_clients(child_id,insurance_client_id,prior_auth_number,payer_name,children(name)),provider:practice_members!provider_id(profiles(name,email))')
     .eq('id', summaryState.sessionId)
     .single();
   if(sR.error){ el.innerHTML = '<div style="padding:20px;color:var(--terracotta)">'+esc(sR.error.message)+'</div>'; return; }
@@ -3718,7 +3742,7 @@ async function openSoapEditor(sessionId){
   el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
   // Hydrate session for header context
   var sR = await sb.from('sessions')
-    .select('id,start_time,end_time,location,cpt_code,status,parent_present,practice_clients(child_id,children(name)),provider:practice_members!provider_id(profiles(name,email))')
+    .select('id,start_time,end_time,location,cpt_code,status,parent_present,practice_clients(child_id,insurance_client_id,prior_auth_number,payer_name,children(name)),provider:practice_members!provider_id(profiles(name,email))')
     .eq('id', sessionId)
     .single();
   if(sR.error){ el.innerHTML = '<div style="padding:20px;color:var(--terracotta)">'+esc(sR.error.message)+'</div>'; return; }
@@ -3746,10 +3770,18 @@ function renderSoapEditor(){
   var providerName = s.provider && s.provider.profiles ? (s.provider.profiles.name || s.provider.profiles.email) : '';
   var durMin = s.end_time ? Math.round((new Date(s.end_time) - new Date(s.start_time)) / 60000) : null;
   var canEdit = !signed && (S.practiceMember.role === 'owner_bcba' || S.practiceMember.role === 'supervising_bcba' || S.practiceMember.role === 'rbt');
+  var pcMeta = (s.practice_clients) || {};
   var h = '<div style="max-width:880px;margin:0 auto">';
   // Header block
   h += '<div style="background:white;border:1px solid var(--sand);border-radius:14px;padding:14px;margin-bottom:14px">'+
-    '<div style="font-size:13px;color:var(--warm-gray)">'+esc(providerName)+(durMin?' · '+durMin+' min':'')+(s.location?' · '+s.location:'')+' · CPT '+esc(s.cpt_code||'')+' · session status: '+s.status+'</div>';
+    '<div style="font-size:13px;color:var(--warm-gray)">'+esc(providerName)+(durMin?' · '+durMin+' min':'')+(s.location?' · '+s.location:'')+' · CPT '+esc(s.cpt_code||'')+' · session status: '+s.status+'</div>'+
+    ((pcMeta.payer_name || pcMeta.insurance_client_id || pcMeta.prior_auth_number)
+      ? '<div style="font-size:12px;color:var(--warm-gray);margin-top:6px;font-family:ui-monospace,Menlo,monospace">'+
+        (pcMeta.payer_name ? '<strong>Payer:</strong> '+esc(pcMeta.payer_name)+' &middot; ' : '')+
+        (pcMeta.insurance_client_id ? '<strong>Client ID:</strong> '+esc(pcMeta.insurance_client_id)+' &middot; ' : '')+
+        (pcMeta.prior_auth_number ? '<strong>Auth #:</strong> '+esc(pcMeta.prior_auth_number) : '')+
+        '</div>'
+      : '<div style="font-size:11px;color:var(--terracotta);margin-top:4px">⚠ Missing insurance Client ID or Auth # — add on the client record before submitting to billing.</div>');
   if(signed){
     h += '<div style="margin-top:8px;padding:10px;background:var(--sage-light);border-radius:10px;color:var(--sage-dark);font-size:13px"><strong>Signed</strong> by '+esc(n.signed_by_name || '')+' ('+esc(n.signed_by_role || '')+') on '+new Date(n.signed_at).toLocaleString()+'. Locked.</div>';
   }
@@ -3842,7 +3874,11 @@ async function generateSoapFromSession(){
       '- Date: '+startedAt.toLocaleDateString()+'\n'+
       '- Duration: '+durMin+' minutes\n'+
       '- Location: '+(s.location||'unspecified')+'\n'+
-      '- CPT: '+(s.cpt_code||'unspecified')+'\n\n'+
+      '- CPT: '+(s.cpt_code||'unspecified')+'\n'+
+      ((s.practice_clients && s.practice_clients.payer_name) ? '- Payer: '+s.practice_clients.payer_name+'\n' : '')+
+      ((s.practice_clients && s.practice_clients.insurance_client_id) ? '- Insurance Client ID: '+s.practice_clients.insurance_client_id+'\n' : '')+
+      ((s.practice_clients && s.practice_clients.prior_auth_number) ? '- Prior Auth #: '+s.practice_clients.prior_auth_number+'\n' : '')+
+      '\n'+
       'Targets run this session:\n'+(targetSummary || '(no targets recorded)')+'\n\n'+
       'Behaviors recorded this session:\n'+behaviorSummary;
     var r = await authFetch(API_URL, {
