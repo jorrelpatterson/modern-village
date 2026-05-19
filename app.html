@@ -1923,6 +1923,145 @@ var POSTS_DATA = [{id:1,author:"MamaOf3",badge:"Village Elder",time:"2h",text:"W
 var TOPICS = ["All","Wins","Seeking Advice","Tips","Encouragement","Professional Review"];
 var BADGE_COLORS = {"Village Elder":"#7A9E7E","New Member":"#C4B8A8","Advocate":"#C4745A","Contributor":"#D4C8E8","Member":"#7A9E7E"};
 
+// ═══ OFFLINE SYNC (mvOffline) ═══
+var mvOffline = {
+  DB_NAME: 'mv-offline-v1',
+  STORE: 'queue',
+  db: null,
+  online: navigator.onLine,
+  syncing: false,
+  queueCount: 0,
+  failedOps: [],
+  _flushTimer: null,
+  _statusListeners: [],
+
+  async init(){
+    var self = this;
+    await new Promise(function(resolve, reject){
+      var req = indexedDB.open(self.DB_NAME, 1);
+      req.onupgradeneeded = function(e){
+        var db = e.target.result;
+        if(!db.objectStoreNames.contains(self.STORE)){
+          db.createObjectStore(self.STORE, { keyPath: 'id', autoIncrement: true });
+        }
+      };
+      req.onsuccess = function(e){ self.db = e.target.result; resolve(); };
+      req.onerror = function(e){ reject(e); };
+    });
+    await self._refreshCount();
+    window.addEventListener('online', function(){ self.online = true; self._notify(); self.flush(); });
+    window.addEventListener('offline', function(){ self.online = false; self._notify(); });
+    window.addEventListener('focus', function(){ if(self.online) self.flush(); });
+    self._flushTimer = setInterval(function(){ if(self.online && !self.syncing) self.flush(); }, 30000);
+    if(self.online && self.queueCount > 0) self.flush();
+  },
+
+  async _refreshCount(){
+    var self = this;
+    self.queueCount = await new Promise(function(resolve){
+      var tx = self.db.transaction(self.STORE, 'readonly');
+      var store = tx.objectStore(self.STORE);
+      var req = store.count();
+      req.onsuccess = function(){ resolve(req.result); };
+      req.onerror = function(){ resolve(0); };
+    });
+    self._notify();
+  },
+
+  async enqueue(op){
+    var self = this;
+    if(!self.db) await self.init();
+    await new Promise(function(resolve, reject){
+      var tx = self.db.transaction(self.STORE, 'readwrite');
+      var store = tx.objectStore(self.STORE);
+      var req = store.add({ table: op.table, payload: op.payload, attempt_count: 0, enqueued_at: Date.now() });
+      req.onsuccess = function(){ resolve(); };
+      req.onerror = function(e){ reject(e); };
+    });
+    await self._refreshCount();
+    if(self.online && !self.syncing){
+      self.flush();
+    }
+  },
+
+  async flush(){
+    var self = this;
+    if(self.syncing || !self.online || !self.db) return;
+    if(self.queueCount === 0) return;
+    self.syncing = true;
+    self._notify();
+    try {
+      var token = await getAuthToken();
+      var batch = await new Promise(function(resolve){
+        var tx = self.db.transaction(self.STORE, 'readonly');
+        var store = tx.objectStore(self.STORE);
+        var req = store.getAll();
+        req.onsuccess = function(){ resolve((req.result || []).slice(0, 25)); };
+        req.onerror = function(){ resolve([]); };
+      });
+      for(var i=0;i<batch.length;i++){
+        var op = batch[i];
+        var resp = await fetch(SUPA_URL+'/rest/v1/'+op.table, {
+          method: 'POST',
+          headers: {
+            apikey: SUPA_KEY,
+            Authorization: 'Bearer '+token,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal'
+          },
+          body: JSON.stringify(op.payload)
+        });
+        if(resp.ok || resp.status === 409){
+          await self._deleteOp(op.id);
+        } else if(resp.status >= 400 && resp.status < 500){
+          self.failedOps.push({ op: op, status: resp.status, body: await resp.text() });
+          await self._deleteOp(op.id);
+          showToast('Sync error — see Sync Log');
+        } else {
+          break;
+        }
+      }
+    } catch(e){
+      console.error('mvOffline.flush error', e);
+    } finally {
+      self.syncing = false;
+      await self._refreshCount();
+    }
+  },
+
+  async _deleteOp(id){
+    var self = this;
+    await new Promise(function(resolve){
+      var tx = self.db.transaction(self.STORE, 'readwrite');
+      tx.objectStore(self.STORE).delete(id);
+      tx.oncomplete = resolve;
+    });
+  },
+
+  statusBadge(){
+    if(!this.online) return { status: 'offline', queueCount: this.queueCount };
+    if(this.syncing || this.queueCount > 0) return { status: 'syncing', queueCount: this.queueCount };
+    return { status: 'synced', queueCount: 0 };
+  },
+
+  renderBadge(){
+    var s = this.statusBadge();
+    if(s.status === 'synced') return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--sage-dark)">&#9899; Synced</span>';
+    if(s.status === 'syncing') return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#7A6A10">&#128992; Syncing'+(s.queueCount?' ('+s.queueCount+')':'')+'</span>';
+    return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--terracotta)">&#128308; Offline ('+s.queueCount+')</span>';
+  },
+
+  onStatusChange(fn){ this._statusListeners.push(fn); },
+  _notify(){ var self = this; this._statusListeners.forEach(function(fn){ try { fn(self.statusBadge()); } catch(e){} }); }
+};
+
+function mvUuid(){
+  // RFC4122 v4
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, function(c){
+    return (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c/4).toString(16);
+  });
+}
+
 // ═══ HELPERS ═══
 function showToast(m){var e=document.querySelector('.toast');if(e)e.remove();var t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.classList.add('out')},2000);setTimeout(function(){t.remove()},2500)}
 
@@ -3203,6 +3342,7 @@ async function init(){
         var session=await sb.auth.getSession();
         if(session.data.session){
           S.user=session.data.session.user;
+          await mvOffline.init();
           await loadProfile();
           await handlePracticeInviteToken();
           // App Lock gate — Face ID / Touch ID if user enabled it
