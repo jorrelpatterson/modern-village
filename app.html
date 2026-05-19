@@ -1503,6 +1503,28 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   </div>
 </div>
 
+<div id="librariesModal" class="modal-overlay" style="display:none">
+  <div class="modal-content" style="max-width:640px;max-height:90vh;overflow-y:auto">
+    <h3 style="font-family:Fraunces,serif;font-size:22px;margin-bottom:6px">Triggers &amp; consequences</h3>
+    <div style="font-size:13px;color:var(--warm-gray);margin-bottom:14px">Used by ABC entry during sessions. Practice-wide entries are shared across all clients.</div>
+    <div class="label" style="margin-bottom:8px">Antecedents (triggers)</div>
+    <div id="libAntecedentsList" style="margin-bottom:6px"></div>
+    <div style="display:flex;gap:6px;margin-bottom:14px">
+      <input id="libNewAnt" class="fi" placeholder="New antecedent name" style="flex:1">
+      <select id="libNewAntScope" class="fi" style="max-width:170px"><option value="client">This client only</option><option value="practice">Practice-wide</option></select>
+      <button class="btn btn-s" onclick="addLibraryItem('antecedent')">+ Add</button>
+    </div>
+    <div class="label" style="margin-bottom:8px;margin-top:6px">Consequences</div>
+    <div id="libConsequencesList" style="margin-bottom:6px"></div>
+    <div style="display:flex;gap:6px;margin-bottom:14px">
+      <input id="libNewCons" class="fi" placeholder="New consequence name" style="flex:1">
+      <select id="libNewConsScope" class="fi" style="max-width:170px"><option value="client">This client only</option><option value="practice">Practice-wide</option></select>
+      <button class="btn btn-s" onclick="addLibraryItem('consequence')">+ Add</button>
+    </div>
+    <button class="btn btn-p" style="width:100%" onclick="closeLibrariesModal()">Done</button>
+  </div>
+</div>
+
 <div id="targetModal" class="modal-overlay" style="display:none">
   <div class="modal-content" style="max-width:640px;max-height:90vh;overflow-y:auto">
     <h3 id="tmTitle" style="font-family:Fraunces,serif;font-size:22px;margin-bottom:12px">New target</h3>
@@ -2818,7 +2840,64 @@ async function submitBehaviorDef(){
   renderClientPrograms();
 }
 
-function openLibrariesModal(){ alert('Libraries modal lands in Task 4'); }
+async function openLibrariesModal(){
+  if(!currentClient){ return; }
+  document.getElementById('librariesModal').style.display = 'flex';
+  await loadLibraries();
+}
+
+async function loadLibraries(){
+  var antR = await sb.from('behavior_antecedents')
+    .select('id,name,practice_id,practice_client_id')
+    .or('practice_id.eq.'+S.practiceMember.practice_id+',practice_client_id.eq.'+currentClient.id)
+    .order('name');
+  var consR = await sb.from('behavior_consequences')
+    .select('id,name,practice_id,practice_client_id')
+    .or('practice_id.eq.'+S.practiceMember.practice_id+',practice_client_id.eq.'+currentClient.id)
+    .order('name');
+  document.getElementById('libAntecedentsList').innerHTML = renderLibraryList(antR.data || [], 'antecedent');
+  document.getElementById('libConsequencesList').innerHTML = renderLibraryList(consR.data || [], 'consequence');
+}
+
+function renderLibraryList(items, kind){
+  if(items.length === 0) return '<div style="color:var(--warm-gray);font-size:13px;padding:6px">No '+kind+'s yet.</div>';
+  var h = '';
+  items.forEach(function(i){
+    var scope = i.practice_id ? 'Practice-wide' : 'This client';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--sand);border-radius:8px;margin-bottom:4px">'+
+      '<div style="flex:1"><div style="font-size:13px">'+esc(i.name)+'</div><div style="font-size:10px;color:var(--warm-gray)">'+scope+'</div></div>'+
+      '<button class="btn btn-s" style="padding:4px 8px;font-size:11px" onclick="deleteLibraryItem(\x27'+kind+'\x27,\x27'+i.id+'\x27)">&times;</button>'+
+      '</div>';
+  });
+  return h;
+}
+
+async function addLibraryItem(kind){
+  var nameEl = document.getElementById(kind === 'antecedent' ? 'libNewAnt' : 'libNewCons');
+  var scopeEl = document.getElementById(kind === 'antecedent' ? 'libNewAntScope' : 'libNewConsScope');
+  var name = nameEl.value.trim();
+  if(!name){ showToast('Name required'); return; }
+  var table = kind === 'antecedent' ? 'behavior_antecedents' : 'behavior_consequences';
+  var payload = { name: name };
+  if(scopeEl.value === 'practice') payload.practice_id = S.practiceMember.practice_id;
+  else payload.practice_client_id = currentClient.id;
+  var r = await sb.from(table).insert(payload);
+  if(r.error){ showToast(r.error.message); return; }
+  nameEl.value = '';
+  await loadLibraries();
+}
+
+async function deleteLibraryItem(kind, id){
+  if(!confirm('Remove this '+kind+'?')) return;
+  var table = kind === 'antecedent' ? 'behavior_antecedents' : 'behavior_consequences';
+  var r = await sb.from(table).delete().eq('id', id);
+  if(r.error){ showToast(r.error.message); return; }
+  await loadLibraries();
+}
+
+function closeLibrariesModal(){
+  document.getElementById('librariesModal').style.display = 'none';
+}
 function openBehaviorDashboard(id){ alert('Behavior dashboard lands in Task 6'); }
 
 function renderProgramGroup(label, list, canWrite){
