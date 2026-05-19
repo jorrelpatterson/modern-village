@@ -279,6 +279,18 @@
 .billing-denied{background:var(--terracotta-light);color:var(--terracotta)}
 .cdtab{padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.15s;border:none;background:none;color:var(--warm-gray)}.cdtab.active{background:var(--sage);color:white}
 @media print{.no-print,.overlay-hdr.no-print,.bnav,#chatBar{display:none !important}.overlay-page{position:static !important;display:block !important}.overlay-body{overflow:visible !important}}
+/* Target Graph print mode — when body.tg-printing is set + the page prints, hide everything except #targetGraphRoot */
+.tg-print-show{display:none}
+body.tg-printing #targetGraphRoot .tg-print-hide{display:none !important}
+body.tg-printing #targetGraphRoot .tg-print-show{display:block !important}
+@media print{
+  body.tg-printing > *:not(#targetGraphPage){display:none !important}
+  body.tg-printing #targetGraphPage{position:static !important;background:white !important;overflow:visible !important}
+  body.tg-printing #targetGraphPage .overlay-header,body.tg-printing #targetGraphPage .overlay-hdr{display:none !important}
+  body.tg-printing #targetGraphPage .overlay-inner{padding:0 !important;overflow:visible !important}
+  body.tg-printing .tg-print-hide{display:none !important}
+  body.tg-printing .tg-print-show{display:block !important}
+}
 
 /* Routine Builder */
 .routine-card{background:white;border-radius:16px;padding:20px;border:1px solid var(--sand);margin-bottom:12px}
@@ -4606,10 +4618,10 @@ async function renderTargets(){
   el.innerHTML = h;
 }
 
-var targetGraphState = { targetId: null, showAverage: true, showMeanOfDay: false };
+var targetGraphState = { targetId: null, showAverage: true, showMeanOfDay: false, showTrendLine: false, showStdDev: false };
 
 async function openTargetGraph(targetId){
-  targetGraphState = { targetId: targetId, showAverage: true, showMeanOfDay: false };
+  targetGraphState = { targetId: targetId, showAverage: true, showMeanOfDay: false, showTrendLine: false, showStdDev: false };
   document.getElementById('targetGraphPage').classList.add('open');
   await renderTargetGraph();
 }
@@ -4628,10 +4640,12 @@ async function renderTargetGraph(){
     .is('ioa_observer_id', null)
     .order('timestamp', { ascending: true });
   var pcR = await sb.from('phase_changes').select('id,occurred_at,label,notes').eq('target_id', targetGraphState.targetId).order('occurred_at');
+  var anR = await sb.from('target_annotations').select('id,occurred_at,note').eq('target_id', targetGraphState.targetId).order('occurred_at');
   var canWrite = S.practiceMember.role === 'owner_bcba' || S.practiceMember.role === 'supervising_bcba';
   if(trR.error || pcR.error){ el.innerHTML = '<div style="padding:20px;color:var(--terracotta)">'+esc((trR.error||pcR.error).message)+'</div>'; return; }
   var trials = trR.data || [];
   var phaseChanges = pcR.data || [];
+  var annotations = (anR && anR.data) || [];
   var bySession = {};
   trials.forEach(function(tr){
     var sid = tr.session_id;
@@ -4643,15 +4657,25 @@ async function renderTargetGraph(){
     var s = bySession[sid];
     return { date: s.date, pct: s.total > 0 ? (s.correct / s.total) * 100 : 0 };
   }).sort(function(a,b){ return a.date - b.date; });
-  var hdr = '<div style="max-width:920px;margin:0 auto">'+
+  function togBtn(label, on, fn){
+    return '<button onclick="'+fn+'()" style="padding:6px 12px;border-radius:14px;border:2px solid '+(on?'var(--sage-dark)':'var(--sand)')+';background:'+(on?'var(--sage-light)':'white')+';color:'+(on?'var(--sage-dark)':'var(--warm-gray)')+';font-size:12px;font-weight:700;cursor:pointer">'+(on?'✓ ':'')+label+'</button>';
+  }
+  var hdr = '<div id="targetGraphRoot" style="max-width:920px;margin:0 auto">'+
+    '<div class="tg-print-hide" style="display:flex;justify-content:space-between;align-items:start;gap:8px;margin-bottom:6px"><div>'+
     '<div style="font-family:Fraunces,serif;font-size:20px;font-weight:700">'+esc(t.name)+'</div>'+
-    '<div style="font-size:13px;color:var(--warm-gray);margin-bottom:14px">'+esc((t.programs && t.programs.name) || '')+' · '+sessions.length+' sessions · '+trials.length+' trials</div>'+
-    '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'+
-    '<button onclick="toggleGraphAverage()" style="padding:6px 12px;border-radius:14px;border:2px solid '+(targetGraphState.showAverage?'var(--sage-dark)':'var(--sand)')+';background:'+(targetGraphState.showAverage?'var(--sage-light)':'white')+';color:'+(targetGraphState.showAverage?'var(--sage-dark)':'var(--warm-gray)')+';font-size:12px;font-weight:700;cursor:pointer">'+(targetGraphState.showAverage?'✓ ':'')+'Average</button>'+
-    '<button onclick="toggleGraphMeanOfDay()" style="padding:6px 12px;border-radius:14px;border:2px solid '+(targetGraphState.showMeanOfDay?'var(--sage-dark)':'var(--sand)')+';background:'+(targetGraphState.showMeanOfDay?'var(--sage-light)':'white')+';color:'+(targetGraphState.showMeanOfDay?'var(--sage-dark)':'var(--warm-gray)')+';font-size:12px;font-weight:700;cursor:pointer">'+(targetGraphState.showMeanOfDay?'✓ ':'')+'Mean-of-day</button>'+
-    '<span style="padding:6px 12px;border-radius:14px;border:2px solid var(--sand);color:var(--warm-gray-light);font-size:12px">Trend line — coming soon</span>'+
+    '<div style="font-size:13px;color:var(--warm-gray)">'+esc((t.programs && t.programs.name) || '')+' · '+sessions.length+' sessions · '+trials.length+' trials</div>'+
+    '</div><button class="btn btn-s" style="font-size:12px;padding:6px 10px" onclick="printTargetGraph()">&#128424; Print / PDF</button></div>'+
+    '<div class="tg-print-show" style="display:none;margin-bottom:14px">'+
+    '<div style="font-family:Fraunces,serif;font-size:22px;font-weight:700">'+esc(t.name)+'</div>'+
+    '<div style="font-size:13px;color:#555">'+esc((t.programs && t.programs.name) || '')+' &middot; '+sessions.length+' sessions, '+trials.length+' trials &middot; printed '+new Date().toLocaleDateString()+'</div>'+
+    '</div>'+
+    '<div class="tg-print-hide" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'+
+    togBtn('Average', targetGraphState.showAverage, 'toggleGraphAverage')+
+    togBtn('Mean-of-day', targetGraphState.showMeanOfDay, 'toggleGraphMeanOfDay')+
+    togBtn('Trend line', targetGraphState.showTrendLine, 'toggleGraphTrendLine')+
+    togBtn('±1 SD band', targetGraphState.showStdDev, 'toggleGraphStdDev')+
     '</div>';
-  var chart = renderTargetGraphSvg(sessions, phaseChanges);
+  var chart = renderTargetGraphSvg(sessions, phaseChanges, annotations);
   var pcList = '<div class="label" style="margin-top:18px;margin-bottom:8px">Phase changes</div>';
   if(phaseChanges.length === 0){
     pcList += '<div style="padding:10px;background:var(--cream);border-radius:10px;font-size:13px;color:var(--warm-gray)">None. '+(canWrite?'Click "+ Add phase change" to mark a clinical event (BIP change, target promoted, etc.).':'')+'</div>';
@@ -4665,22 +4689,40 @@ async function renderTargetGraph(){
     pcList += '</div>';
   }
   if(canWrite) pcList += '<button class="btn btn-s" style="margin-top:8px;font-size:12px;padding:6px 12px" onclick="openPhaseChangeModal(null)">+ Add phase change</button>';
-  el.innerHTML = hdr + chart + pcList + '</div>';
+  // Annotations list
+  var anList = '<div class="label tg-print-hide" style="margin-top:18px;margin-bottom:8px">Annotations</div>';
+  if(annotations.length === 0){
+    anList += '<div class="tg-print-hide" style="padding:10px;background:var(--cream);border-radius:10px;font-size:13px;color:var(--warm-gray)">None. '+(canWrite?'Add a note anchored to a date — appears as a small marker on the chart.':'')+'</div>';
+  } else {
+    anList += '<div class="tg-print-hide" style="display:flex;flex-direction:column;gap:6px">';
+    annotations.forEach(function(an){
+      anList += '<div style="padding:10px 14px;border:1px solid var(--sand);border-radius:10px;background:white;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px">'+esc(an.note)+'</div><div style="font-size:11px;color:var(--warm-gray);margin-top:2px">'+new Date(an.occurred_at).toLocaleDateString()+'</div></div>'+
+        (canWrite ? '<button class="btn btn-s" style="padding:4px 8px;font-size:11px" onclick="deleteAnnotation(\x27'+an.id+'\x27)">×</button>' : '')+
+        '</div>';
+    });
+    anList += '</div>';
+  }
+  if(canWrite) anList += '<button class="btn btn-s tg-print-hide" style="margin-top:8px;font-size:12px;padding:6px 12px" onclick="openAnnotationModal()">+ Add annotation</button>';
+  el.innerHTML = hdr + chart + pcList + anList + '</div>';
 }
 
-function renderTargetGraphSvg(sessions, phaseChanges){
+function renderTargetGraphSvg(sessions, phaseChanges, annotations){
   if(sessions.length === 0){
     return '<div style="background:white;border:1px solid var(--sand);border-radius:14px;padding:30px;text-align:center;color:var(--warm-gray)">No session data yet.</div>';
   }
+  annotations = annotations || [];
   var w = 880, hht = 320, padL = 44, padR = 16, padT = 18, padB = 36;
   var minDate = sessions[0].date.getTime();
   var maxDate = sessions[sessions.length-1].date.getTime();
   if(maxDate === minDate) maxDate = minDate + 1;
+  // Helpers — same coord transform for primary line + overlays + annotations
+  function xCoord(ts){ return padL + ((ts - minDate) / (maxDate - minDate)) * (w - padL - padR); }
+  function yCoord(pct){ return hht - padB - (pct / 100) * (hht - padT - padB); }
   var pathParts = [];
   var circles = '';
   sessions.forEach(function(s, i){
-    var x = padL + ((s.date.getTime() - minDate) / (maxDate - minDate)) * (w - padL - padR);
-    var y = hht - padB - (s.pct / 100) * (hht - padT - padB);
+    var x = xCoord(s.date.getTime());
+    var y = yCoord(s.pct);
     pathParts.push((i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1));
     circles += '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.5" fill="#7B9BB8"><title>'+s.date.toLocaleDateString()+': '+Math.round(s.pct)+'%</title></circle>';
   });
@@ -4734,11 +4776,84 @@ function renderTargetGraphSvg(sessions, phaseChanges){
     '<text x="'+padL+'" y="'+(hht-padB+18)+'" text-anchor="start" font-size="10" fill="var(--warm-gray)">'+new Date(minDate).toLocaleDateString()+'</text>'+
     '<text x="'+((padL+w-padR)/2)+'" y="'+(hht-padB+18)+'" text-anchor="middle" font-size="10" fill="var(--warm-gray)">'+midDate.toLocaleDateString()+'</text>'+
     '<text x="'+(w-padR)+'" y="'+(hht-padB+18)+'" text-anchor="end" font-size="10" fill="var(--warm-gray)">'+new Date(maxDate).toLocaleDateString()+'</text>';
-  return '<div style="background:white;border:1px solid var(--sand);border-radius:14px;padding:14px"><svg width="100%" viewBox="0 0 '+w+' '+hht+'" preserveAspectRatio="xMidYMid meet">'+axes+phaseLines+avgLine+meanLine+path+circles+'</svg></div>';
+  // Linear regression trend line (least squares on session.pct vs date.getTime())
+  var trendLine = '';
+  if(targetGraphState.showTrendLine && sessions.length >= 2){
+    var n = sessions.length;
+    var sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+    sessions.forEach(function(s){ var x = s.date.getTime(); sumX += x; sumY += s.pct; sumXY += x*s.pct; sumXX += x*x; });
+    var denom = (n*sumXX - sumX*sumX);
+    if(denom !== 0){
+      var slope = (n*sumXY - sumX*sumY) / denom;
+      var intercept = (sumY - slope*sumX) / n;
+      var y1 = Math.max(0, Math.min(100, intercept + slope*minDate));
+      var y2 = Math.max(0, Math.min(100, intercept + slope*maxDate));
+      var x1px = xCoord(minDate), x2px = xCoord(maxDate);
+      var y1px = yCoord(y1), y2px = yCoord(y2);
+      // Per-day slope for label (slope is per-ms; convert to per-day)
+      var perDay = slope * 86400000;
+      var direction = perDay >= 0 ? '↑' : '↓';
+      var perWeek = perDay * 7;
+      trendLine = '<line x1="'+x1px.toFixed(1)+'" y1="'+y1px.toFixed(1)+'" x2="'+x2px.toFixed(1)+'" y2="'+y2px.toFixed(1)+'" stroke="#9D7BB8" stroke-width="1.5" stroke-dasharray="6 3"/>'+
+        '<text x="'+(w-padR-2)+'" y="'+Math.max(padT+8, y2px-6)+'" text-anchor="end" font-size="10" fill="#9D7BB8" font-weight="700">trend '+direction+' '+Math.abs(perWeek).toFixed(1)+'%/wk</text>';
+    }
+  }
+  // ±1 std dev band around the mean
+  var stdBand = '';
+  if(targetGraphState.showStdDev && sessions.length >= 2){
+    var mean = sessions.reduce(function(a,s){ return a + s.pct; }, 0) / sessions.length;
+    var variance = sessions.reduce(function(a,s){ return a + (s.pct-mean)*(s.pct-mean); }, 0) / sessions.length;
+    var sd = Math.sqrt(variance);
+    var hi = Math.min(100, mean + sd);
+    var lo = Math.max(0, mean - sd);
+    var hiPx = yCoord(hi), loPx = yCoord(lo);
+    stdBand = '<rect x="'+padL+'" y="'+hiPx.toFixed(1)+'" width="'+(w-padR-padL)+'" height="'+(loPx-hiPx).toFixed(1)+'" fill="var(--sage)" opacity="0.10"/>'+
+      '<text x="'+padL+'" y="'+(hiPx-2).toFixed(1)+'" font-size="10" fill="var(--sage-dark)">±1 SD ('+Math.round(lo)+'-'+Math.round(hi)+'%)</text>';
+  }
+  // Annotation markers
+  var annMarkers = '';
+  (annotations || []).forEach(function(an){
+    var d = new Date(an.occurred_at).getTime();
+    if(d < minDate || d > maxDate) return;
+    var x = xCoord(d);
+    var by = hht - padB;
+    annMarkers += '<polygon points="'+(x-5).toFixed(1)+','+(by-2)+' '+(x+5).toFixed(1)+','+(by-2)+' '+x.toFixed(1)+','+(by-12)+'" fill="#7A6A10" stroke="white" stroke-width="0.5"><title>'+esc(an.note).replace(/"/g,'&quot;')+' ('+new Date(an.occurred_at).toLocaleDateString()+')</title></polygon>';
+  });
+  return '<div style="background:white;border:1px solid var(--sand);border-radius:14px;padding:14px"><svg width="100%" viewBox="0 0 '+w+' '+hht+'" preserveAspectRatio="xMidYMid meet">'+axes+stdBand+phaseLines+avgLine+meanLine+trendLine+path+circles+annMarkers+'</svg></div>';
 }
 
 function toggleGraphAverage(){ targetGraphState.showAverage = !targetGraphState.showAverage; renderTargetGraph(); }
 function toggleGraphMeanOfDay(){ targetGraphState.showMeanOfDay = !targetGraphState.showMeanOfDay; renderTargetGraph(); }
+function toggleGraphTrendLine(){ targetGraphState.showTrendLine = !targetGraphState.showTrendLine; renderTargetGraph(); }
+function toggleGraphStdDev(){ targetGraphState.showStdDev = !targetGraphState.showStdDev; renderTargetGraph(); }
+
+function printTargetGraph(){
+  document.body.classList.add('tg-printing');
+  window.print();
+  setTimeout(function(){ document.body.classList.remove('tg-printing'); }, 1000);
+}
+
+async function openAnnotationModal(){
+  var dateStr = prompt('Annotation date (YYYY-MM-DD):', new Date().toISOString().slice(0,10));
+  if(!dateStr) return;
+  var note = prompt('Note text:');
+  if(!note) return;
+  var r = await sb.from('target_annotations').insert({
+    target_id: targetGraphState.targetId,
+    occurred_at: dateStr,
+    note: note.trim(),
+    created_by: S.practiceMember.id
+  });
+  if(r.error){ showToast(r.error.message); return; }
+  renderTargetGraph();
+}
+
+async function deleteAnnotation(id){
+  if(!confirm('Delete this annotation?')) return;
+  var r = await sb.from('target_annotations').delete().eq('id', id);
+  if(r.error){ showToast(r.error.message); return; }
+  renderTargetGraph();
+}
 
 var phaseChangeEditing = null;
 
