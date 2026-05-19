@@ -1542,6 +1542,28 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   </div>
 </div>
 
+<div id="phaseChangeModal" class="modal-overlay" style="display:none">
+  <div class="modal-content" style="max-width:460px">
+    <h3 id="pcmTitle" style="font-family:Fraunces,serif;font-size:22px;margin-bottom:12px">Add phase change</h3>
+    <label class="fl">Date *</label>
+    <input id="pcmDate" class="fi" type="date">
+    <label class="fl" style="margin-top:12px">Label *</label>
+    <select id="pcmLabel" class="fi">
+      <option>BIP change</option>
+      <option>Target promoted</option>
+      <option>Reinforcer changed</option>
+      <option>Intervention changed</option>
+      <option>Other</option>
+    </select>
+    <label class="fl" style="margin-top:12px">Notes (optional)</label>
+    <textarea id="pcmNotes" class="fi" rows="2"></textarea>
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button class="btn btn-s" style="flex:1" onclick="closePhaseChangeModal()">Cancel</button>
+      <button class="btn btn-p" style="flex:1" onclick="submitPhaseChange()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div id="targetModal" class="modal-overlay" style="display:none">
   <div class="modal-content" style="max-width:640px;max-height:90vh;overflow-y:auto">
     <h3 id="tmTitle" style="font-family:Fraunces,serif;font-size:22px;margin-bottom:12px">New target</h3>
@@ -4333,9 +4355,61 @@ function renderTargetGraphSvg(sessions, phaseChanges){
 function toggleGraphAverage(){ targetGraphState.showAverage = !targetGraphState.showAverage; renderTargetGraph(); }
 function toggleGraphMeanOfDay(){ targetGraphState.showMeanOfDay = !targetGraphState.showMeanOfDay; renderTargetGraph(); }
 
-function openPhaseChangeModal(id){ alert('Phase change modal lands in Task 3'); }
+var phaseChangeEditing = null;
+
+async function openPhaseChangeModal(id){
+  phaseChangeEditing = null;
+  document.getElementById('pcmTitle').textContent = 'Add phase change';
+  document.getElementById('pcmDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('pcmLabel').value = 'BIP change';
+  document.getElementById('pcmNotes').value = '';
+  if(id){
+    var r = await sb.from('phase_changes').select('*').eq('id', id).single();
+    if(r.error){ showToast(r.error.message); return; }
+    phaseChangeEditing = r.data;
+    document.getElementById('pcmTitle').textContent = 'Edit phase change';
+    document.getElementById('pcmDate').value = r.data.occurred_at;
+    document.getElementById('pcmLabel').value = r.data.label;
+    document.getElementById('pcmNotes').value = r.data.notes || '';
+  }
+  document.getElementById('phaseChangeModal').style.display = 'flex';
+}
+
 function editPhaseChange(id){ openPhaseChangeModal(id); }
-async function deletePhaseChange(id){ alert('Delete lands in Task 3'); }
+
+function closePhaseChangeModal(){
+  document.getElementById('phaseChangeModal').style.display = 'none';
+}
+
+async function submitPhaseChange(){
+  var occurredAt = document.getElementById('pcmDate').value;
+  var label = document.getElementById('pcmLabel').value;
+  var notes = document.getElementById('pcmNotes').value.trim() || null;
+  if(!occurredAt || !label){ showToast('Date and label required'); return; }
+  var payload = {
+    target_id: targetGraphState.targetId,
+    occurred_at: occurredAt,
+    label: label,
+    notes: notes,
+    created_by: S.practiceMember.id
+  };
+  if(phaseChangeEditing){
+    var upd = await sb.from('phase_changes').update(payload).eq('id', phaseChangeEditing.id);
+    if(upd.error){ showToast(upd.error.message); return; }
+  } else {
+    var ins = await sb.from('phase_changes').insert(payload);
+    if(ins.error){ showToast(ins.error.message); return; }
+  }
+  closePhaseChangeModal();
+  renderTargetGraph();
+}
+
+async function deletePhaseChange(id){
+  if(!confirm('Delete this phase change?')) return;
+  var r = await sb.from('phase_changes').delete().eq('id', id);
+  if(r.error){ showToast(r.error.message); return; }
+  renderTargetGraph();
+}
 
 function openTargetModal(){
   targetEditing = null;
