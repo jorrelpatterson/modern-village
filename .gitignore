@@ -33,3 +33,15 @@ android/app/release/
 next-env.d.ts
 app/(auth)/
 app/(dashboard)/
+
+# Claude Code per-project state
+.claude/
+
+# Supabase CLI temp / swap dir
+supabase/.temp/
+
+# Sensitive credentials — must not commit (they travel with the working tree on the external drive instead)
+AuthKey_*.p8
+jorrel-os.json
+wrangler.toml
+ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
