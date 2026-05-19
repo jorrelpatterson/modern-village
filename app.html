@@ -1453,6 +1453,14 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   <div class="overlay-inner" id="practiceSettingsContent" style="padding-bottom:80px"></div>
 </div>
 
+<div id="analysisDashboardPage" class="overlay-page">
+  <div class="overlay-header">
+    <button class="overlay-back" onclick="closeOverlay('analysisDashboardPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2 class="overlay-title">Analysis</h2>
+  </div>
+  <div class="overlay-inner" id="analysisDashboardContent" style="padding-bottom:80px"></div>
+</div>
+
 <div id="activeSessionPage" class="overlay-page">
   <div class="overlay-inner" id="activeSessionContent" style="padding:0;height:100vh;display:flex;flex-direction:column;overflow:hidden"></div>
 </div>
@@ -4683,6 +4691,149 @@ async function openPracticeSettings(){
     '</div>';
 }
 
+var analysisDashTab = 'targets';
+
+async function openAnalysisDashboard(){
+  if(!S.practiceMember){ showToast('Set up your practice first'); return; }
+  analysisDashTab = 'targets';
+  document.getElementById('analysisDashboardPage').classList.add('open');
+  await renderAnalysisDashboard();
+}
+
+async function renderAnalysisDashboard(){
+  var el = document.getElementById('analysisDashboardContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
+  var tabBar = '<div style="max-width:920px;margin:0 auto"><div style="display:flex;gap:0;border-bottom:1px solid var(--sand);margin-bottom:14px">'+
+    ['targets','behaviors'].map(function(t){
+      var label = t === 'targets' ? 'Skill targets' : 'Behaviors';
+      var active = analysisDashTab === t;
+      return '<button onclick="switchAnalysisTab(\x27'+t+'\x27)" style="padding:10px 16px;background:none;border:none;border-bottom:3px solid '+(active?'var(--sage-dark)':'transparent')+';color:'+(active?'var(--sage-dark)':'var(--warm-gray)')+';font-weight:700;font-size:14px;cursor:pointer">'+label+'</button>';
+    }).join('')+
+    '</div>';
+  if(analysisDashTab === 'targets'){
+    tabBar += await renderAnalysisTargetsTab();
+  } else {
+    tabBar += await renderAnalysisBehaviorsTab();
+  }
+  tabBar += '</div>';
+  el.innerHTML = tabBar;
+}
+
+function switchAnalysisTab(t){ analysisDashTab = t; renderAnalysisDashboard(); }
+
+async function renderAnalysisTargetsTab(){
+  var pcR = await sb.from('practice_clients').select('id,children(name)').eq('practice_id', S.practiceMember.practice_id).eq('status', 'active');
+  var pcIds = (pcR.data || []).map(function(c){ return c.id; });
+  if(pcIds.length === 0) return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">No active clients yet.</div>';
+  var pgR = await sb.from('programs').select('id,name,practice_client_id').in('practice_client_id', pcIds).eq('status', 'active');
+  var pgIds = (pgR.data || []).map(function(p){ return p.id; });
+  if(pgIds.length === 0) return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">No active programs.</div>';
+  var tR = await sb.from('targets').select('id,name,status,promoted_at,created_at,program_id').in('program_id', pgIds).in('status', ['baseline','in_treatment']);
+  var targets = tR.data || [];
+  if(targets.length === 0) return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">No targets in treatment.</div>';
+  var targetIds = targets.map(function(t){ return t.id; });
+  var sixtyDaysAgo = new Date(Date.now() - 60*24*60*60*1000).toISOString();
+  var trR = await sb.from('trials').select('target_id,response,timestamp,session_id').in('target_id', targetIds).is('superseded_by', null).is('ioa_observer_id', null).gte('timestamp', sixtyDaysAgo);
+  var trialsByTarget = {};
+  (trR.data || []).forEach(function(tr){
+    if(!trialsByTarget[tr.target_id]) trialsByTarget[tr.target_id] = [];
+    trialsByTarget[tr.target_id].push(tr);
+  });
+  function recentPct(targetId){
+    var ts = trialsByTarget[targetId] || [];
+    if(ts.length === 0) return null;
+    var bySess = {};
+    ts.forEach(function(tr){ if(!bySess[tr.session_id]) bySess[tr.session_id] = { total: 0, correct: 0, ts: tr.timestamp }; var s = bySess[tr.session_id]; s.total += 1; if(tr.response === 'correct') s.correct += 1; if(tr.timestamp > s.ts) s.ts = tr.timestamp; });
+    var sessList = Object.values(bySess).sort(function(a,b){ return new Date(b.ts) - new Date(a.ts); }).slice(0, 5);
+    var totalCorrect = sessList.reduce(function(a,s){ return a + s.correct; }, 0);
+    var totalTrials = sessList.reduce(function(a,s){ return a + s.total; }, 0);
+    return totalTrials > 0 ? (totalCorrect / totalTrials) * 100 : null;
+  }
+  var pgMap = {};
+  (pgR.data || []).forEach(function(p){ pgMap[p.id] = p; });
+  var pcMap = {};
+  (pcR.data || []).forEach(function(c){ pcMap[c.id] = c; });
+  function clientName(targetId){
+    var t = targets.find(function(x){ return x.id === targetId; });
+    if(!t) return '';
+    var pg = pgMap[t.program_id];
+    if(!pg) return '';
+    var pc = pcMap[pg.practice_client_id];
+    return pc && pc.children ? pc.children.name : '';
+  }
+  var scored = targets.map(function(t){
+    var pct = recentPct(t.id);
+    var startedAt = t.promoted_at || t.created_at;
+    var daysInTreatment = Math.floor((Date.now() - new Date(startedAt).getTime()) / 86400000);
+    return { target: t, pct: pct, daysInTreatment: daysInTreatment, clientName: clientName(t.id), programName: pgMap[t.program_id] ? pgMap[t.program_id].name : '' };
+  });
+  var needsReassessment = scored.filter(function(s){ return s.daysInTreatment > 30 && s.pct !== null && s.pct < 80; }).sort(function(a,b){ return a.pct - b.pct; }).slice(0, 10);
+  var best = scored.filter(function(s){ return s.pct !== null; }).sort(function(a,b){ return b.pct - a.pct; }).slice(0, 5);
+  var worst = scored.filter(function(s){ return s.pct !== null; }).sort(function(a,b){ return a.pct - b.pct; }).slice(0, 5);
+  var pmR = await sb.from('practice_members').select('id,role,profiles(name,email)').eq('practice_id', S.practiceMember.practice_id).eq('active', true);
+  var members = pmR.data || [];
+  var memberMap = {};
+  members.forEach(function(m){ memberMap[m.id] = m; });
+  var thirtyDaysAgo = new Date(Date.now() - 30*24*60*60*1000).toISOString();
+  var sessR = await sb.from('sessions').select('id,provider_id').in('practice_client_id', pcIds).gte('start_time', thirtyDaysAgo);
+  var sessByProvider = {};
+  (sessR.data || []).forEach(function(s){ sessByProvider[s.provider_id] = (sessByProvider[s.provider_id] || 0) + 1; });
+  var sessIds = (sessR.data || []).map(function(s){ return s.id; });
+  var allTrR = sessIds.length > 0 ? await sb.from('trials').select('session_id').in('session_id', sessIds).is('superseded_by', null).is('ioa_observer_id', null) : { data: [] };
+  var trialsByProvider = {};
+  (allTrR.data || []).forEach(function(tr){
+    var sess = (sessR.data || []).find(function(s){ return s.id === tr.session_id; });
+    if(sess){ trialsByProvider[sess.provider_id] = (trialsByProvider[sess.provider_id] || 0) + 1; }
+  });
+  var h = '';
+  h += renderAnalysisCard('Targets needing reassessment', needsReassessment, function(s){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand);cursor:pointer" onclick="openTargetGraph(\x27'+s.target.id+'\x27)">'+
+      '<div><div style="font-weight:700;font-size:13px">'+esc(s.target.name)+'</div><div style="font-size:11px;color:var(--warm-gray)">'+esc(s.clientName)+' · '+esc(s.programName)+' · '+s.daysInTreatment+' days</div></div>'+
+      '<div style="font-size:13px;font-weight:700;color:'+(s.pct < 60 ? 'var(--terracotta)' : '#7A6A10')+'">'+Math.round(s.pct)+'%</div>'+
+      '</div>';
+  }, 'In treatment >30 days with <80% recent mastery. Click to open graph.');
+  h += renderAnalysisCard('Best performing targets', best, function(s){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand);cursor:pointer" onclick="openTargetGraph(\x27'+s.target.id+'\x27)">'+
+      '<div><div style="font-weight:700;font-size:13px">'+esc(s.target.name)+'</div><div style="font-size:11px;color:var(--warm-gray)">'+esc(s.clientName)+'</div></div>'+
+      '<div style="font-size:13px;font-weight:700;color:var(--sage-dark)">'+Math.round(s.pct)+'%</div>'+
+      '</div>';
+  });
+  h += renderAnalysisCard('Worst performing targets', worst, function(s){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand);cursor:pointer" onclick="openTargetGraph(\x27'+s.target.id+'\x27)">'+
+      '<div><div style="font-weight:700;font-size:13px">'+esc(s.target.name)+'</div><div style="font-size:11px;color:var(--warm-gray)">'+esc(s.clientName)+'</div></div>'+
+      '<div style="font-size:13px;font-weight:700;color:var(--terracotta)">'+Math.round(s.pct)+'%</div>'+
+      '</div>';
+  });
+  var rbtRows = members.filter(function(m){ return (sessByProvider[m.id] || 0) > 0; }).map(function(m){
+    var name = m.profiles ? (m.profiles.name || m.profiles.email) : '(member)';
+    return { name: name, role: m.role, sessions: sessByProvider[m.id] || 0, trials: trialsByProvider[m.id] || 0 };
+  }).sort(function(a,b){ return b.trials - a.trials; });
+  h += renderAnalysisCard('Team activity (last 30 days)', rbtRows, function(r){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand)">'+
+      '<div><div style="font-weight:700;font-size:13px">'+esc(r.name)+'</div><div style="font-size:11px;color:var(--warm-gray)">'+r.role.replace(/_/g,' ')+'</div></div>'+
+      '<div style="font-size:12px;text-align:right"><div style="font-weight:700">'+r.sessions+' sessions</div><div style="color:var(--warm-gray)">'+r.trials+' trials</div></div>'+
+      '</div>';
+  });
+  return h;
+}
+
+function renderAnalysisCard(title, items, rowRenderer, subtitle){
+  var h = '<div style="background:white;border:1px solid var(--sand);border-radius:14px;padding:16px;margin-bottom:14px">'+
+    '<div style="font-family:Fraunces,serif;font-size:16px;font-weight:700;margin-bottom:'+(subtitle?'2':'10')+'px">'+title+'</div>'+
+    (subtitle ? '<div style="font-size:11px;color:var(--warm-gray);margin-bottom:10px">'+subtitle+'</div>' : '');
+  if(!items || items.length === 0){
+    h += '<div style="color:var(--warm-gray);font-size:13px">Nothing yet.</div>';
+  } else {
+    items.forEach(function(item){ h += rowRenderer(item); });
+  }
+  h += '</div>';
+  return h;
+}
+
+async function renderAnalysisBehaviorsTab(){
+  return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">Cross-client behavior trends land in Task 5.</div>';
+}
+
 async function savePracticeSettings(){
   var settings = {
     default_mastery: {
@@ -5438,7 +5589,7 @@ function renderSb(){
   var displayName=S.name||( S.user?S.user.email:'Guest');
   document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Signed in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+displayName+'</div>'+(S.child?'<div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Parent of '+S.child+(S.age?', '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'')+'</div>':'');
   updateSubSt();
-  var allItems=[{label:"\u26a0\ufe0f Crisis Support",action:"openCrisis()",roles:['parent','caregiver','provider','teacher'],highlight:true},{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"Behavior Summary",action:"openBehaviorSummary()",roles:['teacher']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"My Milestones",action:"openMilestones()",roles:['parent']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver','teacher']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver','teacher']},{label:"Session Notes",action:"openParentSessionNotes()",roles:['parent']},{label:"My BCBA",action:"openMyBcba()",roles:['parent'],requiresMyBcba:true,highlight:true},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Billing Dashboard",action:"openBillingDashboard()",roles:['provider']},{label:"My Payers",action:"openPayerManagement()",roles:['provider']},{label:"Practice Dashboard",action:"openPracticeDashboard()",roles:['provider'],requiresPractice:true},{label:"Practice Members",action:"openPracticeMembers()",roles:['provider'],requiresPractice:true},{label:"Clients (Practice)",action:"openPracticeClients()",roles:['provider'],requiresPractice:true},{label:"Curriculum Library",action:"openCurriculumBrowser()",roles:['provider'],requiresPractice:true},{label:"Practice Settings",action:"openPracticeSettings()",roles:['provider'],requiresPractice:true},{label:"Set up Practice",action:"openPracticeOnboarding()",roles:['provider'],requiresNoPractice:true,highlight:true},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
+  var allItems=[{label:"\u26a0\ufe0f Crisis Support",action:"openCrisis()",roles:['parent','caregiver','provider','teacher'],highlight:true},{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"Behavior Summary",action:"openBehaviorSummary()",roles:['teacher']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"My Milestones",action:"openMilestones()",roles:['parent']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver','teacher']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver','teacher']},{label:"Session Notes",action:"openParentSessionNotes()",roles:['parent']},{label:"My BCBA",action:"openMyBcba()",roles:['parent'],requiresMyBcba:true,highlight:true},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Billing Dashboard",action:"openBillingDashboard()",roles:['provider']},{label:"My Payers",action:"openPayerManagement()",roles:['provider']},{label:"Practice Dashboard",action:"openPracticeDashboard()",roles:['provider'],requiresPractice:true},{label:"Practice Members",action:"openPracticeMembers()",roles:['provider'],requiresPractice:true},{label:"Clients (Practice)",action:"openPracticeClients()",roles:['provider'],requiresPractice:true},{label:"Curriculum Library",action:"openCurriculumBrowser()",roles:['provider'],requiresPractice:true},{label:"Practice Settings",action:"openPracticeSettings()",roles:['provider'],requiresPractice:true},{label:"Analysis",action:"openAnalysisDashboard()",roles:['provider'],requiresPractice:true},{label:"Set up Practice",action:"openPracticeOnboarding()",roles:['provider'],requiresNoPractice:true,highlight:true},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
   var items=allItems.filter(function(item){
     if(item.roles && item.roles.indexOf(S.role) < 0) return false;
     if(item.requiresPractice && !S.practiceMember) return false;
