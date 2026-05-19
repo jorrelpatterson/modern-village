@@ -2786,23 +2786,33 @@ async function doSearchParent(){
   var email = document.getElementById('addClientParentEmail').value.trim().toLowerCase();
   var picker = document.getElementById('addClientChildPicker');
   if(email.length < 3){ picker.style.display = 'none'; return; }
-  var r = await sb.from('profiles').select('id,name,email,children(id,name,age,diagnosis)').eq('email', email).maybeSingle();
-  if(!r.data){
-    picker.innerHTML = '<div style="background:var(--cream);padding:10px;border-radius:10px;font-size:13px;color:var(--warm-gray)">No Modern Village account for that email. Ask the parent to sign up first, then re-add.</div>';
+  // Use SECURITY DEFINER RPC because RLS on profiles + children restricts to
+  // current user only. The RPC gates access by practice membership.
+  var r = await sb.rpc('lookup_parent_by_email', { p_email: email });
+  if(r.error){
+    picker.innerHTML = '<div style="background:var(--terracotta-light);padding:10px;border-radius:10px;font-size:13px;color:var(--terracotta)">'+esc(r.error.message)+'</div>';
     picker.style.display = 'block';
     addClientState.parentId = null;
     addClientState.childId = null;
     return;
   }
-  addClientState.parentId = r.data.id;
-  var kids = r.data.children || [];
+  var profile = (r.data && r.data.length) ? r.data[0] : null;
+  if(!profile){
+    picker.innerHTML = '<div style="background:var(--cream);padding:10px;border-radius:10px;font-size:13px;color:var(--warm-gray)">No Modern Village account for <strong>'+esc(email)+'</strong>. Ask the parent to sign up at modernvillage.app, then come back and add them.</div>';
+    picker.style.display = 'block';
+    addClientState.parentId = null;
+    addClientState.childId = null;
+    return;
+  }
+  addClientState.parentId = profile.id;
+  var kids = profile.children || [];
   if(kids.length === 0){
-    picker.innerHTML = '<div style="background:var(--cream);padding:10px;border-radius:10px;font-size:13px;color:var(--warm-gray)">Parent found, but they haven\\x27t added a child yet. Ask them to add a child in their profile, then re-add.</div>';
+    picker.innerHTML = '<div style="background:var(--cream);padding:10px;border-radius:10px;font-size:13px;color:var(--warm-gray)">Found <strong>'+esc(profile.name || profile.email)+'</strong>, but they haven\\x27t added a child to their profile yet. Ask them to add a child in Modern Village, then re-add.</div>';
     picker.style.display = 'block';
     addClientState.childId = null;
     return;
   }
-  var h = '<label class="fl">Which child?</label><div style="display:flex;flex-direction:column;gap:6px">';
+  var h = '<label class="fl">Which child? <span style="color:var(--warm-gray);font-weight:400;font-size:11px">(parent: '+esc(profile.name || profile.email)+')</span></label><div style="display:flex;flex-direction:column;gap:6px">';
   kids.forEach(function(k){
     h += '<label style="display:flex;gap:8px;padding:10px;border:1px solid var(--sand);border-radius:10px;cursor:pointer"><input type="radio" name="childPick" value="'+k.id+'" onchange="addClientState.childId=this.value"> <span><strong>'+esc(k.name)+'</strong><span style="color:var(--warm-gray);font-size:12px"> &middot; age '+(k.age||'?')+'</span></span></label>';
   });
