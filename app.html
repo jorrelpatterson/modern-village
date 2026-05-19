@@ -1392,6 +1392,48 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   </div>
 </div>
 
+<div id="targetsEditorPage" class="overlay-page">
+  <div class="overlay-header">
+    <button class="overlay-back" onclick="closeOverlay('targetsEditorPage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2 class="overlay-title" id="teProgramTitle">Targets</h2>
+  </div>
+  <div class="overlay-inner" id="targetsEditorContent" style="padding-bottom:80px"></div>
+</div>
+
+<div id="targetModal" class="modal-overlay" style="display:none">
+  <div class="modal-content" style="max-width:640px;max-height:90vh;overflow-y:auto">
+    <h3 id="tmTitle" style="font-family:Fraunces,serif;font-size:22px;margin-bottom:12px">New target</h3>
+    <label class="fl">Target name *</label>
+    <input id="tmName" class="fi" placeholder="e.g. Mand for preferred item">
+    <label class="fl" style="margin-top:14px">Operational definition * <span style="color:var(--warm-gray);font-weight:400;font-size:11px">(measurable, observable, specific)</span></label>
+    <textarea id="tmOpDef" class="fi" rows="3" placeholder="When MO is present, child independently requests using 1-3 word mand within 10 seconds."></textarea>
+    <label class="fl" style="margin-top:14px">Target type *</label>
+    <select id="tmType" class="fi" onchange="renderTargetTypeFields()">
+      <option value="discrete_trial">Discrete trial (DTT)</option>
+      <option value="task_analysis">Task analysis</option>
+      <option value="frequency">Frequency count</option>
+      <option value="duration">Duration</option>
+      <option value="interval">Interval recording</option>
+    </select>
+    <div id="tmDataConfig" style="margin-top:14px"></div>
+    <div class="label" style="margin-top:18px;margin-bottom:6px">Mastery criteria</div>
+    <div id="tmMastery"></div>
+    <div class="label" style="margin-top:18px;margin-bottom:6px">Baseline criteria</div>
+    <div id="tmBaseline"></div>
+    <div class="label" style="margin-top:18px;margin-bottom:6px">Maintenance criteria</div>
+    <div id="tmMaintenance"></div>
+    <div id="tmStepsWrap" style="display:none;margin-top:18px">
+      <div class="label" style="margin-bottom:6px">Task analysis steps</div>
+      <div id="tmStepsList"></div>
+      <button class="btn btn-s" style="margin-top:8px;font-size:12px;padding:6px 10px" onclick="addStep()">+ Add step</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:24px">
+      <button class="btn btn-s" style="flex:1" onclick="closeTargetModal()">Cancel</button>
+      <button class="btn btn-p" style="flex:1" onclick="submitTarget()">Save target</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══ SUPABASE INIT ═══
 var SUPA_URL = "https://jrsiqjfwvunrjiihnsgc.supabase.co";
@@ -2343,7 +2385,222 @@ async function archiveProgram(programId){
   renderClientPrograms();
 }
 
-function openTargetsEditor(programId){ alert('Targets editor coming in Task 12'); }
+var currentProgram = null;
+var targetEditing = null;
+var targetSteps = [];
+
+async function openTargetsEditor(programId){
+  var r = await sb.from('programs').select('id,name,category,domain,practice_client_id').eq('id', programId).single();
+  if(r.error){ showToast(r.error.message); return; }
+  currentProgram = r.data;
+  document.getElementById('teProgramTitle').textContent = currentProgram.name;
+  document.getElementById('targetsEditorPage').classList.add('open');
+  await renderTargets();
+}
+
+async function renderTargets(){
+  var el = document.getElementById('targetsEditorContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
+  var r = await sb.from('targets')
+    .select('id,name,operational_definition,target_type,mastery_criteria,status,promoted_at,library_source')
+    .eq('program_id', currentProgram.id)
+    .order('created_at', { ascending: true });
+  if(r.error){ el.innerHTML = '<div style="padding:20px;color:var(--terracotta)">'+esc(r.error.message)+'</div>'; return; }
+  var canWrite = S.practiceMember.role === 'owner_bcba' || S.practiceMember.role === 'supervising_bcba';
+  var h = '<div style="max-width:760px;margin:0 auto">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+    '<div style="font-family:Fraunces,serif;font-size:18px;font-weight:700">'+(r.data||[]).length+' target'+((r.data||[]).length!==1?'s':'')+'</div>'+
+    (canWrite ? '<div style="display:flex;gap:6px"><button class="btn btn-s" onclick="openCurriculumBrowserForProgram()">From curriculum</button><button class="btn btn-p" onclick="openTargetModal()">+ New target</button></div>' : '')+
+    '</div>';
+  if(!r.data || r.data.length === 0){
+    h += '<div style="padding:40px;text-align:center;color:var(--warm-gray);border:1px dashed var(--sand);border-radius:14px">No targets yet. Add one custom or import from the curriculum library.</div>';
+  } else {
+    r.data.forEach(function(t){
+      var typeLabel = { discrete_trial:'DTT', task_analysis:'Task Analysis', frequency:'Frequency', duration:'Duration', interval:'Interval' }[t.target_type] || t.target_type;
+      h += '<div style="border:1px solid var(--sand);border-radius:14px;padding:14px;margin-bottom:8px;background:white">'+
+        '<div style="display:flex;justify-content:space-between;align-items:start;gap:10px">'+
+        '<div style="flex:1"><div style="font-weight:700;font-size:15px">'+esc(t.name)+'</div>'+
+        '<div style="font-size:12px;color:var(--warm-gray);margin-top:4px">'+esc(t.operational_definition.slice(0,180))+(t.operational_definition.length>180?'…':'')+'</div>'+
+        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+
+        '<span class="log-tag" style="background:var(--sage-light)">'+typeLabel+'</span>'+
+        '<span class="log-tag">'+t.status.replace(/_/g,' ')+'</span>'+
+        (t.library_source ? '<span class="log-tag" style="background:var(--lavender)">from library</span>' : '')+
+        '</div></div>'+
+        (canWrite ? '<button class="btn btn-s" style="padding:6px 10px;font-size:11px" onclick="editTarget(\x27'+t.id+'\x27)">Edit</button>' : '')+
+        '</div></div>';
+    });
+  }
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+function openTargetModal(){
+  targetEditing = null;
+  targetSteps = [];
+  document.getElementById('tmTitle').textContent = 'New target';
+  document.getElementById('tmName').value = '';
+  document.getElementById('tmOpDef').value = '';
+  document.getElementById('tmType').value = 'discrete_trial';
+  renderTargetTypeFields();
+  renderCriteriaFields({});
+  document.getElementById('targetModal').style.display = 'flex';
+}
+
+async function editTarget(targetId){
+  var r = await sb.from('targets').select('*,target_steps(*)').eq('id', targetId).single();
+  if(r.error){ showToast(r.error.message); return; }
+  targetEditing = r.data;
+  targetSteps = (r.data.target_steps||[]).sort(function(a,b){ return a.sequence - b.sequence; }).map(function(s){ return { name: s.name, description: s.description }; });
+  document.getElementById('tmTitle').textContent = 'Edit target';
+  document.getElementById('tmName').value = r.data.name;
+  document.getElementById('tmOpDef').value = r.data.operational_definition;
+  document.getElementById('tmType').value = r.data.target_type;
+  renderTargetTypeFields(r.data.data_collection_config);
+  renderCriteriaFields(r.data);
+  document.getElementById('targetModal').style.display = 'flex';
+}
+
+function closeTargetModal(){
+  document.getElementById('targetModal').style.display = 'none';
+}
+
+function renderTargetTypeFields(cfg){
+  var type = document.getElementById('tmType').value;
+  var el = document.getElementById('tmDataConfig');
+  cfg = cfg || {};
+  if(type === 'discrete_trial'){
+    el.innerHTML = '<label class="fl">Trials per session</label><input id="tmCfg_trials" class="fi" type="number" min="1" value="'+(cfg.trials_per_session||10)+'">';
+  } else if(type === 'task_analysis'){
+    el.innerHTML = '<div style="font-size:12px;color:var(--warm-gray)">Configure prompt levels and step list below.</div>';
+  } else if(type === 'frequency'){
+    el.innerHTML = '<label class="fl">Observation window (minutes, optional)</label><input id="tmCfg_window" class="fi" type="number" min="1" placeholder="leave blank for whole-session count" value="'+(cfg.window_minutes||'')+'">';
+  } else if(type === 'duration'){
+    el.innerHTML = '<div style="font-size:12px;color:var(--warm-gray)">Stopwatch-style. No extra config needed.</div>';
+  } else if(type === 'interval'){
+    el.innerHTML = '<label class="fl">Interval length (seconds)</label><input id="tmCfg_int" class="fi" type="number" min="1" value="'+(cfg.interval_seconds||10)+'"><label class="fl" style="margin-top:10px">Type</label><select id="tmCfg_intType" class="fi"><option value="whole" '+(cfg.interval_type==='whole'?'selected':'')+'>Whole interval</option><option value="partial" '+(cfg.interval_type==='partial'?'selected':'')+'>Partial interval</option><option value="momentary" '+(cfg.interval_type==='momentary'?'selected':'')+'>Momentary time sampling</option></select>';
+  }
+  document.getElementById('tmStepsWrap').style.display = (type === 'task_analysis' ? 'block' : 'none');
+  if(type === 'task_analysis') renderSteps();
+}
+
+function renderCriteriaFields(t){
+  var m = (t && t.mastery_criteria) || {};
+  var b = (t && t.baseline_criteria) || {};
+  var mt = (t && t.maintenance_criteria) || {};
+  document.getElementById('tmMastery').innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+    '<div><label class="fl">% correct</label><input id="tmM_pct" class="fi" type="number" min="0" max="100" value="'+(m.response_pct||80)+'"></div>'+
+    '<div><label class="fl">Consecutive sessions</label><input id="tmM_cons" class="fi" type="number" min="1" value="'+(m.consecutive_sessions||3)+'"></div>'+
+    '</div>'+
+    '<label style="display:flex;gap:8px;margin-top:8px;font-size:13px"><input id="tmM_fti" type="checkbox" '+(m.first_trial_independent?'checked':'')+'> First trial independent required</label>';
+  document.getElementById('tmBaseline').innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+    '<div><label class="fl">Sessions</label><input id="tmB_sess" class="fi" type="number" min="1" value="'+(b.sessions||3)+'"></div>'+
+    '<div><label class="fl">Trials per session</label><input id="tmB_trials" class="fi" type="number" min="1" value="'+(b.trials_per_session||5)+'"></div>'+
+    '</div>';
+  document.getElementById('tmMaintenance').innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+    '<div><label class="fl">Probe frequency</label><select id="tmMt_freq" class="fi"><option value="weekly" '+(mt.probe_frequency==='weekly'?'selected':'')+'>Weekly</option><option value="biweekly" '+(mt.probe_frequency==='biweekly'?'selected':'')+'>Biweekly</option><option value="monthly" '+(mt.probe_frequency==='monthly'?'selected':'')+'>Monthly</option></select></div>'+
+    '<div><label class="fl">Probes required</label><input id="tmMt_probes" class="fi" type="number" min="1" value="'+(mt.probes_required||2)+'"></div>'+
+    '</div>';
+}
+
+function renderSteps(){
+  var el = document.getElementById('tmStepsList');
+  if(targetSteps.length === 0){
+    el.innerHTML = '<div style="color:var(--warm-gray);font-size:12px;padding:8px">No steps yet. Add one below.</div>';
+    return;
+  }
+  var h = '';
+  targetSteps.forEach(function(s, idx){
+    h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">'+
+      '<span style="width:24px;font-weight:700;color:var(--warm-gray)">'+(idx+1)+'.</span>'+
+      '<input class="fi" style="flex:1;padding:8px 10px;font-size:13px" value="'+esc(s.name)+'" onchange="targetSteps['+idx+'].name=this.value">'+
+      '<button class="btn btn-s" style="padding:4px 8px;font-size:11px" onclick="removeStep('+idx+')">×</button>'+
+      '</div>';
+  });
+  el.innerHTML = h;
+}
+
+function addStep(){
+  targetSteps.push({ name: '', description: null });
+  renderSteps();
+}
+
+function removeStep(idx){
+  targetSteps.splice(idx, 1);
+  renderSteps();
+}
+
+function readDataConfig(){
+  var type = document.getElementById('tmType').value;
+  if(type === 'discrete_trial') return { trials_per_session: parseInt(document.getElementById('tmCfg_trials').value, 10) || 10 };
+  if(type === 'frequency') return document.getElementById('tmCfg_window').value ? { window_minutes: parseInt(document.getElementById('tmCfg_window').value, 10) } : {};
+  if(type === 'interval') return { interval_seconds: parseInt(document.getElementById('tmCfg_int').value, 10) || 10, interval_type: document.getElementById('tmCfg_intType').value };
+  return {};
+}
+
+async function submitTarget(){
+  var name = document.getElementById('tmName').value.trim();
+  var opDef = document.getElementById('tmOpDef').value.trim();
+  if(!name || !opDef){ showToast('Name and operational definition are required'); return; }
+  if(opDef.length < 20){ showToast('Operational definition should be specific (≥20 chars)'); return; }
+  var type = document.getElementById('tmType').value;
+  var payload = {
+    program_id: currentProgram.id,
+    name: name,
+    operational_definition: opDef,
+    target_type: type,
+    data_collection_config: readDataConfig(),
+    mastery_criteria: {
+      response_pct: parseInt(document.getElementById('tmM_pct').value, 10) || 80,
+      consecutive_sessions: parseInt(document.getElementById('tmM_cons').value, 10) || 3,
+      first_trial_independent: document.getElementById('tmM_fti').checked
+    },
+    baseline_criteria: {
+      sessions: parseInt(document.getElementById('tmB_sess').value, 10) || 3,
+      trials_per_session: parseInt(document.getElementById('tmB_trials').value, 10) || 5
+    },
+    maintenance_criteria: {
+      probe_frequency: document.getElementById('tmMt_freq').value,
+      probes_required: parseInt(document.getElementById('tmMt_probes').value, 10) || 2
+    }
+  };
+  var saved;
+  if(targetEditing){
+    var upd = await sb.from('targets').update(payload).eq('id', targetEditing.id).select().single();
+    if(upd.error){ showToast(upd.error.message); return; }
+    saved = upd.data;
+    if(type === 'task_analysis'){
+      await sb.from('target_steps').delete().eq('target_id', saved.id);
+      for(var i=0;i<targetSteps.length;i++){
+        var s = targetSteps[i];
+        if(s.name.trim()){
+          await sb.from('target_steps').insert({ target_id: saved.id, sequence: i+1, name: s.name, description: s.description });
+        }
+      }
+    }
+  } else {
+    var ins = await sb.from('targets').insert(payload).select().single();
+    if(ins.error){ showToast(ins.error.message); return; }
+    saved = ins.data;
+    if(type === 'task_analysis'){
+      for(var i=0;i<targetSteps.length;i++){
+        var s = targetSteps[i];
+        if(s.name.trim()){
+          await sb.from('target_steps').insert({ target_id: saved.id, sequence: i+1, name: s.name, description: s.description });
+        }
+      }
+    }
+  }
+  closeTargetModal();
+  showToast('Target saved');
+  renderTargets();
+}
+
+function openCurriculumBrowserForProgram(){
+  openCurriculumBrowser(true);
+}
 function openCurriculumBrowser(){ alert('Curriculum browser coming next'); }
 function openPracticeSettings(){ alert('Practice settings coming next'); }
 
