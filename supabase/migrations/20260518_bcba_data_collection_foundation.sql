@@ -219,6 +219,10 @@ CREATE TABLE IF NOT EXISTS public.sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_client ON public.sessions(practice_client_id, start_time DESC);
 CREATE INDEX IF NOT EXISTS idx_sessions_provider ON public.sessions(provider_id, start_time DESC);
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_client_uuid_unique
+  ON public.sessions(practice_client_id, client_uuid)
+  WHERE client_uuid IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS public.trials (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   session_id uuid REFERENCES public.sessions(id) ON DELETE CASCADE NOT NULL,
@@ -316,6 +320,19 @@ CREATE POLICY "Members read same-practice members" ON public.practice_members
 CREATE POLICY "BCBA writes members" ON public.practice_members
   FOR ALL USING (public.is_practice_bcba(practice_id) OR public.is_admin())
   WITH CHECK (public.is_practice_bcba(practice_id) OR public.is_admin());
+
+-- Bootstrap: allow a practice owner to insert their own initial owner_bcba member row.
+-- Without this, the practice creation flow can't add the owner as the first member
+-- because is_practice_bcba() returns false until the membership exists.
+CREATE POLICY "Owner bootstraps own member row" ON public.practice_members
+  FOR INSERT WITH CHECK (
+    user_id = auth.uid()
+    AND role = 'owner_bcba'
+    AND EXISTS (
+      SELECT 1 FROM public.practices
+      WHERE id = practice_id AND owner_id = auth.uid()
+    )
+  );
 
 -- practice_clients
 ALTER TABLE public.practice_clients ENABLE ROW LEVEL SECURITY;
@@ -630,7 +647,11 @@ BEGIN
       WHERE practice_id = pid AND status = 'active'
     )
     WHERE id = pid;
-  RETURN NEW;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  ELSE
+    RETURN NEW;
+  END IF;
 END $$;
 
 CREATE TRIGGER tr_practice_clients_count
