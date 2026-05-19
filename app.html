@@ -2946,11 +2946,59 @@ function renderBehaviorOverlay(){
       '<button class="btn btn-s" style="flex:1" onclick="behaviorBackToList()">Back</button>'+
       '<button class="btn btn-p" style="flex:1" onclick="behaviorDurationSave()">Save</button>'+
       '</div></div>';
-  } else if(behaviorOverlayState.mode === 'abc' || behaviorOverlayState.mode === 'interval'){
-    // Task 7 implements these — temporary fallback
-    title.textContent = behaviorOverlayState.current.name + ' (Task 7)';
-    el.innerHTML = '<div style="padding:30px 16px;text-align:center;color:var(--warm-gray);font-size:13px">'+behaviorOverlayState.current.recording_type+' entry lands in Task 7.</div>'+
-      '<div style="padding:0 16px"><button class="btn btn-s" style="width:100%" onclick="behaviorBackToList()">Back</button></div>';
+  } else if(behaviorOverlayState.mode === 'interval'){
+    title.textContent = behaviorOverlayState.current.name;
+    var bo = behaviorOverlayState;
+    if(!bo.interval){
+      bo.interval = { totalIntervals: 12, intervalSecs: 10, currentIdx: 0, results: [], started: false };
+    }
+    var iv = bo.interval;
+    var pctComplete = Math.round((iv.currentIdx / iv.totalIntervals) * 100);
+    el.innerHTML = '<div style="padding:0 4px">'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
+      '<div><label class="fl">Total intervals</label><input id="boIvTotal" class="fi" type="number" min="1" value="'+iv.totalIntervals+'" onchange="behaviorOverlayState.interval.totalIntervals=parseInt(this.value,10)||12"></div>'+
+      '<div><label class="fl">Seconds each</label><input id="boIvSecs" class="fi" type="number" min="1" value="'+iv.intervalSecs+'" onchange="behaviorOverlayState.interval.intervalSecs=parseInt(this.value,10)||10"></div>'+
+      '</div>'+
+      '<div style="text-align:center;padding:10px 0">'+
+      '<div style="font-family:Fraunces,serif;font-size:36px;font-weight:800">Interval '+(iv.currentIdx+1)+'/'+iv.totalIntervals+'</div>'+
+      '<div style="font-size:12px;color:var(--warm-gray)">'+pctComplete+'% complete</div>'+
+      '</div>'+
+      (iv.started && iv.currentIdx < iv.totalIntervals
+        ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:400px;margin:0 auto">'+
+          '<button onclick="behaviorIntervalMark(false)" style="padding:24px;background:var(--cream);border:2px solid var(--warm-gray);color:var(--warm-gray);border-radius:14px;font-size:16px;font-weight:700;cursor:pointer">Did not occur</button>'+
+          '<button onclick="behaviorIntervalMark(true)" style="padding:24px;background:var(--terracotta-light);border:2px solid var(--terracotta);color:var(--terracotta);border-radius:14px;font-size:16px;font-weight:700;cursor:pointer">Occurred</button>'+
+          '</div>'
+        : (iv.currentIdx >= iv.totalIntervals
+            ? '<div style="text-align:center;padding:14px;background:var(--sage-light);border-radius:12px;color:var(--sage-dark);font-weight:700">All intervals recorded. Tap Save.</div>'
+            : '<button onclick="behaviorIntervalStart()" style="width:100%;padding:18px;background:var(--terracotta-light);border:2px solid var(--terracotta);color:var(--terracotta);border-radius:14px;font-size:16px;font-weight:700;cursor:pointer">Start</button>'))+
+      '<div style="display:flex;gap:8px;margin-top:14px">'+
+      '<button class="btn btn-s" style="flex:1" onclick="behaviorBackToList()">Back</button>'+
+      '<button class="btn btn-p" style="flex:1" onclick="behaviorIntervalSave()">Save</button>'+
+      '</div></div>';
+  } else if(behaviorOverlayState.mode === 'abc'){
+    title.textContent = behaviorOverlayState.current.name;
+    var bo = behaviorOverlayState;
+    if(!bo.abc) bo.abc = { antecedent: '', consequence: '', function_category: '', notes: '' };
+    el.innerHTML = '<div style="padding:0 4px">'+
+      '<label class="fl">Antecedent (what happened just before)</label>'+
+      '<textarea id="boAnt" class="fi" rows="2" placeholder="e.g. Asked to come to table">'+esc(bo.abc.antecedent)+'</textarea>'+
+      '<label class="fl" style="margin-top:10px">Behavior</label>'+
+      '<div style="padding:10px;background:var(--cream);border-radius:10px;font-size:13px"><strong>'+esc(bo.current.name)+'</strong><br><span style="color:var(--warm-gray);font-size:11px">'+esc(bo.current.operational_definition || '')+'</span></div>'+
+      '<label class="fl" style="margin-top:10px">Consequence (what happened after)</label>'+
+      '<textarea id="boCons" class="fi" rows="2" placeholder="e.g. Given iPad to calm down">'+esc(bo.abc.consequence)+'</textarea>'+
+      '<label class="fl" style="margin-top:10px">Function</label>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">'+
+        ['tangible','escape','attention','sensory'].map(function(f){
+          var sel = bo.abc.function_category === f;
+          return '<button onclick="behaviorAbcFn(\x27'+f+'\x27)" style="padding:8px 14px;border-radius:20px;border:2px solid '+(sel?'var(--sage-dark)':'var(--sand)')+';background:'+(sel?'var(--sage-light)':'white')+';color:'+(sel?'var(--sage-dark)':'var(--warm-gray)')+';font-size:12px;font-weight:700;cursor:pointer">'+f+'</button>';
+        }).join('')+
+      '</div>'+
+      '<label class="fl" style="margin-top:10px">Notes (optional)</label>'+
+      '<textarea id="boNotes" class="fi" rows="2"></textarea>'+
+      '<div style="display:flex;gap:8px;margin-top:16px">'+
+      '<button class="btn btn-s" style="flex:1" onclick="behaviorBackToList()">Back</button>'+
+      '<button class="btn btn-p" style="flex:1" onclick="behaviorAbcSave()">Save</button>'+
+      '</div></div>';
   }
 }
 
@@ -3058,6 +3106,72 @@ async function quickAddBehavior(){
   behaviorOverlayState.mode = recordingType;
   renderBehaviorOverlay();
 }
+function behaviorIntervalStart(){
+  var iv = behaviorOverlayState.interval;
+  iv.started = true;
+  renderBehaviorOverlay();
+}
+
+function behaviorIntervalMark(occurred){
+  var iv = behaviorOverlayState.interval;
+  iv.results.push(occurred);
+  iv.currentIdx += 1;
+  renderBehaviorOverlay();
+}
+
+async function behaviorIntervalSave(){
+  var iv = behaviorOverlayState.interval;
+  if(iv.results.length === 0){ showToast('Mark at least one interval'); return; }
+  mvOffline.enqueue({
+    table: 'behavior_recordings',
+    payload: {
+      session_id: activeSession.id,
+      behavior_definition_id: behaviorOverlayState.current.id,
+      observer_id: S.practiceMember.id,
+      recording_type: 'interval',
+      interval_data: { results: iv.results, intervalSecs: iv.intervalSecs, totalIntervals: iv.totalIntervals },
+      client_uuid: mvUuid()
+    }
+  });
+  var occurrences = iv.results.filter(function(x){ return x; }).length;
+  activeSession.last_behavior_label = behaviorOverlayState.current.name + ' (' + occurrences + '/' + iv.results.length + ' intervals)';
+  behaviorOverlayState.interval = null;
+  closeBehaviorOverlay();
+  renderActiveSession();
+}
+
+function behaviorAbcFn(fn){
+  behaviorOverlayState.abc.function_category = fn;
+  renderBehaviorOverlay();
+}
+
+async function behaviorAbcSave(){
+  var bo = behaviorOverlayState;
+  bo.abc.antecedent = document.getElementById('boAnt').value.trim();
+  bo.abc.consequence = document.getElementById('boCons').value.trim();
+  bo.abc.notes = document.getElementById('boNotes').value.trim();
+  if(!bo.abc.antecedent && !bo.abc.consequence && !bo.abc.function_category){
+    showToast('Fill at least one field');
+    return;
+  }
+  mvOffline.enqueue({
+    table: 'behavior_recordings',
+    payload: {
+      session_id: activeSession.id,
+      behavior_definition_id: bo.current.id,
+      observer_id: S.practiceMember.id,
+      recording_type: 'abc',
+      function_category: bo.abc.function_category || null,
+      notes: 'A: ' + bo.abc.antecedent + '\nC: ' + bo.abc.consequence + (bo.abc.notes ? '\nNotes: ' + bo.abc.notes : ''),
+      client_uuid: mvUuid()
+    }
+  });
+  activeSession.last_behavior_label = bo.current.name + ' (ABC)';
+  bo.abc = null;
+  closeBehaviorOverlay();
+  renderActiveSession();
+}
+
 function confirmEndSession(){ alert('End session flow lands in Task 8'); }
 
 var currentProgram = null;
