@@ -4831,7 +4831,91 @@ function renderAnalysisCard(title, items, rowRenderer, subtitle){
 }
 
 async function renderAnalysisBehaviorsTab(){
-  return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">Cross-client behavior trends land in Task 5.</div>';
+  var pcR = await sb.from('practice_clients').select('id,children(name)').eq('practice_id', S.practiceMember.practice_id).eq('status', 'active');
+  var pcs = pcR.data || [];
+  if(pcs.length === 0) return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">No active clients.</div>';
+  var pcIds = pcs.map(function(c){ return c.id; });
+  var defR = await sb.from('behavior_definitions').select('id,practice_client_id').in('practice_client_id', pcIds).eq('classification', 'challenging').eq('status', 'active');
+  var defIds = (defR.data || []).map(function(d){ return d.id; });
+  if(defIds.length === 0) return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">No challenging behaviors defined.</div>';
+  var defToPc = {};
+  (defR.data || []).forEach(function(d){ defToPc[d.id] = d.practice_client_id; });
+  var ninetyDaysAgo = new Date(Date.now() - 90*24*60*60*1000).toISOString();
+  var brR = await sb.from('behavior_recordings')
+    .select('behavior_definition_id,recording_type,count,duration_seconds,interval_data,timestamp')
+    .in('behavior_definition_id', defIds)
+    .is('superseded_by', null)
+    .gte('timestamp', ninetyDaysAgo)
+    .order('timestamp', { ascending: true });
+  if(brR.error) return '<div style="padding:20px;color:var(--terracotta)">'+esc(brR.error.message)+'</div>';
+  var recordings = brR.data || [];
+  if(recordings.length === 0) return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">No behavior recordings in the last 90 days.</div>';
+  var pcMap = {};
+  pcs.forEach(function(c){ pcMap[c.id] = c.children ? c.children.name : '(client)'; });
+  var byDayByClient = {};
+  recordings.forEach(function(r){
+    var pcId = defToPc[r.behavior_definition_id];
+    var dayKey = new Date(r.timestamp).toISOString().slice(0,10);
+    if(!byDayByClient[dayKey]) byDayByClient[dayKey] = {};
+    var occ = 0;
+    if(r.recording_type === 'frequency' || r.recording_type === 'abc') occ = (r.count || (r.recording_type === 'abc' ? 1 : 0));
+    else if(r.recording_type === 'interval' && r.interval_data) occ = (r.interval_data.results || []).filter(function(x){ return x; }).length;
+    else if(r.recording_type === 'duration') occ = (r.duration_seconds || 0) > 0 ? 1 : 0;
+    byDayByClient[dayKey][pcId] = (byDayByClient[dayKey][pcId] || 0) + occ;
+  });
+  var allDays = Object.keys(byDayByClient).sort();
+  var seriesByPc = {};
+  pcIds.forEach(function(pid){ seriesByPc[pid] = { name: pcMap[pid], points: [] }; });
+  allDays.forEach(function(day){
+    pcIds.forEach(function(pid){
+      var v = (byDayByClient[day] || {})[pid] || 0;
+      seriesByPc[pid].points.push({ x: new Date(day).getTime(), y: v });
+    });
+  });
+  Object.keys(seriesByPc).forEach(function(pid){
+    var sum = seriesByPc[pid].points.reduce(function(a,p){ return a + p.y; }, 0);
+    if(sum === 0) delete seriesByPc[pid];
+  });
+  var activePcIds = Object.keys(seriesByPc);
+  if(activePcIds.length === 0) return '<div style="padding:30px;text-align:center;color:var(--warm-gray)">No challenging behavior recordings in the last 90 days.</div>';
+  var w = 880, hht = 320, padL = 44, padR = 16, padT = 18, padB = 36;
+  var allYs = [];
+  activePcIds.forEach(function(pid){ seriesByPc[pid].points.forEach(function(p){ allYs.push(p.y); }); });
+  var maxY = Math.max.apply(null, allYs);
+  if(maxY === 0) maxY = 1;
+  var minX = new Date(allDays[0]).getTime();
+  var maxX = new Date(allDays[allDays.length-1]).getTime();
+  if(maxX === minX) maxX = minX + 1;
+  var colors = ['#C97B5C','#7A9E7E','#7B9BB8','#B59C7A','#9D7BB8','#D4A05B','#6BA3A6','#9D8FBE'];
+  var paths = '';
+  activePcIds.forEach(function(pid, idx){
+    var s = seriesByPc[pid];
+    var color = colors[idx % colors.length];
+    var pathD = s.points.map(function(p, i){
+      var x = padL + ((p.x - minX) / (maxX - minX)) * (w - padL - padR);
+      var y = hht - padB - ((p.y / maxY) * (hht - padT - padB));
+      return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    paths += '<path d="'+pathD+'" fill="none" stroke="'+color+'" stroke-width="2" opacity="0.85"/>';
+  });
+  var axes = '<line x1="'+padL+'" y1="'+(hht-padB)+'" x2="'+(w-padR)+'" y2="'+(hht-padB)+'" stroke="var(--warm-gray-light)" stroke-width="1"/>'+
+    '<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(hht-padB)+'" stroke="var(--warm-gray-light)" stroke-width="1"/>'+
+    '<text x="'+(padL-6)+'" y="'+padT+'" text-anchor="end" font-size="10" fill="var(--warm-gray)" alignment-baseline="middle">'+maxY+'</text>'+
+    '<text x="'+(padL-6)+'" y="'+(hht-padB)+'" text-anchor="end" font-size="10" fill="var(--warm-gray)" alignment-baseline="middle">0</text>'+
+    '<text x="'+padL+'" y="'+(hht-padB+18)+'" text-anchor="start" font-size="10" fill="var(--warm-gray)">'+new Date(minX).toLocaleDateString()+'</text>'+
+    '<text x="'+(w-padR)+'" y="'+(hht-padB+18)+'" text-anchor="end" font-size="10" fill="var(--warm-gray)">'+new Date(maxX).toLocaleDateString()+'</text>';
+  var legend = '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12px">';
+  activePcIds.forEach(function(pid, idx){
+    var color = colors[idx % colors.length];
+    legend += '<div style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:3px;background:'+color+';display:inline-block"></span>'+esc(seriesByPc[pid].name)+'</div>';
+  });
+  legend += '</div>';
+  return '<div style="background:white;border:1px solid var(--sand);border-radius:14px;padding:14px">'+
+    '<div style="font-family:Fraunces,serif;font-size:16px;font-weight:700;margin-bottom:4px">Challenging behavior — daily occurrences per client</div>'+
+    '<div style="font-size:12px;color:var(--warm-gray);margin-bottom:10px">Last 90 days. Higher line = more occurrences that day.</div>'+
+    '<svg width="100%" viewBox="0 0 '+w+' '+hht+'" preserveAspectRatio="xMidYMid meet">'+axes+paths+'</svg>'+
+    legend+
+    '</div>';
 }
 
 async function savePracticeSettings(){
