@@ -1865,6 +1865,32 @@ async function completeOnboarding(goToMembers){
   showToast('Practice created — welcome.');
 }
 function openPracticeDashboard(){ alert('Practice dashboard coming next'); }
+async function handlePracticeInviteToken(){
+  var params = new URLSearchParams(window.location.search);
+  var token = params.get('practice_invite');
+  if(!token || !S.user) return;
+  var r = await sb.from('practice_members')
+    .select('id,practice_id,user_id,practices(name)')
+    .eq('invite_token', token)
+    .maybeSingle();
+  if(r.error || !r.data){
+    showToast('Invite link invalid or expired');
+    return;
+  }
+  if(r.data.user_id !== S.user.id){
+    showToast('This invite was for a different account. Sign in with the invited email.');
+    return;
+  }
+  var upd = await sb.from('practice_members')
+    .update({ active: true, accepted_at: new Date().toISOString(), invite_token: null })
+    .eq('id', r.data.id);
+  if(upd.error){ showToast(upd.error.message); return; }
+  // Strip token from URL
+  window.history.replaceState({}, '', window.location.pathname);
+  await loadProfile();
+  showToast('Welcome to '+(r.data.practices && r.data.practices.name || 'your practice'));
+  openPracticeDashboard();
+}
 async function openPracticeMembers(){
   if(!S.practiceMember){ showToast('Set up your practice first'); return; }
   document.getElementById('practiceMembersPage').classList.add('open');
@@ -2413,6 +2439,7 @@ async function init(){
         if(session.data.session){
           S.user=session.data.session.user;
           await loadProfile();
+          await handlePracticeInviteToken();
           // App Lock gate — Face ID / Touch ID if user enabled it
           if(typeof mvAppLockGate==='function' && mvNative.biometric.isEnabled()){
             var unlocked = await mvAppLockGate();
