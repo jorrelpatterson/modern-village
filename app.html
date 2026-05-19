@@ -1436,6 +1436,18 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   <div class="overlay-inner" id="practiceSettingsContent" style="padding-bottom:80px"></div>
 </div>
 
+<div id="activeSessionPage" class="overlay-page">
+  <div class="overlay-inner" id="activeSessionContent" style="padding:0;height:100vh;display:flex;flex-direction:column;overflow:hidden"></div>
+</div>
+
+<div id="targetPickerSheet" style="display:none;position:fixed;left:0;right:0;bottom:0;background:white;border-radius:18px 18px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,0.15);padding:20px;z-index:1100;max-height:60vh;overflow-y:auto">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h3 style="font-family:Fraunces,serif;font-size:18px;font-weight:700">Switch target</h3>
+    <button class="btn btn-s" style="padding:6px 12px;font-size:12px" onclick="closeTargetPicker()">Close</button>
+  </div>
+  <div id="targetPickerList"></div>
+</div>
+
 <div id="targetModal" class="modal-overlay" style="display:none">
   <div class="modal-content" style="max-width:640px;max-height:90vh;overflow-y:auto">
     <h3 id="tmTitle" style="font-family:Fraunces,serif;font-size:22px;margin-bottom:12px">New target</h3>
@@ -2657,7 +2669,143 @@ async function beginSession(){
   openActiveSession(sessR.data.id);
 }
 
-function openActiveSession(sessionId){ alert('Active session UI lands in Task 4 — session created: '+sessionId); }
+var activeSession = null;
+
+async function openActiveSession(sessionId){
+  var sR = await sb.from('sessions')
+    .select('id,practice_client_id,start_time,location,cpt_code,practice_clients(children(name))')
+    .eq('id', sessionId)
+    .single();
+  if(sR.error){ showToast(sR.error.message); return; }
+  var stR = await sb.from('session_targets')
+    .select('target_id,planned_trials,targets(id,name,target_type,data_collection_config,target_steps(*))')
+    .eq('session_id', sessionId);
+  if(stR.error){ showToast(stR.error.message); return; }
+  var targets = (stR.data || []).map(function(row){
+    var t = row.targets;
+    var steps = (t.target_steps || []).slice().sort(function(a,b){ return a.sequence - b.sequence; });
+    return {
+      id: t.id,
+      name: t.name,
+      target_type: t.target_type,
+      steps: steps,
+      planned_trials: row.planned_trials || 10,
+      trials_run: 0,
+      trials_correct: 0,
+      step_idx: 0
+    };
+  });
+  activeSession = {
+    id: sR.data.id,
+    practice_client_id: sR.data.practice_client_id,
+    child_name: sR.data.practice_clients.children.name,
+    targets: targets,
+    current_target_idx: targets.length > 0 ? 0 : -1,
+    trial_in_target: 0,
+    started_at: new Date(sR.data.start_time),
+    last_behavior_label: null
+  };
+  document.getElementById('activeSessionPage').classList.add('open');
+  renderActiveSession();
+  mvOffline.onStatusChange(function(){ updateSyncBadge(); });
+  if(window._activeSessionTimer) clearInterval(window._activeSessionTimer);
+  window._activeSessionTimer = setInterval(updateSessionTimer, 1000);
+}
+
+function renderActiveSession(){
+  var el = document.getElementById('activeSessionContent');
+  if(!activeSession){ el.innerHTML = ''; return; }
+  var t = activeSession.current_target_idx >= 0 ? activeSession.targets[activeSession.current_target_idx] : null;
+  var top = '<div style="display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--sand);background:white;gap:8px">'+
+    '<button class="btn btn-s" style="padding:6px 10px;font-size:12px" onclick="confirmEndSession()">End</button>'+
+    '<div style="flex:1;display:flex;align-items:center;gap:8px;overflow:hidden">'+
+      '<div style="font-size:11px;color:var(--warm-gray);white-space:nowrap">'+esc(activeSession.child_name)+'</div>'+
+      (t ? '<button onclick="openTargetPicker()" style="background:var(--sage-light);color:var(--sage-dark);border:none;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60vw">'+esc(t.name)+' &#9662;</button>' : '<button onclick="openTargetPicker()" style="background:var(--terracotta-light);color:var(--terracotta);border:none;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:700;cursor:pointer">+ Pick target</button>')+
+    '</div>'+
+    '<div style="font-size:11px;color:var(--warm-gray)" id="asTrialCounter">'+(t ? (activeSession.trial_in_target+1)+'/'+t.planned_trials : '')+'</div>'+
+    '<div style="font-size:11px;color:var(--warm-gray)" id="asTimer">0:00</div>'+
+    '<div id="asSyncBadge">'+mvOffline.renderBadge()+'</div>'+
+    '</div>';
+  var body = '<div id="asBody" style="flex:1;overflow-y:auto;padding:20px">'+
+    (t ? renderTrialEntry(t) : '<div style="text-align:center;padding:60px 20px;color:var(--warm-gray)">No target selected. Tap "+ Pick target" above.</div>')+
+    '</div>';
+  var fab = '<button id="asBehaviorBtn" onclick="openBehaviorOverlay()" style="position:fixed;right:18px;bottom:18px;width:56px;height:56px;border-radius:50%;background:var(--terracotta);color:white;border:none;font-size:24px;box-shadow:0 4px 12px rgba(0,0,0,0.2);cursor:pointer;z-index:1050">+</button>';
+  el.innerHTML = top + body + fab;
+}
+
+function renderTrialEntry(target){
+  return '<div style="text-align:center;padding:60px 20px;color:var(--warm-gray)">Trial entry buttons land in Task 5. Current target: '+esc(target.name)+'</div>';
+}
+
+function updateSessionTimer(){
+  if(!activeSession) return;
+  var el = document.getElementById('asTimer');
+  if(!el) return;
+  var secs = Math.floor((new Date() - activeSession.started_at) / 1000);
+  var mm = Math.floor(secs/60);
+  var ss = (secs % 60).toString().padStart(2, '0');
+  el.textContent = mm+':'+ss;
+}
+
+function updateSyncBadge(){
+  var el = document.getElementById('asSyncBadge');
+  if(el) el.innerHTML = mvOffline.renderBadge();
+}
+
+async function openTargetPicker(){
+  var sheet = document.getElementById('targetPickerSheet');
+  var list = document.getElementById('targetPickerList');
+  var h = '';
+  activeSession.targets.forEach(function(t, idx){
+    var isCurrent = idx === activeSession.current_target_idx;
+    h += '<div onclick="switchTarget('+idx+')" style="padding:12px;border:1px solid '+(isCurrent?'var(--sage-dark)':'var(--sand)')+';border-radius:10px;margin-bottom:6px;cursor:pointer;background:'+(isCurrent?'var(--sage-light)':'white')+'">'+
+      '<div style="font-weight:700;font-size:14px">'+esc(t.name)+'</div>'+
+      '<div style="font-size:11px;color:var(--warm-gray);margin-top:2px">'+t.target_type.replace(/_/g,' ')+' · '+t.trials_run+'/'+t.planned_trials+' trials</div>'+
+      '</div>';
+  });
+  h += '<button class="btn btn-s" style="width:100%;margin-top:8px;font-size:12px" onclick="addAdHocTarget()">+ Add another in-treatment target</button>';
+  list.innerHTML = h;
+  sheet.style.display = 'block';
+}
+
+function closeTargetPicker(){
+  document.getElementById('targetPickerSheet').style.display = 'none';
+}
+
+function switchTarget(idx){
+  activeSession.current_target_idx = idx;
+  activeSession.trial_in_target = activeSession.targets[idx].trials_run;
+  closeTargetPicker();
+  renderActiveSession();
+}
+
+async function addAdHocTarget(){
+  var existingIds = activeSession.targets.map(function(t){ return t.id; });
+  var r = await sb.from('targets')
+    .select('id,name,target_type,data_collection_config,target_steps(*),programs!inner(id,name,practice_client_id)')
+    .eq('programs.practice_client_id', activeSession.practice_client_id)
+    .in('status', ['baseline','in_treatment','in_maintenance']);
+  if(r.error){ showToast(r.error.message); return; }
+  var available = (r.data || []).filter(function(t){ return existingIds.indexOf(t.id) < 0; });
+  if(available.length === 0){ showToast('No more in-treatment targets'); return; }
+  var t = available[0];
+  var steps = (t.target_steps || []).slice().sort(function(a,b){ return a.sequence - b.sequence; });
+  activeSession.targets.push({
+    id: t.id, name: t.name, target_type: t.target_type, steps: steps,
+    planned_trials: (t.data_collection_config && t.data_collection_config.trials_per_session) || 10,
+    trials_run: 0, trials_correct: 0, step_idx: 0
+  });
+  await sb.from('session_targets').insert({
+    session_id: activeSession.id,
+    target_id: t.id,
+    planned_trials: (t.data_collection_config && t.data_collection_config.trials_per_session) || 10,
+    planned_by: S.practiceMember.id
+  });
+  switchTarget(activeSession.targets.length - 1);
+}
+
+function openBehaviorOverlay(){ alert('Behavior overlay lands in Task 6'); }
+function confirmEndSession(){ alert('End session flow lands in Task 8'); }
 
 var currentProgram = null;
 var targetEditing = null;
