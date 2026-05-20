@@ -24,21 +24,18 @@ mkdir -p ~/.claude/projects && cp -R "/Volumes/(626)806-4475/Ai Projects/modern-
 
 After that, any new Claude Code session in this repo will see the project memory and prior conversation context automatically. If you skip this step entirely, this `SESSION_HANDOFF.md` is the safety net — read it on session start.
 
-## Most recent session — 2026-05-19 (admin sub-admin role + Mika onboarded)
+## Most recent session — 2026-05-19 (Mika onboarded as sub_admin)
 
-**Context:** Jorrel asked to give Mika (mika@ascnd.pro) an admin login with a "sub admin" role he can later restrict. Built it end-to-end.
+**Context:** Jorrel asked to give Mika (mika@ascnd.pro) an admin login with a "sub admin" role he can later restrict.
 
-**What landed:**
+**State of the `sub_admin` role at session start (already done by an earlier session, commit `ea428b4` on 2026-05-15, already on origin/main and live in prod):**
 
-- New `admin_role` value `sub_admin` added as a first-class option in [admin.html](admin.html) (VA Team section):
-  - Create-VA form dropdown — `Sub Admin` is now the default selection
-  - Inline role-change dropdown on each member row
-  - Stats row gained a "Sub Admin" count card
-  - Tag color reuses `tag-sage` (same as Super)
-  - Commit `ea428b4` on `main`, **1 commit ahead of `origin/main` — needs `git push` to deploy via Vercel**
-- No schema change needed: `profiles.admin_role` is plain `text` with no CHECK constraint (see [supabase/migrations/20260407_admin_roles.sql](supabase/migrations/20260407_admin_roles.sql))
-- No worker.js change needed: `/admin/create-va` passes `admin_role` through without a whitelist
-- **Permissions: identical to existing marketing/billing/content admins.** Only `is_admin=true` is checked on most endpoints. Only `/admin/create-va` gates on `admin_role==='super'` (so a sub_admin cannot create new admin accounts). Future per-feature gating can target `adminRole === 'sub_admin'` in [admin.html](admin.html) / [worker.js](worker.js).
+- `admin_role` value `sub_admin` is a first-class option in [admin.html](admin.html) (VA Team section): create-VA form dropdown, inline role-change dropdown, stats row, sage tag color
+- No schema change was needed: `profiles.admin_role` is plain `text` with no CHECK constraint (see [supabase/migrations/20260407_admin_roles.sql](supabase/migrations/20260407_admin_roles.sql))
+- No worker.js change was needed: `/admin/create-va` passes `admin_role` through without a whitelist
+- **Permissions are identical to existing marketing/billing/content admins.** Only `is_admin=true` is checked on most endpoints. Only `/admin/create-va` gates on `admin_role==='super'` (so a sub_admin cannot create new admin accounts). Future per-feature gating can target `adminRole === 'sub_admin'` in [admin.html](admin.html) / [worker.js](worker.js).
+
+**What this session actually changed:** only created Mika's account in prod Supabase, and updated this handoff doc.
 
 **Mika's account (live in prod Supabase, project ref `jrsiqjfwvunrjiihnsgc`):**
 
@@ -53,9 +50,9 @@ After that, any new Claude Code session in this repo will see the project memory
 | Login URL | https://modernvillage.app/admin.html |
 | Email confirmed | yes |
 
-**How Mika was created (for reference, in case you need to do this again):** the local `supabase` CLI is authenticated against the org, so `supabase projects api-keys --project-ref jrsiqjfwvunrjiihnsgc` returns the `service_role` key. With that key, two API calls do it: `POST /auth/v1/admin/users` (create auth user) then `PATCH /rest/v1/profiles?id=eq.{id}` (set `is_admin=true`, `admin_role`, `name`). The full curl sequence is in the conversation history if needed, or just use the UI after pushing.
+**How Mika was created (for reference, in case you need to do this again):** the local `supabase` CLI is authenticated against the org, so `supabase projects api-keys --project-ref jrsiqjfwvunrjiihnsgc` returns the `service_role` key. With that key, two API calls do it: `POST /auth/v1/admin/users` (create auth user) then `PATCH /rest/v1/profiles?id=eq.{id}` (set `is_admin=true`, `admin_role`, `name`). Alternatively, after pushing any pending commits, a super admin can use the admin.html VA Team → + Add VA UI.
 
-**Immediate next step on the new laptop:** `git push` to deploy commit `ea428b4` so the Sub Admin option appears in the admin UI for future role assignments. Mika can already log in — she does not depend on the push.
+**Immediate next step on the new laptop:** `git push` to publish the SESSION_HANDOFF.md update (`d9305be`). Mika's account exists in Supabase already and is independent of any push.
 
 ## What's running in production
 
