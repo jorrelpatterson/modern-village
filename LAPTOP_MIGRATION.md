@@ -1,6 +1,6 @@
 # Modern Village — Laptop Migration Guide
 
-**Last updated:** 2026-05-06
+**Last updated:** 2026-05-19
 
 You're reading this because you copied the AI Projects folder from the Mac mini to a new APFS drive (`(626)806-4475`) and want to actually run Modern Village from a laptop. Follow this top to bottom — should take ~30-45 minutes the first time. Modern Village is the most complex of your projects (web + iOS Capacitor wrap + Cloudflare Worker + Vercel + Supabase + Apple signing keys), so don't skip steps.
 
@@ -11,7 +11,7 @@ You're reading this because you copied the AI Projects folder from the Mac mini 
 - **Modern Village** — ABA-powered parenting platform for neurodivergent families
 - Co-founders: Ariana Roberts (BCBA, Clinical Director) + you (President / Builder)
 - **Frontend:** Vanilla HTML/CSS/JS (no framework, no build step) — `app.html`, `index.html`, `admin.html`, etc.
-- **Database/Auth:** Supabase Postgres + RLS (`efuxqrvdkrievbpljlaf.supabase.co`)
+- **Database/Auth:** Supabase Postgres + RLS (`jrsiqjfwvunrjiihnsgc.supabase.co`)
 - **API proxy:** Cloudflare Worker (`village-api.jorrelpatterson.workers.dev`) → see `worker.js`
 - **AI:** Claude Sonnet 4 via Anthropic API (called from the worker)
 - **Payments:** Stripe ($19.99/mo Pro)
@@ -267,7 +267,7 @@ Migrations live in `supabase/migrations/*.sql`. They are **applied by paste**, n
 
 To apply:
 
-1. Open https://supabase.com/dashboard → project `efuxqrvdkrievbpljlaf` → SQL Editor
+1. Open https://supabase.com/dashboard → project `jrsiqjfwvunrjiihnsgc` → SQL Editor
 2. Paste the contents of the new migration file
 3. Run
 
@@ -357,7 +357,7 @@ Two common causes:
 | Vercel project | https://vercel.com (Modern Village) |
 | Cloudflare Worker | https://dash.cloudflare.com → Workers → `village-api` |
 | Worker URL | `https://village-api.jorrelpatterson.workers.dev` |
-| Supabase project | `efuxqrvdkrievbpljlaf` (https://supabase.com/dashboard) |
+| Supabase project | `jrsiqjfwvunrjiihnsgc` (https://supabase.com/dashboard) |
 | App Store Connect | App ID for Modern Village (Team `X577Q747WV`) |
 | Bundle ID | `app.modernvillage.ios` |
 | APNs key | `AuthKey_MLBB3NX7FC.p8` (repo root, gitignored) |
@@ -378,22 +378,24 @@ Two common causes:
 
 Per-project Claude memory lives at:
 ```
-~/.claude/projects/-Volumes-(626)806-4475-AI-Projects-modern-village-ai-projects--volumes-(626)806-4475-ai-projects-modern-village/memory/
+~/.claude/projects/-Volumes--626-806-4475-Ai-Projects-modern-village/memory/
 ```
 
-This is **per-machine** — it doesn't sync via git. To preserve continuity on the laptop:
+This is **per-machine** — it doesn't sync via git. The memory + past session transcripts are backed up to the external drive at `/Volumes/(626)806-4475/Ai Projects/modern-village-claude-state/`. To restore on a fresh laptop, run the one-liner in `SESSION_HANDOFF.md` (the "Restoring Claude Code auto-memory on a new laptop" section).
 
-1. Copy that whole directory from the Mac mini to the same path on the laptop, OR
-2. Rely on the docs in the repo (they're the durable source of truth):
-   - `docs/ROADMAP.md` — full roadmap state
-   - `docs/SUPPLEMENTARY.md` — strategy, business decisions, architecture
-   - `docs/MARKETING-PLAYBOOK.md` — marketing strategy
-   - `docs/MY-VILLAGE-SPEC.md` — community feature spec
-   - `docs/APP-STORE-PRIVACY-LABELS.md` — privacy labels reference
-   - `AGENT-NOTES.md` — recent agent work log
-   - `BUGS.md` — open bugs
+If you skip restoration, the durable source-of-truth docs in the repo cover most of it:
 
-If you skip step 1, the next Claude Code session on the laptop just starts fresh — slower (it has to re-learn the codebase) but everything still works.
+- `SESSION_HANDOFF.md` — start here, canonical session state
+- `CLAUDE.md` — agent onboarding pointer
+- `docs/ROADMAP.md` — full roadmap state
+- `docs/SUPPLEMENTARY.md` — strategy, business decisions, architecture
+- `docs/MARKETING-PLAYBOOK.md` — marketing strategy
+- `docs/MY-VILLAGE-SPEC.md` — community feature spec
+- `docs/APP-STORE-PRIVACY-LABELS.md` — privacy labels reference
+- `AGENT-NOTES.md` — recent agent work log
+- `BUGS.md` — open bugs
+
+Without restoration, the next Claude Code session on the laptop just starts fresh — slower (it has to re-learn the codebase) but everything still works.
 
 ---
 
