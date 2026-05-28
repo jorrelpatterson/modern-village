@@ -19,3 +19,8 @@ After reading it, you have full context to pick up where the last session left o
 - **Never** write `\\x27` — it renders as literal `\x27` in the HTML attribute and breaks the click handler. This bit us on 2026-05-19.
 - Don't redesign the schema; build new surfaces on top.
 - iOS/Capacitor caches HTML aggressively — always remind users to hard-refresh after a deploy.
+
+## Active workstream (2026-05-27)
+
+- **NSF SBIR Phase I pitch** — draft at [docs/GRANTS-NSF-SBIR-PITCH.md](docs/GRANTS-NSF-SBIR-PITCH.md), waiting on Ariana's clinical review, then submit once the Jun 2, 2026 portal reopens. See SESSION_HANDOFF.md for the full audit (the playbook's old foundation-grant lineup was wrong for a for-profit LLC — most autism foundations require 501(c)(3)).
+- **Grant strategy:** SBIR (NSF + NIH) are the realistic for-profit paths. Do NOT propose OAR / Caplan / Flutie / Autism Speaks / NEXT for AUTISM as direct applicants for Modern Village — those require a 501(c)(3) partner-model. Audit details in [docs/MARKETING-PLAYBOOK.md](docs/MARKETING-PLAYBOOK.md) §"Client Type 6".
