@@ -409,17 +409,16 @@ Decision = whichever answer has the most "yes" votes from testers.
 - [ ] LinkedIn Sales Navigator trial — DM California BCBAs
 - [ ] CalABA conference attendance/networking
 
-### 🟡 Grants (time-sensitive)
-- [ ] Register at researchautism.org (OAR — $50K, OPEN NOW)
-- [ ] Doug Flutie Jr. Foundation ($5K-25K)
-- [ ] Autism Speaks Community Grants ($5K-15K)
-- [ ] Caplan Foundation ($25K-50K, early childhood 0-5)
-- [ ] NEXT for AUTISM signup ($10K-50K — check cycle)
-- [ ] Inclusive App Accelerator — apply Dec 2026 for 2027 cycle ($10K, inclusiveapps.com)
-- [ ] Send Ariana grant docs to review
-- [ ] NIH SBIR — $314K (paused, apply when reopens)
-- [ ] NSF SBIR — $275K (paused)
-- [ ] Full grant target list in `docs/SUPPLEMENTARY.md` §6
+### 🟡 Grants (time-sensitive — audited 2026-05-27)
+- [ ] **NSF SBIR Project Pitch** — portal reopens Jun 2, 2026; 3-page pitch for "Digital Health → Physical/Mental/Behavioral Health" sub-topic ($275K Phase I)
+- [ ] **NIH SBIR Omnibus** — Sept 5, 2026 standard receipt; target NIMH or NICHD ($314K Phase I). Reauthorized 4/13/26
+- [ ] **Inclusive App Accelerator** — Dec 2026 cycle ($10K, inclusiveapps.com)
+- [ ] **Partner-model evaluation** — identify 501(c)(3) partner (autism research center / university) who could co-apply to OAR / Caplan / Flutie with Modern Village as tech sub-recipient
+- [ ] Ariana confirms availability to serve as clinical co-PI on SBIR (20+ hr/wk during award period)
+
+**Modern Village Services LLC formed, EIN issued, SAM.gov + SBIR.gov registrations completed 2026-05-27 — ready to submit pitches.**
+
+**Previously listed foundation grants (Caplan, Doug Flutie, OAR direct, NEXT for AUTISM) verified ineligible for Modern Village LLC as a for-profit on 2026-05-27. Audit + partner-model alternative in [docs/MARKETING-PLAYBOOK.md](docs/MARKETING-PLAYBOOK.md) §"Client Type 6"; [docs/SUPPLEMENTARY.md](docs/SUPPLEMENTARY.md) §6 also updated to match.**
 
 ### 🟡 Legal (before taking real payments)
 - [ ] Healthcare attorney reviews Terms, Privacy Policy, BAA ($500-1,500)
@@ -489,8 +488,8 @@ Decision = whichever answer has the most "yes" votes from testers.
 2. **Have Ariana test:** Crisis mode, voice mode, care team invites, ABA trigger buttons (Tangible/Escape/Attention/Sensory), community photo uploads, provider signup flow
 3. **Ready to launch campaigns:** 9-email drip sequences for BCBAs (15,000 leads), Districts (994 leads), Regional Centers (21 leads) — all in admin CRM
 4. **Next to build:** My Village — local community layer (nearby parents, events/meetups, resource directory). Full spec in `docs/MY-VILLAGE-SPEC.md`. This is the #1 retention feature.
-5. **Business tasks:** Jorrel to form Modern Village Services LLC, get EIN, activate Stripe real payments, OAR grant application (open now, $50K)
-5a. **Partnership Contracts:** Full set of 7 draft contracts at `docs/legal/`. Ariana's LLC already formed as "Modern Village LLC". Jorrel still needs to form "Modern Village Services LLC" before signing. Attorney review needed (estimated $2K-4K flat fee). See `docs/legal/TERM-SHEET.md` for the plain-English overview.
+5. **Business tasks:** Activate Stripe real payments; submit NSF SBIR Project Pitch shortly after Jun 2, 2026 portal reopens ($275K Phase I — see [docs/MARKETING-PLAYBOOK.md](docs/MARKETING-PLAYBOOK.md) §"Client Type 6" and draft at [docs/GRANTS-NSF-SBIR-PITCH.md](docs/GRANTS-NSF-SBIR-PITCH.md)). Modern Village Services LLC formed + EIN + SAM.gov / SBIR.gov registrations completed 2026-05-27.
+5a. **Partnership Contracts:** Full set of 7 draft contracts at `docs/legal/`. Both LLCs formed — Ariana's "Modern Village LLC" and Jorrel's "Modern Village Services LLC" (completed 2026-05-27). Ready to sign once attorney review completes (estimated $2K-4K flat fee). See `docs/legal/TERM-SHEET.md` for the plain-English overview.
 6. **Regional Centers:** 21 imported into CRM. Craft RC-specific email sequence. Find Family Support Services director contacts at RCOC and RCSD. Ask Ariana for RC contacts.
 7. **Dear Mom Co:** Research partnership opportunity — they got RCs to pay $495/ticket. Modern Village could be the digital companion.
 8. **Bugs cleared:** All 12 tracked bugs resolved as of 2026-04-07. Admin sidebar reorganized into 8 grouped sections.

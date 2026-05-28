@@ -1,6 +1,6 @@
-# Session Handoff — 2026-05-19
+# Session Handoff — 2026-05-27
 
-Single source of truth for picking up the BCBA module work on a new machine. Read this first.
+Single source of truth for picking up wherever the last session left off. Read this first.
 
 ## How to resume
 
@@ -24,7 +24,68 @@ mkdir -p ~/.claude/projects && cp -R "/Volumes/(626)806-4475/Ai Projects/modern-
 
 After that, any new Claude Code session in this repo will see the project memory and prior conversation context automatically. If you skip this step entirely, this `SESSION_HANDOFF.md` is the safety net — read it on session start.
 
-## Most recent session — 2026-05-19 (Mika onboarded as sub_admin)
+## Most recent session — 2026-05-27 (Grants strategy audit + NSF SBIR pitch drafted)
+
+**Context:** Jorrel asked to work on grants. Audit revealed the playbook's grant lineup was almost entirely wrong for Modern Village's legal structure.
+
+### What we learned (audit done 2026-05-27)
+
+Modern Village Services LLC is a for-profit. **Almost every autism / early-childhood foundation grant previously listed in the playbook requires 501(c)(3) status** or funds research studies rather than products. Confirmed ineligibilities:
+
+- **Caplan Foundation** — "Does not fund for-profit entities"
+- **Doug Flutie Jr. Foundation** — 501(c)(3) or qualified schools only
+- **OAR Community Grant** — community orgs/nonprofits/individuals (Ariana could apply individually as a "direct service provider" for $1-15K, but poor ROI vs. her clinical bandwidth)
+- **OAR Applied Research Grant** — researchers at institutions only; LOI cycle already closed Mar 16, 2026
+- **NEXT for AUTISM** — funds programs for autistic *adults*; 2026 cycle closed May 22
+
+The previous playbook entries that promised "$50K, OPEN NOW" for OAR etc. were aspirational/wrong. None of those drafts ever existed on disk (`_reference/grant-oar-letter-of-intent.docx` and friends were referenced but not present).
+
+### What we pivoted to
+
+**NSF and NIH SBIR Phase I — the realistic for-profit paths.**
+
+| Opportunity | Amount | Next deadline |
+|-------------|--------|---------------|
+| NSF SBIR Phase I — Digital Health | up to $275K | Project Pitch portal reopens **Jun 2, 2026** |
+| NIH SBIR Omnibus (HHS) | up to $314K Phase I | **Sept 5, 2026** standard receipt |
+
+Both programs were reauthorized 4/13/26. NSF "Physical, Mental and Behavioral Health" is a named sub-topic under Digital Health — direct fit. Pitch-first model: 3-page pitch → ~3-week NSF response → if invited, full Phase I proposal.
+
+### What's drafted and where
+
+**Working NSF Project Pitch draft:** [docs/GRANTS-NSF-SBIR-PITCH.md](docs/GRANTS-NSF-SBIR-PITCH.md). All 4 sections (Technology Innovation, Technical Objectives & Challenges, Market Opportunity, Company & Team) within NSF character limits. **Status: DRAFT — needs Ariana's clinical sign-off before submission.**
+
+### What still needs to happen (next session pickup)
+
+1. **Send the draft to Ariana** with the validation asks listed in the "Open items for Ariana" section at the bottom of the pitch file — research targets (85% inter-rater, F1 ≥ 0.80, 20% behavior reduction), the actual 12 dimensions of the Adaptive AI Engine, clinical claims sanity check, and her 20+ hr/wk co-PI commitment confirmation. Aim to get it to her this week so she has ≥5 days before the Jun 2 portal opens.
+2. **Jorrel fills in:** state of LLC registration (currently "US-registered"), current active subscriber count, decide whether to name competitors by name in §3
+3. **Submit pitch shortly after Jun 2, 2026** when portal reopens (https://seedfund.nsf.gov/project-pitch/)
+4. **In parallel:** pick the NIH institute for the Sept 5 omnibus (likely NIMH or NICHD) and start scoping that submission
+
+### Procedural setup (all done 2026-05-27)
+
+- ✅ Modern Village Services LLC formed
+- ✅ EIN issued
+- ✅ SAM.gov registration complete
+- ✅ SBIR.gov registration complete
+
+Jorrel is ready to submit pitches with no further setup blocked.
+
+### Docs updated this session
+
+- [docs/MARKETING-PLAYBOOK.md](docs/MARKETING-PLAYBOOK.md) §"Client Type 6" — full rewrite with eligibility audit + SBIR-first opportunities + partner-model alternative
+- [docs/ROADMAP.md](docs/ROADMAP.md) grants checklist + business tasks lines — updated
+- [docs/SUPPLEMENTARY.md](docs/SUPPLEMENTARY.md) §6 — tier list restructured (Tier 1 = SBIR, Tier 3 = partner-model only)
+- [docs/GRANTS-NSF-SBIR-PITCH.md](docs/GRANTS-NSF-SBIR-PITCH.md) — **new** working draft
+- Memory: `project_grants_pivot_sbir.md` saved so future sessions don't re-make the same foundation-grant mistake
+
+### One sentence for the future session that picks this up
+
+The NSF SBIR pitch is drafted and waiting on Ariana's clinical review; once she signs off and the Jun 2 portal opens, submit it.
+
+---
+
+## Previous session — 2026-05-19 (Mika onboarded as sub_admin)
 
 **Context:** Jorrel asked to give Mika (mika@ascnd.pro) an admin login with a "sub admin" role he can later restrict.
 

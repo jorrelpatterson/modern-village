@@ -149,29 +149,46 @@ Build the child/teen login first (already done — username + PIN). As children 
 
 ## Client Type 6: Grant Funders (B2G)
 
-**Revenue:** $10K-314K one-time grants
-**Lead volume:** 35 foundation + accelerator leads scraped
+**Revenue:** Up to $275K (NSF SBIR Phase I) / $314K (NIH SBIR Phase I); Phase II awards run $750K-$1.5M
 
-### Active Opportunities
-| Grant | Amount | Status | Deadline |
-|-------|--------|--------|----------|
-| OAR (Organization for Autism Research) | $50K | **OPEN NOW** | Check cycle |
-| NEXT for AUTISM | $10K | Check cycle | Check cycle |
-| Inclusive App Accelerator | $10K | Apply Dec 2026 | Dec 2026 |
-| NIH SBIR | $314K | Paused | When reopens |
-| NSF SBIR | $275K | Paused | When reopens |
+### Reality check (audited 2026-05-27)
 
-### Strategy
-- Lead with impact data (behavioral outcomes, parent engagement metrics)
-- Emphasize underserved communities (families who can't afford $200/hr BCBA)
-- Show technology innovation (AI that learns each child)
-- Reference clinical oversight (BCBA-founded, evidence-based ABA)
+**Most private autism / early-childhood foundations require 501(c)(3) status and won't take a for-profit LLC.** Modern Village LLC is ineligible for almost everything previously listed here. Verified ineligibilities:
+
+| Funder | Why we can't apply |
+|--------|--------------------|
+| Caplan Foundation | "Does not fund for-profit entities" — 501(c)(3) required |
+| Doug Flutie Jr. Foundation | 501(c)(3) or qualified schools only; partial invite-only |
+| OAR Community Grant | Community orgs / nonprofits / individuals. Modern Village LLC cannot apply directly. Ariana could apply individually as a "direct service provider" for $1-15K |
+| OAR Applied Research Grant | Researchers at institutions. Commercial products allowed but require marketing plan + reimbursement to OAR. Also: LOI cycle closed Mar 16, 2026 |
+| NEXT for AUTISM | Funds programs for autistic *adults* (Phase 4 alignment, not our current segment); 2026 cycle closed May 22 |
+
+The prior plan in this section was misaligned with Modern Village's legal structure. None of those foundations are realistic.
+
+### Actually-eligible opportunities
+
+| Opportunity | Amount | Next deadline | Fit |
+|-------------|--------|---------------|-----|
+| **NSF SBIR Phase I — Digital Health** | up to $275K | **Project Pitch portal reopens Jun 2, 2026** | Direct — "Physical, Mental and Behavioral Health" is a named NSF Digital Health sub-topic. Pitch-first: 3-page pitch → ~3-week NSF response → if invited, full proposal |
+| **NIH SBIR Omnibus (HHS)** | up to $314K Phase I | **Sept 5, 2026** standard receipt | Direct — autism routes to NIMH (behavioral) or NICHD (child development). Reauthorized 4/13/26 |
+| **Inclusive App Accelerator** | $10K | Dec 2026 cycle (inclusiveapps.com) | Direct — accessibility-focused tech accelerator |
+| **State / Regional Center contracts** | $50K-$250K per contract | Rolling | High fit — RFP/contract path, not "grant." See Client Type 7 |
+
+### SBIR eligibility (Modern Village qualifies)
+- Small business <500 employees, US-located ✅
+- 50%+ owned by US citizens/permanent residents ✅
+- All funded work performed in US ✅
+- PI must work 20+ hr/wk for the company — Jorrel ✅ as founder; **Ariana would need to confirm commitment to serve as clinical co-PI during award period**
+
+### Partner-model alternative (if pursuing private foundations later)
+If a 501(c)(3) partner (autism research center, university, advocacy org) acts as the applicant with Modern Village as the technology sub-recipient, the closed foundations re-open. Requires a real partnership, not a paper one. Ariana's clinical network is the best source of leads here.
 
 ### Prerequisites
-- [ ] Grant application package (already in _reference/modern-village-grant-package.docx)
-- [ ] OAR letter of intent (already in _reference/grant-oar-letter-of-intent.docx)
-- [ ] NEXT for AUTISM application (already in _reference/grant-next-for-autism.docx)
-- [ ] Ariana reviews and signs off on clinical claims
+- [x] Modern Village Services LLC formed + EIN issued + SAM.gov + SBIR.gov registrations (completed 2026-05-27)
+- [ ] **NSF SBIR Project Pitch** — draft at [docs/GRANTS-NSF-SBIR-PITCH.md](GRANTS-NSF-SBIR-PITCH.md); submit shortly after Jun 2, 2026 portal reopens
+- [ ] **NIH SBIR** — pick target institute (NIMH vs NICHD vs IES) and aim for Sept 5, 2026 omnibus deadline
+- [ ] Ariana confirms 20+ hr/wk co-PI commitment during award period + reviews clinical claims in pitch draft
+- [ ] Identify 1-2 501(c)(3) partner candidates for foundation co-applications
 
 ---
 

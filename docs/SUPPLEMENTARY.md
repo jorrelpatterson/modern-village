@@ -173,20 +173,26 @@ Full email copy in `modern-village-email-sequences.docx`.
 
 ## 6. GRANT STRATEGY & TARGETS
 
-### Tier 1: Apply Now
-| Foundation | Amount |
-|-----------|--------|
-| Organization for Autism Research (OAR) | $50K |
-| Doug Flutie Jr. Foundation | $5K-25K |
-| Autism Speaks Community Grants | $5K-15K |
-| Caplan Foundation | $25K-50K |
-| NEXT for AUTISM | $10K-50K |
+**Audited 2026-05-27.** Modern Village Services LLC is a for-profit, which excludes it from most autism / early-childhood foundation grants (501(c)(3) typically required). The prior tier list assumed nonprofit eligibility and is now restructured to match reality. Full audit + partner-model alternative in [MARKETING-PLAYBOOK.md](MARKETING-PLAYBOOK.md) §"Client Type 6".
 
-### Tier 2: Within 6 Months
-Autism Science Foundation ($25K-100K), Google.org ($50K-500K), Camelback Ventures ($40K), NewSchools ($100K-500K), 4.0 Schools ($10K-100K), Inclusive App Accelerator ($10K)
+### Tier 1: Apply now (for-profit-eligible)
+| Opportunity | Amount | Next deadline |
+|-------------|--------|---------------|
+| NSF SBIR Phase I — Digital Health | up to $275K | Project Pitch portal reopens Jun 2, 2026 |
+| NIH SBIR Omnibus (HHS) | up to $314K Phase I | Sept 5, 2026 standard receipt |
+| State / Regional Center contracts | $50K-$250K/contract | Rolling — see §"Regional Centers" / Client Type 7 |
 
-### Tier 3: After Traction
-SBIR NIH ($314K), SBIR NSF ($275K), Robert Wood Johnson ($50K-500K), Simons/SFARI ($100K-500K)
+### Tier 2: For-profit-friendly accelerators (verify current cycle before applying)
+Inclusive App Accelerator ($10K, Dec 2026 cycle), Camelback Ventures ($40K), 4.0 Schools ($10K-100K), Google.org ($50K-500K). Each needs current-cycle and eligibility verification before drafting — none confirmed open for for-profit MV as of audit.
+
+### Tier 3: Partner-model only (require 501(c)(3) co-applicant)
+OAR Applied Research Grant ($30K-40K), Caplan Foundation ($25K-50K), Doug Flutie Jr. Foundation ($5K-25K), Autism Speaks community/research programs, Autism Science Foundation ($25K-100K), Robert Wood Johnson ($50K-500K), Simons/SFARI ($100K-500K). Modern Village can access these only by partnering with a 501(c)(3) (autism research center, university, advocacy org) that acts as applicant with MV as technology sub-recipient.
+
+### Tier 4: Segment-mismatched (revisit at later product phase)
+NEXT for AUTISM ($10K-20K) — funds programs for autistic adults; revisit when MV ships the adult product (Phase 4).
+
+### Note on OAR Community Grant
+Cannot be submitted under Modern Village Services LLC (community orgs / nonprofits / individuals only). Ariana could potentially apply individually as a "direct autism service provider" for $1-15K, but the ROI vs. her bandwidth on BCBA billing tooling is poor.
 
 ---
 
