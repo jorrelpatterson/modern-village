@@ -194,22 +194,9 @@ If a 501(c)(3) partner (autism research center, university, advocacy org) acts a
 
 ## Campaign Calendar — First 30 Days
 
-| Day | Action | Channel | Target |
-|-----|--------|---------|--------|
-| 1 | Post screener in 3 autism parent FB groups | Facebook | Parents |
-| 1 | Post screener on r/AutismParenting | Reddit | Parents |
-| 1 | First 4 Instagram graphics | Instagram | Parents |
-| 3 | Launch BCBA cold email sequence (providers) | Email | 500 BCBAs |
-| 5 | Post in 3 BCBA Facebook groups (Ariana) | Facebook | Providers |
-| 7 | Launch district cold email sequence | Email | 200 districts |
-| 7 | LinkedIn Sales Navigator trial | LinkedIn | Providers + Districts |
-| 10 | Email autism bloggers for screener backlinks | Email | SEO |
-| 14 | SELPA outreach email sequence | Email | 95 SELPAs |
-| 14 | Submit OAR grant application | Application | Grant |
-| 21 | Submit NEXT for AUTISM application | Application | Grant |
-| 21 | Second BCBA email wave (remaining 14,500) | Email | Providers |
-| 28 | Review email campaign metrics, optimize sequences | Admin CRM | All |
-| 30 | Post results + learnings, plan month 2 | Internal | — |
+> **Moved.** The day-by-day launch calendar now lives in [`docs/LAUNCH-STRATEGY.md`](LAUNCH-STRATEGY.md) §3 (Phase A — soft launch), §4 (Phase B — public launch), and §5 (Phase C — scale) — that is the single source of truth so the two docs don't drift again.
+>
+> The old grid here was stale (2026-05-06): it front-loaded parent acquisition before the marketplace had BCBA supply, skipped the Phase A→B decision gate, and scheduled OAR + NEXT for AUTISM grant submissions that MV LLC is ineligible for (501(c)(3)-only — see Client Type 6 audit, 2026-05-27). The real near-term grant action is the **NSF SBIR pitch when the portal reopens Jun 2, 2026** (pending Ariana's clinical sign-off).
 
 ---
 

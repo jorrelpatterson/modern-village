@@ -78,8 +78,9 @@ Decisions, not tasks. Ariana's input required.
 - [ ] Draft Dear Mom Co partnership email (offer Modern Village as digital companion to their $495/ticket conferences).
 
 **Grants (time-sensitive)**
-- [ ] Submit OAR application ($50K, open now). Ariana signs clinical claims.
-- [ ] Submit NEXT for Autism application ($10K).
+- [ ] Submit **NSF SBIR Project Pitch** when the portal reopens **Jun 2, 2026** (https://seedfund.nsf.gov/project-pitch/). Draft at `docs/GRANTS-NSF-SBIR-PITCH.md`; Ariana signs off on clinical claims + confirms 20+ hr/wk co-PI commitment first.
+- [ ] Scope **NIH SBIR Omnibus** (NIMH vs NICHD) for the **Sept 5, 2026** deadline.
+- [ ] ~~OAR / NEXT for AUTISM~~ — **dropped**: MV LLC is for-profit; these require 501(c)(3). See `MARKETING-PLAYBOOK.md` Client Type 6 (audited 2026-05-27).
 
 ---
 
