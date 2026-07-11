@@ -527,6 +527,26 @@ export default {
       return new Response('{"success":true}', { headers: h });
     }
 
+    // === DELETE ACCOUNT (user erases their own account + data) — App Store 5.1.1(v) ===
+    if (url.pathname === '/delete-account') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      const uid = user.id;
+      const supaH = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+      // Best-effort erase of the user's own rows (ignore tables/columns that don't apply).
+      const userTables = ['behavior_logs','daily_checkins','conversations','saved_strategies','routines','child_checkins','care_notes','bookings','village_profiles','push_tokens','user_push_preferences','user_feedback','content_reports'];
+      for (const t of userTables) {
+        try { await fetch(env.SUPABASE_URL + '/rest/v1/' + t + '?user_id=eq.' + encodeURIComponent(uid), { method: 'DELETE', headers: supaH }); } catch (e) {}
+      }
+      try { await fetch(env.SUPABASE_URL + '/rest/v1/children?parent_id=eq.' + encodeURIComponent(uid), { method: 'DELETE', headers: supaH }); } catch (e) {}
+      try { await fetch(env.SUPABASE_URL + '/rest/v1/child_access?user_id=eq.' + encodeURIComponent(uid), { method: 'DELETE', headers: supaH }); } catch (e) {}
+      try { await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + encodeURIComponent(uid), { method: 'DELETE', headers: supaH }); } catch (e) {}
+      // Finally remove the auth account itself (this is the App Store requirement).
+      const delRes = await fetch(env.SUPABASE_URL + '/auth/v1/admin/users/' + uid, { method: 'DELETE', headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY } });
+      if (!delRes.ok) { const err = await delRes.text(); return new Response(JSON.stringify({ error: 'Could not delete account', detail: err }), { status: 500, headers: h }); }
+      return new Response('{"success":true}', { headers: h });
+    }
+
     // === SELF-SERVICE PASSWORD RESET (sends reset email) ===
     if (url.pathname === '/reset-password') {
       if (!checkRate(ip, 'email')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
