@@ -1343,7 +1343,12 @@ async function loadVerification(){
 }
 
 async function verifyProvider(id){
-  await sb.from('profiles').update({provider_verified:true}).eq('id',id);
+  var session=await sb.auth.getSession();
+  var token=session.data.session?.access_token;
+  try{
+    var r=await fetch('https://village-api.jorrelpatterson.workers.dev/admin/verify-provider',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({id:id})});
+    if(!r.ok)throw new Error('failed');
+  }catch(e){showToast('Could not approve provider');return}
   showToast('Provider approved');
   loadVerification();
 }

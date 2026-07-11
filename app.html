@@ -5914,7 +5914,7 @@ async function loadProfile(){
     if(isSubActive&&r.data.subscription_expires_at){
       if(new Date(r.data.subscription_expires_at)<new Date()){
         isSubActive=false;
-        await sb.from('profiles').update({subscription_status:'free'}).eq('id',S.user.id);
+        try{authFetch(API_URL+'subscription/downgrade-expired',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).catch(function(){})}catch(e){}
       }
     }
     S.sharedPro=false;

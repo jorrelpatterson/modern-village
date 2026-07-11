@@ -547,6 +547,32 @@ export default {
       return new Response('{"success":true}', { headers: h });
     }
 
+    // === ADMIN: verify a provider (server-side so provider_verified can stay locked) ===
+    if (url.pathname === '/admin/verify-provider') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      const ac = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=is_admin', { headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY } });
+      const ad = await ac.json();
+      if (!ad.length || !ad[0].is_admin) return new Response('{"error":"Admin only"}', { status: 403, headers: h });
+      if (!body.id) return new Response('{"error":"Missing id"}', { status: 400, headers: h });
+      const upd = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + encodeURIComponent(body.id), { method: 'PATCH', headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify({ provider_verified: true }) });
+      if (!upd.ok) { const err = await upd.text(); return new Response(JSON.stringify({ error: 'Verify failed', detail: err }), { status: 500, headers: h }); }
+      return new Response('{"success":true}', { headers: h });
+    }
+
+    // === SUBSCRIPTION: downgrade the caller's OWN expired subscription (server-side) ===
+    if (url.pathname === '/subscription/downgrade-expired') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      const sh = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY };
+      const pr = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=subscription_status,subscription_expires_at', { headers: sh });
+      const rows = await pr.json();
+      if (rows.length && rows[0].subscription_status === 'pro' && rows[0].subscription_expires_at && new Date(rows[0].subscription_expires_at) < new Date()) {
+        await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id, { method: 'PATCH', headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify({ subscription_status: 'free' }) });
+      }
+      return new Response('{"success":true}', { headers: h });
+    }
+
     // === SELF-SERVICE PASSWORD RESET (sends reset email) ===
     if (url.pathname === '/reset-password') {
       if (!checkRate(ip, 'email')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
