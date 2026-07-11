@@ -8354,6 +8354,7 @@ async function logBehavior(){
     user_id: S.user.id,
     behavior: behavior,
     trigger_desc: (selectedTriggerFunc?(selectedTriggerFunc+(document.getElementById('trTrigger').value.trim()?' — '+document.getElementById('trTrigger').value.trim():'')):document.getElementById('trTrigger').value.trim())||null,
+    trigger_type: selectedTriggerFunc||null,
     duration_minutes: parseInt(document.getElementById('trDuration').value)||null,
     intensity: document.getElementById('trIntensity').value||null,
     location: document.getElementById('trLocation').value.trim()||null,
