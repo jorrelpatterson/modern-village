@@ -493,11 +493,12 @@ export default {
     if (url.pathname === '/admin/reset-password') {
       const user = await verifyToken(authToken, env);
       if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
-      const adminCheck = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=is_admin', {
+      const adminCheck = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=is_admin,admin_role', {
         headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
       });
       const adminData = await adminCheck.json();
-      if (!adminData.length || !adminData[0].is_admin) return new Response('{"error":"Admin only"}', { status: 403, headers: h });
+      // Password reset can take over any account, so restrict it to super admins only.
+      if (!adminData.length || !adminData[0].is_admin || adminData[0].admin_role !== 'super') return new Response('{"error":"Super admin only"}', { status: 403, headers: h });
 
       const targetEmail = body.email;
       const newPassword = body.password;
@@ -509,6 +510,14 @@ export default {
       const users = usersData.users || usersData || [];
       const targetUser = users.find(u => u.email === targetEmail);
       if (!targetUser) return new Response('{"error":"User not found"}', { status: 404, headers: h });
+      // Block using this endpoint to take over another admin's account.
+      if (targetUser.id !== user.id) {
+        const tgtProf = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + targetUser.id + '&select=is_admin', {
+          headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+        });
+        const tgtRows = await tgtProf.json();
+        if (tgtRows.length && tgtRows[0].is_admin) return new Response('{"error":"Cannot reset another admin account"}', { status: 403, headers: h });
+      }
       const updateRes = await fetch(env.SUPABASE_URL + '/auth/v1/admin/users/' + targetUser.id, {
         method: 'PUT',
         headers: { 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'apikey': env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' },
@@ -1152,8 +1161,17 @@ export default {
     const user = await verifyToken(authToken, env);
     if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
 
-    body.model = 'claude-sonnet-4-20250514';
+    body.model = 'claude-sonnet-5';
     if (body.max_tokens > 8000) body.max_tokens = 8000;
+    // Sonnet 5 runs adaptive thinking by default; disable it so structured, low-latency
+    // coach + clinical responses aren't truncated by thinking tokens under the max_tokens cap.
+    body.thinking = { type: 'disabled' };
+    // Cap attacker-controllable input so a signed-up user can't burn the API key with 200K-token prompts.
+    try {
+      var _sysLen = typeof body.system === 'string' ? body.system.length : JSON.stringify(body.system || '').length;
+      var _msgLen = JSON.stringify(body.messages || []).length;
+      if (_sysLen + _msgLen > 120000) return new Response('{"error":"Request too large"}', { status: 413, headers: h });
+    } catch (_e) {}
 
     try {
       const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1817,7 +1835,7 @@ async function runDailyTasks(env) {
         const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 200, messages: [{ role: 'user', content: optimizePrompt }] })
+          body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 200, messages: [{ role: 'user', content: optimizePrompt }] })
         });
         const aiData = await aiRes.json();
         const aiText = aiData.content && aiData.content[0] ? aiData.content[0].text : '';

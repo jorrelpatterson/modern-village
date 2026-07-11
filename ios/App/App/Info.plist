@@ -30,7 +30,7 @@
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
@@ -51,8 +51,6 @@
 	<false/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Modern Village uses Face ID to keep your child's information private — so only you can unlock the app.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Modern Village uses the microphone for voice mode — talk to the coach hands-free during a meltdown.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Modern Village can save photos you capture in-app back to your library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -60,8 +58,6 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Modern Village uses the camera so you can take photos of wins, events, or your child’s artwork to share.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Modern Village uses your location to show parents and resources nearby in your community.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Modern Village uses your location to show parents and resources nearby in your community.</string>
 </dict>
 </plist>
