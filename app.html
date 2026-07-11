@@ -6444,7 +6444,7 @@ function renderSb(){
   var displayName=S.name||( S.user?S.user.email:'Guest');
   document.getElementById('sbProf').innerHTML='<div style="font-size:14px;color:var(--warm-gray)">Signed in as</div><div style="font-weight:700;font-size:18px;margin-top:2px">'+displayName+'</div>'+(S.child?'<div style="font-size:13px;color:var(--warm-gray);margin-top:2px">Parent of '+S.child+(S.age?', '+S.age:'')+(S.dx?' \u00b7 '+S.dx:'')+'</div>':'');
   updateSubSt();
-  var allItems=[{label:"\u26a0\ufe0f Crisis Support",action:"openCrisis()",roles:['parent','caregiver','provider','teacher'],highlight:true},{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"Behavior Summary",action:"openBehaviorSummary()",roles:['teacher']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"My Milestones",action:"openMilestones()",roles:['parent']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver','teacher']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver','teacher']},{label:"Session Notes",action:"openParentSessionNotes()",roles:['parent']},{label:"My BCBA",action:"openMyBcba()",roles:['parent'],requiresMyBcba:true,highlight:true},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Billing Dashboard",action:"openBillingDashboard()",roles:['provider']},{label:"My Payers",action:"openPayerManagement()",roles:['provider']},{label:"Practice Dashboard",action:"openPracticeDashboard()",roles:['provider'],requiresPractice:true},{label:"Practice Members",action:"openPracticeMembers()",roles:['provider'],requiresPractice:true},{label:"Clients (Practice)",action:"openPracticeClients()",roles:['provider'],requiresPractice:true},{label:"Curriculum Library",action:"openCurriculumBrowser()",roles:['provider'],requiresPractice:true},{label:"Practice Settings",action:"openPracticeSettings()",roles:['provider'],requiresPractice:true},{label:"Analysis",action:"openAnalysisDashboard()",roles:['provider'],requiresPractice:true},{label:"Set up Practice",action:"openPracticeOnboarding()",roles:['provider'],requiresNoPractice:true,highlight:true},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
+  var allItems=[{label:"\u26a0\ufe0f Crisis Support",action:"openCrisis()",roles:['parent','caregiver','provider','teacher'],highlight:true},{label:"My Profile",action:"openProfile()",roles:['parent','provider','caregiver','teacher']},{label:"Saved Strategies",action:"openStrategies()",roles:['parent','caregiver']},{label:"Behavior Summary",action:"openBehaviorSummary()",roles:['teacher']},{label:"\ud83e\udde0 Child Insights",action:"openInsights()",roles:['parent','provider']},{label:"Progress Dashboard",action:"openProgress()",roles:['parent','provider']},{label:"My Milestones",action:"openMilestones()",roles:['parent']},{label:"Routine Builder",action:"openRoutines()",roles:['parent','caregiver','teacher']},{label:"IEP Toolkit",action:"openIep()",roles:['parent','teacher']},{label:"Resources",action:"openResources()",roles:['parent','provider','caregiver','teacher']},{label:"Community Guidelines",action:"showCommunityGuidelines()",roles:['parent','caregiver','provider','teacher']},{label:"Behavior Tracker",action:"switchTab('track')",roles:['parent','caregiver','teacher']},{label:"Session Notes",action:"openParentSessionNotes()",roles:['parent']},{label:"My BCBA",action:"openMyBcba()",roles:['parent'],requiresMyBcba:true,highlight:true},{label:"Booking History",action:"openBookingHistory()",roles:['parent']},{label:"\ud83c\udf81 Invite Friends \u2014 Get 1 Month Free",action:"openReferral()",highlight:true,roles:['parent']},{label:"Billing Dashboard",action:"openBillingDashboard()",roles:['provider']},{label:"My Payers",action:"openPayerManagement()",roles:['provider']},{label:"Practice Dashboard",action:"openPracticeDashboard()",roles:['provider'],requiresPractice:true},{label:"Practice Members",action:"openPracticeMembers()",roles:['provider'],requiresPractice:true},{label:"Clients (Practice)",action:"openPracticeClients()",roles:['provider'],requiresPractice:true},{label:"Curriculum Library",action:"openCurriculumBrowser()",roles:['provider'],requiresPractice:true},{label:"Practice Settings",action:"openPracticeSettings()",roles:['provider'],requiresPractice:true},{label:"Analysis",action:"openAnalysisDashboard()",roles:['provider'],requiresPractice:true},{label:"Set up Practice",action:"openPracticeOnboarding()",roles:['provider'],requiresNoPractice:true,highlight:true},{label:"Care Team Notes",action:"openCareNotes()",roles:['parent','caregiver','provider','teacher']}];
   var items=allItems.filter(function(item){
     if(item.roles && item.roles.indexOf(S.role) < 0) return false;
     if(item.requiresPractice && !S.practiceMember) return false;
@@ -7004,6 +7004,16 @@ async function submitReport(contentType, contentId, reason){
   showToast('Reported. Our team will review this.');
 }
 
+// ─── Community: block user + guidelines (App Store 1.2) ───
+function mvBlockedKey(){return 'mv_blocked_'+(S.user?S.user.id:'anon')}
+function mvBlockedList(){try{return JSON.parse(localStorage.getItem(mvBlockedKey())||'[]')}catch(e){return[]}}
+function mvIsBlocked(uid){return !!uid&&mvBlockedList().indexOf(uid)>=0}
+function blockUser(uid){if(!uid){showToast('Cannot block this member');return}if(!confirm('Block this member? You won\x27t see their posts or comments.'))return;var l=mvBlockedList();if(l.indexOf(uid)<0)l.push(uid);try{localStorage.setItem(mvBlockedKey(),JSON.stringify(l))}catch(e){}var rm=document.getElementById('reportModal');if(rm)rm.remove();showToast('Member blocked');renderCommunityPosts()}
+var COMMUNITY_GUIDELINES='Modern Village has zero tolerance for objectionable content or abusive members.\n\nDo not post content that is hateful, harassing, threatening, sexually explicit, or that harms or endangers a child. Do not share other people\x27s private information. You are responsible for what you post.\n\nReported content is reviewed within 24 hours and removed if it violates these rules; abusive members are removed. You can Report or Block any member at any time from their post.\n\nBy continuing you agree to these guidelines and our Terms of Use.';
+function mvGuidelinesAccepted(){try{return localStorage.getItem('mv_guidelines_ok')==='1'}catch(e){return false}}
+function mvAcceptGuidelines(){try{localStorage.setItem('mv_guidelines_ok','1')}catch(e){}var m=document.getElementById('guidelinesModal'),cb=m&&m.__cb;if(m)m.remove();if(typeof cb==='function')cb()}
+function showCommunityGuidelines(onAccept){var m=document.createElement('div');m.id='guidelinesModal';m.style.cssText='position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:20px';m.innerHTML='<div style="background:white;border-radius:18px;max-width:440px;max-height:82vh;overflow-y:auto;padding:24px"><div style="font-family:Fraunces,serif;font-size:20px;font-weight:800;margin-bottom:12px">Community Guidelines</div><div style="font-size:13px;line-height:1.6;color:var(--warm-gray);white-space:pre-wrap">'+esc(COMMUNITY_GUIDELINES)+'</div><div style="display:flex;gap:10px;margin-top:18px"><button class="btn" style="flex:1;border:1px solid var(--sand);background:white" onclick="document.getElementById(\x27guidelinesModal\x27).remove()">Close</button>'+(onAccept?'<button class="btn btn-p" style="flex:1" onclick="mvAcceptGuidelines()">I Agree</button>':'')+'</div></div>';if(typeof onAccept==='function')m.__cb=onAccept;document.body.appendChild(m)}
+
 var composeImageFile=null;
 function previewComposeImage(input){
   if(!input.files||!input.files[0])return;
@@ -7028,6 +7038,7 @@ async function submitPost(){
   var text=document.getElementById('composeText').value.trim();
   if(!text){showToast('Write something first');return}
   if(!S.user){showAuth(true);return}
+  if(!mvGuidelinesAccepted()){showCommunityGuidelines(submitPost);return}
 
   // Auto-filter
   var check=checkContent(text);
@@ -7110,12 +7121,12 @@ async function renderCommunityPosts(){
 
   // Add real posts first (skip hidden)
   realPosts.forEach(function(p){
-    if(p.status==='hidden') return;
+    if(p.status==='hidden'||mvIsBlocked(p.user_id)) return;
     var d=new Date(p.created_at);
     var mins=Math.round((Date.now()-d.getTime())/60000);
     var timeStr=mins<60?mins+'m':mins<1440?Math.round(mins/60)+'h':Math.round(mins/1440)+'d';
     allPosts.push({
-      id:p.id,author:p.author_name||'Anonymous',badge:p.status==='flagged'?'Under Review':'Member',time:timeStr,
+      id:p.id,user_id:p.user_id,author:p.author_name||'Anonymous',badge:p.status==='flagged'?'Under Review':'Member',time:timeStr,
       text:p.content,likes:likeCounts[p.id]||0,comments:0,topic:p.topic||'General',
       isSeed:false,userLiked:userLikes[p.id]||false,status:p.status,image_url:p.image_url||null
     });
@@ -7137,7 +7148,7 @@ async function renderCommunityPosts(){
   for(var i=0;i<filtered.length;i++){
     var p=filtered[i],bc=BADGE_COLORS[p.badge]||'#7A9E7E',lk=p.userLiked;
     h+='<div class="postcard" style="animation:slideUp 0.5s '+(i*0.06)+'s both"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><div class="postav" style="background:linear-gradient(135deg,'+bc+'40,'+bc+'80)">'+esc(p.author[0]||'')+'</div><div style="flex:1"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;font-size:14px">'+esc(p.author)+'</span><span style="padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;background:'+bc+'20;color:'+bc+'">'+esc(p.badge)+'</span></div><div style="display:flex;align-items:center;gap:6px;margin-top:2px"><span style="font-size:12px;color:var(--warm-gray-light)">'+esc(p.time)+'</span><span style="width:3px;height:3px;border-radius:50%;background:var(--sand-dark)"></span><span style="font-size:12px;color:var(--warm-gray)">'+esc(p.topic)+'</span></div></div>';
-    if(!p.isSeed) h+='<button style="background:none;border:none;cursor:pointer;padding:4px;color:var(--warm-gray-light);font-size:18px;line-height:1" onclick="showReportModal(\'post\',\''+p.id+'\')" title="Report">&middot;&middot;&middot;</button>';
+    if(!p.isSeed) h+='<button style="background:none;border:none;cursor:pointer;padding:4px;color:var(--warm-gray-light);font-size:18px;line-height:1" onclick="showReportModal(\'post\',\''+p.id+'\')" title="Report">&middot;&middot;&middot;</button>'+(p.user_id?'<button style="background:none;border:none;cursor:pointer;padding:4px 6px;color:var(--warm-gray-light);font-size:11px" onclick="blockUser(\x27'+p.user_id+'\x27)" title="Block member">Block</button>':'');
     h+='</div>';
     h+='<p style="font-size:14.5px;line-height:1.6;margin-bottom:14px">'+esc(p.text)+'</p>';
     if(p.image_url)h+='<div style="margin-top:8px"><img src="'+esc(p.image_url)+'" style="max-width:100%;border-radius:12px;max-height:300px;object-fit:cover" loading="lazy"></div>';
