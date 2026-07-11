@@ -605,10 +605,10 @@ async function submitDistrictRequest(){
       document.getElementById('districtForm').style.display='none';
       document.getElementById('districtSuccess').style.display='block';
       // Notify you via email
-      fetch('https://village-api.jorrelpatterson.workers.dev/email',{
+      fetch('https://village-api.jorrelpatterson.workers.dev/feedback-notify',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({to:'jorrelpatterson@gmail.com',subject:'New District Pilot Request — '+district,
-          html:'<h2>New District Pilot Request</h2><p><strong>Name:</strong> '+name+'</p><p><strong>Title:</strong> '+(document.getElementById('dTitle').value||'N/A')+'</p><p><strong>Email:</strong> '+email+'</p><p><strong>Phone:</strong> '+(document.getElementById('dPhone').value||'N/A')+'</p><p><strong>District:</strong> '+district+'</p><p><strong>State:</strong> '+(document.getElementById('dState').value||'N/A')+'</p><p><strong>Students:</strong> '+(document.getElementById('dStudents').value||'N/A')+'</p><p><strong>Message:</strong> '+(document.getElementById('dMessage').value||'N/A')+'</p>'
+        body:JSON.stringify({type:'District Pilot Request',page:'Landing — For Districts',user:name+' <'+email+'>',role:'District: '+district,
+          content:'State: '+(document.getElementById('dState').value||'N/A')+' | Title: '+(document.getElementById('dTitle').value||'N/A')+' | Phone: '+(document.getElementById('dPhone').value||'N/A')+' | Students: '+(document.getElementById('dStudents').value||'N/A')+' | Message: '+(document.getElementById('dMessage').value||'N/A')
         })
       }).catch(function(){});
     } else {btn.disabled=false;btn.textContent='Submit Pilot Request';alert('Error submitting. Please try again.')}
@@ -633,6 +633,7 @@ async function submitDistrictRequest(){
       <a class="footer-link" href="/terms.html">Terms</a>
       <a class="footer-link" href="/privacy.html">Privacy</a>
       <a class="footer-link" href="/baa.html">BAA</a>
+      <a class="footer-link" href="mailto:hello@modernvillage.app">Support</a>
     </div>
   </div>
   <div class="footer-disclaimer">
