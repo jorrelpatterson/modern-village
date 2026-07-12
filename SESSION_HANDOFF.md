@@ -1,4 +1,4 @@
-# Session Handoff — 2026-05-27
+# Session Handoff — 2026-07-11
 
 Single source of truth for picking up wherever the last session left off. Read this first.
 
@@ -24,7 +24,35 @@ mkdir -p ~/.claude/projects && cp -R "/Volumes/(626)806-4475/Ai Projects/modern-
 
 After that, any new Claude Code session in this repo will see the project memory and prior conversation context automatically. If you skip this step entirely, this `SESSION_HANDOFF.md` is the safety net — read it on session start.
 
-## Most recent session — 2026-05-27 (Grants strategy audit + NSF SBIR pitch drafted)
+## Most recent session — 2026-07-11 (Apple IAP wired — Path A / RevenueCat)
+
+**Context:** Last item before App Store submission (from the 2026-07-11 full-app audit, items 1-4 all shipped earlier today — see jorrel-os.json `completed_today`). The Stripe `subscribe()` button on iOS is a Guideline 3.1.1 rejection; Jorrel chose Path A: Apple In-App Purchase via RevenueCat. Plan + research notes: [docs/superpowers/plans/2026-07-11-apple-iap-revenuecat.md](docs/superpowers/plans/2026-07-11-apple-iap-revenuecat.md).
+
+### What was built (approved by Jorrel 2026-07-11, committed to main + deployed; RevenueCat/ASC setup done same evening — entitlement `pro`, product `mv_pro_monthly`, `default` offering, webhook + both worker secrets live, `RC_IOS_API_KEY` in app.html)
+
+- **`supabase/migrations/20260711_iap_subscription_source.sql`** — adds `profiles.subscription_source` (`'apple_iap'` / `'promo'` / null) + backfills promo Pros. **Not yet applied to prod.**
+- **`worker.js`**: exported `computeIapProfilePatch()` (pure entitlement→profile mapping, unit-tested in `tests/iap.test.mjs`, `node --test tests/iap.test.mjs` = 7 pass) + `syncRCSubscriber()` helper; new routes `POST /iap/sync` (authed; re-syncs the caller from RevenueCat REST) and `POST /iap/webhook` (RevenueCat server notifications; exact-match Authorization header vs `REVENUECAT_WEBHOOK_AUTH`); `/validate-code` now stamps `subscription_source:'promo'`; `/subscription/downgrade-expired` re-syncs `apple_iap` subs from RevenueCat instead of blind-downgrading (renewal the webhook missed ≠ expired). All profile writes stay service-key (the column-lock trigger from the audit blocks client writes).
+- **`app.html`**: `RC_IOS_API_KEY` const (line ~1683, **empty = IAP disabled**); `mvIAP` module (configure/logIn per user, `getOfferings` → `purchasePackage({aPackage})` → `/iap/sync` → `loadProfile`, restore, localized `priceString` swap on the paywall); `subscribe()` routes native→IAP-only (never Stripe on iOS), web unchanged; paywall gains Restore Purchases (native) and hides the promo-code row on native (3.1.1) — the auto-renew price + Terms/Privacy disclosure already existed on the paywall via `openLegal()` from the earlier audit session, so 3.1.2 was already covered (left as-is); `manageSubscription()` → Apple's manage-subscriptions page for `apple_iap` subs; `renderBillingCard()` (BCBA practice Stripe card) returns `''` on native; `enterApp()` calls `mvIAP.init()`; `loadProfile()` expiry check calls `/iap/sync` for `apple_iap` subs.
+- **`package.json`**: `@revenuecat/purchases-capacitor@13.2.2` (Capacitor 8 compatible) + `"type":"module"` (needed for `node --test`; `npx cap` verified still working). `npx cap sync ios` ran — `ios/App/CapApp-SPM/Package.swift` now lists `RevenuecatPurchasesCapacitor`.
+
+### Jorrel's half (in order — nothing charges until all done)
+
+1. **App Store Connect:** Agreements → Paid Apps active. Create auto-renewable subscription: product id `mv_pro_monthly`, group "Modern Village Pro", $19.99/mo, display name "Modern Village Coach Pro". Add a sandbox tester (Users & Access → Sandbox).
+2. **RevenueCat:** account + project → add iOS app (bundle `app.modernvillage.ios`) → upload an App Store Connect In-App Purchase API key → entitlement `pro` → attach product `mv_pro_monthly` → offering `default` with a Monthly package.
+3. **Keys:** public Apple SDK key (`appl_…`) → `RC_IOS_API_KEY` in app.html (ships with the site — no binary rebuild). Secret key (`sk_…`) → `wrangler secret put REVENUECAT_API_KEY`. Random string → RevenueCat webhook "Authorization header value" AND `wrangler secret put REVENUECAT_WEBHOOK_AUTH`. Webhook URL: `https://village-api.jorrelpatterson.workers.dev/iap/webhook`.
+4. **Apply** `supabase/migrations/20260711_iap_subscription_source.sql` in the Supabase SQL editor.
+5. **Deploy:** approve diffs → commit/push (Vercel) + `wrangler deploy`.
+6. **Xcode:** open `ios/App`, add the **In-App Purchase capability** to the App target, build to a device, sign into the sandbox tester (Settings → App Store → Sandbox Account), test purchase + Restore Purchases. Sandbox subs renew every few minutes and expire fast — a quick downgrade there is expected, not a bug. Hard-refresh the app after the web deploy (iOS caches HTML aggressively).
+7. **At submission time:** the FIRST subscription must ride along with the app version — on the version's page in App Store Connect, scroll to "In-App Purchases and Subscriptions" and attach `mv_pro_monthly` (plus its review screenshot) before clicking Submit for Review. Sandbox testing works fine before this, even while the product says "Missing Metadata".
+
+### Known gaps (deliberate, out of scope)
+
+- Web consumer Stripe checkout was ALREADY a dead end — `subscribe()` calls `/create-checkout` and `manageSubscription()` calls `/create-portal`, but neither route exists in worker.js (only the practice-billing `/stripe/create-checkout` + `/stripe/portal` exist). Pre-existing; the web $19.99 sub only ever activates via promo codes today. Decide later: build the consumer web checkout or drop the web upgrade button.
+- No Android IAP (no Android release planned yet); `updateSubSt()` hardcodes "$19.99/mo" copy (fine for US-only launch).
+
+---
+
+## Previous session — 2026-05-27 (Grants strategy audit + NSF SBIR pitch drafted)
 
 **Context:** Jorrel asked to work on grants. Audit revealed the playbook's grant lineup was almost entirely wrong for Modern Village's legal structure.
 

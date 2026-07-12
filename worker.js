@@ -24,6 +24,25 @@ function checkRate(ip, type) {
   return e.c <= max;
 }
 
+// ═══ APPLE IAP (RevenueCat) — pure mapping from a RevenueCat subscriber to a profiles PATCH ═══
+// Returns the PATCH body, or null when the profile must not be touched.
+// Guard: only downgrade profiles whose Pro came from Apple IAP — never promo/legacy rows.
+export function computeIapProfilePatch(subscriber, profileRow, nowMs) {
+  const ent = subscriber && subscriber.entitlements && subscriber.entitlements['pro'];
+  const active = !!(ent && (!ent.expires_date || Date.parse(ent.expires_date) > nowMs));
+  if (active) {
+    return {
+      subscription_status: 'pro',
+      subscription_expires_at: ent.expires_date || null,
+      subscription_source: 'apple_iap'
+    };
+  }
+  if (profileRow && profileRow.subscription_status === 'pro' && profileRow.subscription_source === 'apple_iap') {
+    return { subscription_status: 'free' };
+  }
+  return null;
+}
+
 function getCors(request) {
   const origin = request.headers.get('Origin') || '';
   const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
@@ -221,6 +240,31 @@ async function verifyToken(token, env) {
   } catch { return null; }
 }
 
+// Re-fetch one subscriber from RevenueCat and sync their profile row (service key).
+// Source of truth for /iap/sync and every /iap/webhook event — idempotent.
+async function syncRCSubscriber(userId, env) {
+  if (!env.REVENUECAT_API_KEY) return { synced: false, error: 'RevenueCat not configured' };
+  const rcR = await fetch('https://api.revenuecat.com/v1/subscribers/' + encodeURIComponent(userId), {
+    headers: { 'Authorization': 'Bearer ' + env.REVENUECAT_API_KEY, 'Content-Type': 'application/json' }
+  });
+  if (!rcR.ok) return { synced: false, error: 'revenuecat ' + rcR.status };
+  const rcData = await rcR.json();
+  const sh = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY };
+  const pr = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + encodeURIComponent(userId) + '&select=subscription_status,subscription_source', { headers: sh });
+  const rows = await pr.json();
+  if (!rows.length) return { synced: false, error: 'no profile' };
+  const patch = computeIapProfilePatch(rcData.subscriber, rows[0], Date.now());
+  if (patch) {
+    await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + encodeURIComponent(userId), {
+      method: 'PATCH',
+      headers: { ...sh, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(patch)
+    });
+  }
+  const isPro = patch ? patch.subscription_status === 'pro' : rows[0].subscription_status === 'pro';
+  return { synced: true, pro: isPro };
+}
+
 function emailWrapper(bodyContent, unsubscribeUrl) {
   var unsub = unsubscribeUrl || 'https://modernvillage.app/app.html';
   var unsubText = unsubscribeUrl ? 'Unsubscribe' : 'Manage email preferences';
@@ -376,6 +420,27 @@ export default {
         }
       }
       return new Response('{"ok":true}', { headers: h });
+    }
+
+    // ═══ REVENUECAT WEBHOOK (Apple IAP lifecycle: purchases, renewals, expirations) ═══
+    // Auth: RevenueCat sends the configured "Authorization header value" verbatim.
+    if (url.pathname === '/iap/webhook') {
+      if (!env.REVENUECAT_WEBHOOK_AUTH || request.headers.get('Authorization') !== env.REVENUECAT_WEBHOOK_AUTH) {
+        return new Response('{"error":"Unauthorized"}', { status: 401, headers: h });
+      }
+      const ev = body && body.event;
+      if (ev) {
+        const ids = [];
+        if (ev.app_user_id) ids.push(ev.app_user_id);
+        (ev.transferred_to || []).forEach(function(id){ ids.push(id); });
+        (ev.transferred_from || []).forEach(function(id){ ids.push(id); });
+        for (const id of ids) {
+          if (id && !String(id).startsWith('$RCAnonymousID')) {
+            try { await syncRCSubscriber(id, env); } catch (e) {}
+          }
+        }
+      }
+      return new Response('{"received":true}', { headers: h });
     }
 
     // === FEEDBACK NOTIFICATION ===
@@ -565,12 +630,30 @@ export default {
       const user = await verifyToken(authToken, env);
       if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
       const sh = { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY };
-      const pr = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=subscription_status,subscription_expires_at', { headers: sh });
+      const pr = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=subscription_status,subscription_expires_at,subscription_source', { headers: sh });
       const rows = await pr.json();
       if (rows.length && rows[0].subscription_status === 'pro' && rows[0].subscription_expires_at && new Date(rows[0].subscription_expires_at) < new Date()) {
-        await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id, { method: 'PATCH', headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify({ subscription_status: 'free' }) });
+        if (rows[0].subscription_source === 'apple_iap') {
+          // Apple owns this sub — re-sync from RevenueCat (a renewal may have happened).
+          try { await syncRCSubscriber(user.id, env); } catch (e) {}
+        } else {
+          await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id, { method: 'PATCH', headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify({ subscription_status: 'free' }) });
+        }
       }
       return new Response('{"success":true}', { headers: h });
+    }
+
+    // === IAP: sync the caller's OWN RevenueCat entitlement into their profile ===
+    // Called by the app right after purchase/restore and on app-open for apple_iap subs.
+    if (url.pathname === '/iap/sync') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      try {
+        const result = await syncRCSubscriber(user.id, env);
+        return new Response(JSON.stringify(result), { headers: h });
+      } catch (e) {
+        return new Response('{"synced":false,"error":"sync failed"}', { status: 500, headers: h });
+      }
     }
 
     // === SELF-SERVICE PASSWORD RESET (sends reset email) ===
@@ -639,7 +722,7 @@ export default {
             body: JSON.stringify({ times_used: codes[0].times_used + 1 })
           });
           // Set user's subscription expiration to match the code's expires_at
-          const profileUpdate = { subscription_status: 'pro', promo_code: code };
+          const profileUpdate = { subscription_status: 'pro', promo_code: code, subscription_source: 'promo' };
           if (codes[0].expires_at) profileUpdate.subscription_expires_at = codes[0].expires_at;
           await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id, {
             method: 'PATCH',

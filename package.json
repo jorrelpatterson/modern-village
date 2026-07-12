@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Modern Village iOS + Android Capacitor wrap",
   "private": true,
+  "type": "module",
   "scripts": {
     "cap": "cap"
   },
@@ -18,7 +19,8 @@
     "@capacitor/share": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capawesome/capacitor-apple-sign-in": "^0.1.0",
-    "@capawesome/capacitor-badge": "^8.0.2"
+    "@capawesome/capacitor-badge": "^8.0.2",
+    "@revenuecat/purchases-capacitor": "^13.2.2"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",

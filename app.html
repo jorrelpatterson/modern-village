@@ -1169,7 +1169,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
   <header class="hdr"><div class="hdr-left"><button class="hdr-menu" onclick="openSb()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div style="display:flex;align-items:center;gap:8px"><div class="hdr-logo"><svg width="18" height="18" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 24C8 32 14 38 22 38C30 38 36 32 36 24C36 14 22 6 22 6Z" fill="white" opacity="0.9"/><circle cx="22" cy="24" r="4" fill="white"/></svg></div><span class="hdr-name">Modern <span>Village</span></span></div></div><div class="hdr-av" id="hdrAv" onclick="openSb()">?</div></header>
 
   <div class="scroll" id="mainScroll"><div class="minner">
-    <div id="tCoach" class="tab on"><div id="childSwitcher" style="display:none;gap:8px;padding:0 0 12px;overflow-x:auto;flex-wrap:wrap"></div><div id="upgradeBanner" style="display:none"></div><div id="streakArea" style="display:none;padding:4px 0 8px"></div><div id="predictionsArea" style="display:none;margin-bottom:8px"></div><div id="coachEmpty" class="ce"><div class="ce-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/><path d="M19 15L19.75 17.25L22 18L19.75 18.75L19 21L18.25 18.75L16 18L18.25 17.25L19 15Z" opacity="0.6"/></svg></div><h2>Modern Village Coach</h2><p>ABA-powered behavior strategies delivered as step-by-step cards.</p><p style="font-size:11px;color:var(--warm-gray-light);margin-top:8px;line-height:1.45">Educational support only — not medical advice, diagnosis, or a substitute for care from your licensed provider. If someone is in danger or crisis, call or text <b>988</b>, or call <b>911</b>.</p><div id="ceProfile" class="ce-profile hidden"></div><div id="freeCtr" class="free-ctr"></div><div id="sugs" style="margin-top:20px;display:flex;flex-direction:column;gap:8px"></div><div class="ariana-banner" onclick="switchTab('pros')"><div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--lavender),rgba(212,200,232,0.6));display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div><div style="flex:1"><div style="font-weight:700;font-size:14px">Need deeper support? Book a Pro session</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Certified BCBAs — from $55/session</div></div><div style="color:var(--warm-gray-light);font-size:18px">&rarr;</div></div></div><div id="chatMsgs" class="msgs hidden"></div><div id="paywall" class="paywall hidden"><div class="paywall-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/></svg></div><h3>Unlock Unlimited Coaching</h3><p>Upgrade for unlimited ABA strategy cards.</p><div class="pw-price">$19<span style="font-size:18px;font-weight:500">.99</span></div><div class="pw-period">per month &middot; cancel anytime</div><ul class="pw-feats"><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Unlimited strategy cards</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Save &amp; revisit strategies</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Behavior tracking</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Available 24/7</li></ul><button class="pw-btn" onclick="subscribe()">Start Modern Village Coach &mdash; $19.99/mo</button><div style="font-size:10px;color:var(--warm-gray-light);margin-top:8px;line-height:1.4;text-align:center">$19.99/month, auto-renews until cancelled. <span onclick="openLegal('terms')" style="text-decoration:underline;cursor:pointer">Terms</span> &middot; <span onclick="openLegal('privacy')" style="text-decoration:underline;cursor:pointer">Privacy</span></div><div style="display:flex;gap:8px;margin-top:12px;align-items:center"><input id="promoInput" class="fi" style="flex:1;padding:10px 14px;font-size:14px;text-align:center;text-transform:uppercase" placeholder="Have a code?" maxlength="20"><button class="btn btn-s" style="padding:10px 16px" onclick="redeemCode()">Redeem</button></div><button class="pw-skip" onclick="dismissPw()">Maybe later</button></div></div>
+    <div id="tCoach" class="tab on"><div id="childSwitcher" style="display:none;gap:8px;padding:0 0 12px;overflow-x:auto;flex-wrap:wrap"></div><div id="upgradeBanner" style="display:none"></div><div id="streakArea" style="display:none;padding:4px 0 8px"></div><div id="predictionsArea" style="display:none;margin-bottom:8px"></div><div id="coachEmpty" class="ce"><div class="ce-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/><path d="M19 15L19.75 17.25L22 18L19.75 18.75L19 21L18.25 18.75L16 18L18.25 17.25L19 15Z" opacity="0.6"/></svg></div><h2>Modern Village Coach</h2><p>ABA-powered behavior strategies delivered as step-by-step cards.</p><p style="font-size:11px;color:var(--warm-gray-light);margin-top:8px;line-height:1.45">Educational support only — not medical advice, diagnosis, or a substitute for care from your licensed provider. If someone is in danger or crisis, call or text <b>988</b>, or call <b>911</b>.</p><div id="ceProfile" class="ce-profile hidden"></div><div id="freeCtr" class="free-ctr"></div><div id="sugs" style="margin-top:20px;display:flex;flex-direction:column;gap:8px"></div><div class="ariana-banner" onclick="switchTab('pros')"><div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--lavender),rgba(212,200,232,0.6));display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div><div style="flex:1"><div style="font-weight:700;font-size:14px">Need deeper support? Book a Pro session</div><div style="font-size:12px;color:var(--warm-gray);margin-top:2px">Certified BCBAs — from $55/session</div></div><div style="color:var(--warm-gray-light);font-size:18px">&rarr;</div></div></div><div id="chatMsgs" class="msgs hidden"></div><div id="paywall" class="paywall hidden"><div class="paywall-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/></svg></div><h3>Unlock Unlimited Coaching</h3><p>Upgrade for unlimited ABA strategy cards.</p><div class="pw-price" id="pwPrice">$19<span style="font-size:18px;font-weight:500">.99</span></div><div class="pw-period">per month &middot; cancel anytime</div><ul class="pw-feats"><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Unlimited strategy cards</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Save &amp; revisit strategies</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Behavior tracking</li><li><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Available 24/7</li></ul><button class="pw-btn" onclick="subscribe()">Start Modern Village Coach &mdash; $19.99/mo</button><div style="font-size:10px;color:var(--warm-gray-light);margin-top:8px;line-height:1.4;text-align:center">$19.99/month, auto-renews until cancelled. <span onclick="openLegal('terms')" style="text-decoration:underline;cursor:pointer">Terms</span> &middot; <span onclick="openLegal('privacy')" style="text-decoration:underline;cursor:pointer">Privacy</span></div><div id="pwPromoRow" style="display:flex;gap:8px;margin-top:12px;align-items:center"><input id="promoInput" class="fi" style="flex:1;padding:10px 14px;font-size:14px;text-align:center;text-transform:uppercase" placeholder="Have a code?" maxlength="20"><button class="btn btn-s" style="padding:10px 16px" onclick="redeemCode()">Redeem</button></div><button class="pw-skip" onclick="dismissPw()">Maybe later</button><button id="pwRestore" class="pw-skip" style="display:none" onclick="restorePurchases()">Restore Purchases</button></div></div>
     <div id="tPros" class="tab"><div id="providerView"></div></div>
     <div id="tComm" class="tab">
       <div style="margin-bottom:4px"><h2 style="font-family:'Fraunces',serif;font-size:24px;font-weight:800">Your Village</h2><p style="color:var(--warm-gray);font-size:14px;margin-top:4px">Real parents. Real stories. Real support.</p></div>
@@ -1681,6 +1681,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
 var SUPA_URL = "https://jrsiqjfwvunrjiihnsgc.supabase.co";
 var SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyc2lxamZ3dnVucmppaWhuc2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MTUyMDksImV4cCI6MjA5MDQ5MTIwOX0.KLkbX6wjMpIty_gwV3HuE5bs-Wlut-VlRhBGP4VnrO4";
 var API_URL = "https://village-api.jorrelpatterson.workers.dev/";
+var RC_IOS_API_KEY = "appl_zaeKXnzzkIGfGfuGOUJOjjwqJnB"; // RevenueCat PUBLIC iOS SDK key. Empty string disables IAP on native. Served remotely — key changes need no new binary.
 var sb;
 try { sb = supabase.createClient(SUPA_URL, SUPA_KEY); } catch(e) { console.error('Supabase init failed:', e); }
 
@@ -1920,6 +1921,96 @@ var mvNative = {
     }
   }
 };
+
+// ═══ APPLE IN-APP PURCHASE (RevenueCat) — iOS only; web keeps Stripe ═══
+// Plugin reached via the same native bridge proxy as every other plugin.
+// The client NEVER writes subscription_status (column is trigger-locked);
+// the worker /iap/sync + /iap/webhook write it from RevenueCat truth.
+var mvIAP={
+  _ready:false,
+  _appUserID:null,
+  plugin:function(){return (window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Purchases)||null},
+  available:function(){
+    if(!RC_IOS_API_KEY)return false;
+    if(typeof mvNative==='undefined'||!mvNative.isNative())return false;
+    if(!(window.Capacitor.getPlatform&&window.Capacitor.getPlatform()==='ios'))return false;
+    return !!mvIAP.plugin();
+  },
+  init:async function(){
+    if(!mvIAP.available()||!S.user)return;
+    if(mvIAP._appUserID===S.user.id)return;
+    var P=mvIAP.plugin();
+    try{
+      if(mvIAP._ready){await P.logIn({appUserID:S.user.id});}
+      else{await P.configure({apiKey:RC_IOS_API_KEY,appUserID:S.user.id});mvIAP._ready=true;}
+      mvIAP._appUserID=S.user.id;
+    }catch(e){console.error('[IAP] init:',e)}
+  },
+  getMonthlyPackage:async function(){
+    var offs=await mvIAP.plugin().getOfferings();
+    var off=(offs&&offs.current)||((offs&&offs.all)?offs.all['default']:null);
+    if(!off||!off.availablePackages||!off.availablePackages.length)return null;
+    for(var i=0;i<off.availablePackages.length;i++){
+      if(off.availablePackages[i].packageType==='MONTHLY')return off.availablePackages[i];
+    }
+    return off.availablePackages[0];
+  },
+  refreshPaywallPrice:async function(){
+    if(!mvIAP.available())return;
+    try{
+      await mvIAP.init();
+      var pkg=await mvIAP.getMonthlyPackage();
+      if(pkg&&pkg.product&&pkg.product.priceString){
+        var priceEl=document.getElementById('pwPrice');
+        if(priceEl)priceEl.textContent=pkg.product.priceString;
+        var btn=document.querySelector('.pw-btn');
+        if(btn&&!btn.disabled)btn.textContent='Start Modern Village Coach — '+pkg.product.priceString+'/mo';
+      }
+    }catch(e){}
+  },
+  purchase:async function(){
+    if(!S.user){showAuth(true);return}
+    var btn=document.querySelector('.pw-btn');
+    try{
+      if(btn){btn.disabled=true;btn.textContent='Opening App Store...'}
+      await mvIAP.init();
+      var pkg=await mvIAP.getMonthlyPackage();
+      if(!pkg){showToast('Subscription is not available right now. Please try again later.');return}
+      var res=await mvIAP.plugin().purchasePackage({aPackage:pkg});
+      var info=res&&res.customerInfo;
+      var active=!!(info&&info.entitlements&&info.entitlements.active&&info.entitlements.active['pro']);
+      if(active){
+        try{await authFetch(API_URL+'iap/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})}catch(e){}
+        await loadProfile();
+        if(!S.subscribed)S.subscribed=true; // worker sync may lag a beat — Apple already charged
+        dismissPw();updateFreeCtr();updateSubSt();renderSb();
+        showToast('Welcome to Coach Pro! Unlimited coaching unlocked.');
+      }else{
+        showToast('Purchase not completed.');
+      }
+    }catch(e){
+      var msg=String((e&&e.message)||'');
+      if(!/cancel/i.test(msg)){console.error('[IAP] purchase:',e);showToast('Purchase failed. Please try again.')}
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent='Start Modern Village Coach — $19.99/mo'}
+      mvIAP.refreshPaywallPrice();
+    }
+  },
+  restore:async function(){
+    if(!mvIAP.available())return;
+    try{
+      showToast('Restoring purchases...');
+      await mvIAP.init();
+      var res=await mvIAP.plugin().restorePurchases();
+      try{await authFetch(API_URL+'iap/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})}catch(e){}
+      await loadProfile();
+      updateFreeCtr();updateSubSt();renderSb();
+      if(S.subscribed){dismissPw();showToast('Coach Pro restored!')}
+      else{showToast('No previous purchases found.')}
+    }catch(e){console.error('[IAP] restore:',e);showToast('Could not restore purchases.')}
+  }
+};
+function restorePurchases(){mvIAP.restore()}
 
 // Offer biometric opt-in after first sign-in (native only)
 function mvBiometricPromptKey(){ return S.user ? 'mv_applock_prompted_'+S.user.id : null; }
@@ -2477,6 +2568,7 @@ async function openPracticeDashboard(){
 }
 
 function renderBillingCard(p, isOwner, trialDaysLeft){
+  if(typeof mvNative!=='undefined'&&mvNative.isNative())return ''; // BCBA billing is web-only — no Stripe UI on iOS (3.1.1)
   var status = p.subscription_status || 'trialing';
   var pastDueDays = p.past_due_since ? Math.floor((new Date() - new Date(p.past_due_since))/86400000) : 0;
   var bg, color, headline, sub, cta;
@@ -5915,7 +6007,16 @@ async function loadProfile(){
     if(isSubActive&&r.data.subscription_expires_at){
       if(new Date(r.data.subscription_expires_at)<new Date()){
         isSubActive=false;
-        try{authFetch(API_URL+'subscription/downgrade-expired',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).catch(function(){})}catch(e){}
+        if(r.data.subscription_source==='apple_iap'){
+          // Apple may have renewed while our webhook slept — ask the worker to re-sync from RevenueCat.
+          try{
+            var iapR=await authFetch(API_URL+'iap/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+            var iapD=await iapR.json();
+            if(iapD&&iapD.pro)isSubActive=true;
+          }catch(e){}
+        } else {
+          try{authFetch(API_URL+'subscription/downgrade-expired',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).catch(function(){})}catch(e){}
+        }
       }
     }
     S.sharedPro=false;
@@ -6237,6 +6338,7 @@ function enterApp(){
   if(typeof registerPushNotifications==='function') registerPushNotifications();
   // Clear push badge when user actually enters the app
   if(S.user){
+    if(typeof mvIAP!=='undefined')mvIAP.init();
     try {
       authFetch(API_URL+'push/clear-badge',{ method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' }).catch(function(){});
     } catch(e){}
@@ -6503,10 +6605,16 @@ for(var i=0;i<sugs.length;i++){var s=sugs[i];h+='<button class="sug" style="anim
 if(S.user&&!childInsights){fetchChildContext().then(function(){renderSugs()})}
 }
 function canSend(){return S.subscribed||S.freeUsed<S.freeLimit}
-function showPw(){document.getElementById('paywall').classList.remove('hidden');document.getElementById('coachEmpty').classList.add('hidden');document.getElementById('chatBar').style.display='none'}
+function showPw(){document.getElementById('paywall').classList.remove('hidden');document.getElementById('coachEmpty').classList.add('hidden');document.getElementById('chatBar').style.display='none';var pwNative=typeof mvNative!=='undefined'&&mvNative.isNative();var pwPromo=document.getElementById('pwPromoRow');if(pwPromo)pwPromo.style.display=pwNative?'none':'flex';var pwRest=document.getElementById('pwRestore');if(pwRest)pwRest.style.display=(pwNative&&mvIAP.available())?'block':'none';if(pwNative)mvIAP.refreshPaywallPrice();}
 function dismissPw(){document.getElementById('paywall').classList.add('hidden');if(S.msgs.length)document.getElementById('chatMsgs').classList.remove('hidden');else document.getElementById('coachEmpty').classList.remove('hidden');document.getElementById('chatBar').style.display='block'}
 async function subscribe(){
   if(!S.user){showAuth(true);return}
+  // iOS/native: Apple IAP only — a Stripe checkout here is an App Store 3.1.1 rejection.
+  if(typeof mvNative!=='undefined'&&mvNative.isNative()){
+    if(mvIAP.available()){await mvIAP.purchase();}
+    else{showToast('Subscriptions are coming to the app soon.')}
+    return;
+  }
   try{
     var btn=document.querySelector('.pw-btn');
     if(btn){btn.disabled=true;btn.textContent='Redirecting to checkout...'}
@@ -6526,6 +6634,13 @@ async function subscribe(){
 }
 
 async function manageSubscription(){
+  var src=S.profile&&S.profile.subscription_source;
+  if(typeof mvNative!=='undefined'&&mvNative.isNative()){
+    if(src==='apple_iap'){window.open('https://apps.apple.com/account/subscriptions','_blank');}
+    else{showToast('Nothing to manage on this account.')}
+    return;
+  }
+  if(src==='apple_iap'){showToast('Manage your subscription in the App Store on your iPhone.');return}
   try{
     showToast('Opening billing portal...');
     var r=await authFetch(API_URL+'create-portal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
