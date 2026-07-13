@@ -1667,7 +1667,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
     <div id="tmStepsWrap" style="display:none;margin-top:18px">
       <div class="label" style="margin-bottom:6px">Task analysis steps</div>
       <div id="tmStepsList"></div>
-      <button class="btn btn-s" style="margin-top:8px;font-size:12px;padding:6px 10px" onclick="addStep()">+ Add step</button>
+      <button class="btn btn-s" style="margin-top:8px;font-size:12px;padding:6px 10px" onclick="addTaStep()">+ Add step</button>
     </div>
     <div style="display:flex;gap:8px;margin-top:24px">
       <button class="btn btn-s" style="flex:1" onclick="closeTargetModal()">Cancel</button>
@@ -5348,18 +5348,18 @@ function renderSteps(){
     h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">'+
       '<span style="width:24px;font-weight:700;color:var(--warm-gray)">'+(idx+1)+'.</span>'+
       '<input class="fi" style="flex:1;padding:8px 10px;font-size:13px" value="'+esc(s.name)+'" onchange="targetSteps['+idx+'].name=this.value">'+
-      '<button class="btn btn-s" style="padding:4px 8px;font-size:11px" onclick="removeStep('+idx+')">×</button>'+
+      '<button class="btn btn-s" style="padding:4px 8px;font-size:11px" onclick="removeTaStep('+idx+')">×</button>'+
       '</div>';
   });
   el.innerHTML = h;
 }
 
-function addStep(){
+function addTaStep(){
   targetSteps.push({ name: '', description: null });
   renderSteps();
 }
 
-function removeStep(idx){
+function removeTaStep(idx){
   targetSteps.splice(idx, 1);
   renderSteps();
 }
