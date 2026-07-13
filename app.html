@@ -1356,7 +1356,7 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
       <select id="invSupervisorId" class="fi"></select>
     </div>
     <div style="display:flex;gap:8px;margin-top:20px">
-      <button class="btn btn-s" style="flex:1" onclick="closeInviteModal()">Cancel</button>
+      <button class="btn btn-s" style="flex:1" onclick="closeMemberInviteModal()">Cancel</button>
       <button class="btn btn-p" style="flex:1" onclick="submitInviteMember()">Send invite</button>
     </div>
   </div>
@@ -2767,7 +2767,7 @@ async function openInviteModal(){
   document.getElementById('inviteMemberModal').style.display = 'flex';
 }
 
-function closeInviteModal(){
+function closeMemberInviteModal(){
   document.getElementById('inviteMemberModal').style.display = 'none';
 }
 
@@ -2784,7 +2784,7 @@ async function submitInviteMember(){
   });
   var j = await r.json();
   if(!r.ok){ showToast(j.error || 'Invite failed'); return; }
-  closeInviteModal();
+  closeMemberInviteModal();
   showToast('Invite sent to '+email);
   loadPracticeMembers();
 }
