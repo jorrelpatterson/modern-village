@@ -3782,7 +3782,7 @@ async function renderSessionSummary(){
     .select('target_id,planned_trials,targets(id,name,target_type)')
     .eq('session_id', summaryState.sessionId);
   var trR = await sb.from('trials')
-    .select('target_id,prompt_level,response,ioa_observer_id')
+    .select('target_id,prompt_level,response,ioa_observer_id,trial_index')
     .eq('session_id', summaryState.sessionId)
     .is('superseded_by', null);
   var brR = await sb.from('behavior_recordings')
@@ -3804,12 +3804,19 @@ async function renderSessionSummary(){
   Object.keys(ioaTrialsByTarget).forEach(function(tid){
     var primary = trialsByTarget[tid] || [];
     var ioa = ioaTrialsByTarget[tid];
-    var n = Math.min(primary.length, ioa.length);
-    var match = 0;
-    for(var i=0;i<n;i++){
-      if(primary[i].response === ioa[i].response) match++;
-    }
-    ioaByTarget[tid] = n > 0 ? Math.round((match/n)*100) : null;
+    // Pair primary vs observer by trial_index (they share it), not array position,
+    // and score agreement on the full trial value (prompt level + response).
+    var pByIdx = {};
+    primary.forEach(function(p){ if(p.trial_index != null) pByIdx[p.trial_index] = p; });
+    var match = 0, paired = 0;
+    ioa.forEach(function(o){
+      var p = o.trial_index != null ? pByIdx[o.trial_index] : null;
+      if(p){
+        paired++;
+        if(p.prompt_level === o.prompt_level && p.response === o.response) match++;
+      }
+    });
+    ioaByTarget[tid] = paired > 0 ? Math.round((match/paired)*100) : null;
   });
   summaryState.ioaByTarget = ioaByTarget;
   var behaviorsByDef = {};
@@ -4288,6 +4295,7 @@ async function joinAsIoaObserver(sessionId, primaryName){
     ioa_mode: true,
     primary_current_target_id: null,
     primary_current_target_name: null,
+    primary_current_trial_index: null,
     last_behavior_label: null
   };
   document.getElementById('practiceDashboardPage').classList.remove('open');
@@ -4308,6 +4316,7 @@ async function pollIoaTarget(){
     .limit(1);
   if(r.data && r.data.length > 0){
     var t = r.data[0];
+    activeSession.primary_current_trial_index = t.trial_index;
     if(t.target_id !== activeSession.primary_current_target_id){
       activeSession.primary_current_target_id = t.target_id;
       activeSession.primary_current_target_name = t.targets.name;
@@ -4358,7 +4367,9 @@ function renderTrialEntryIoa(target){
 function recordTrialIoa(promptLevel, response){
   if(!activeSession || !activeSession.ioa_mode || !activeSession.primary_current_target_id) return;
   var t = activeSession.targets[0];
-  var trialIndex = t.trials_run + 1;
+  // IOA trials share the primary observer's trial_index so the two records pair up
+  // by trial in the summary (not by array position).
+  var trialIndex = activeSession.primary_current_trial_index != null ? activeSession.primary_current_trial_index : (t.trials_run + 1);
   var stepId = null;
   if(t.target_type === 'task_analysis' && t.steps.length > 0){
     stepId = t.steps[t.step_idx % t.steps.length].id;
