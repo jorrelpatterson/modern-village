@@ -3886,7 +3886,7 @@ async function renderSessionSummary(){
       '<label class="fl">Notes (placeholder — full SOAP in sub-project #5)</label>'+
       '<textarea id="ssNotes" class="fi" rows="3" placeholder="Brief session notes"></textarea>'+
       '<div style="display:flex;gap:8px;margin-top:18px">'+
-      '<button class="btn btn-s" style="flex:1" onclick="closeSessionSummary()">Save &amp; continue editing</button>'+
+      '<button class="btn btn-s" style="flex:1" onclick="saveSessionDetails()">Save &amp; continue editing</button>'+
       '<button class="btn btn-p" style="flex:1" onclick="submitSession()">Submit session</button>'+
       '</div>';
   } else {
@@ -4195,6 +4195,18 @@ async function submitSession(){
   document.getElementById('activeSessionPage').classList.remove('open');
   showToast('Session submitted');
   if(currentClient) renderClientPrograms();
+}
+
+async function saveSessionDetails(){
+  var cpt = document.getElementById('ssCpt').value;
+  var parentPresent = document.getElementById('ssParentPresent').checked;
+  var upd = await sb.from('sessions').update({
+    cpt_code: cpt,
+    parent_present: parentPresent
+  }).eq('id', summaryState.sessionId);
+  if(upd.error){ showToast(upd.error.message); return; }
+  showToast('Saved');
+  closeSessionSummary();
 }
 
 var preSessionState = { client: null, targets: [] };
@@ -5695,7 +5707,7 @@ async function renderAnalysisTargetsTab(){
       '<div><div style="font-weight:700;font-size:13px">'+esc(s.target.name)+'</div><div style="font-size:11px;color:var(--warm-gray)">'+esc(s.clientName)+' · '+esc(s.programName)+' · '+s.daysInTreatment+' days</div></div>'+
       '<div style="font-size:13px;font-weight:700;color:'+(s.pct < 60 ? 'var(--terracotta)' : '#7A6A10')+'">'+Math.round(s.pct)+'%</div>'+
       '</div>';
-  }, 'In treatment >30 days with <80% recent mastery. Click to open graph.');
+  }, 'In treatment >30 days with <80% recent average correct. Click to open graph.');
   h += renderAnalysisCard('Best performing targets', best, function(s){
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--sand);cursor:pointer" onclick="openTargetGraph(\x27'+s.target.id+'\x27)">'+
       '<div><div style="font-weight:700;font-size:13px">'+esc(s.target.name)+'</div><div style="font-size:11px;color:var(--warm-gray)">'+esc(s.clientName)+'</div></div>'+
