@@ -4,7 +4,22 @@ From the 2026-07-11 full-app audit (two independent BCBA passes). This is the wo
 
 **Blocker:** most fixes are in `app.html` (the BCBA module), which was mid-edit by the Apple-IAP thread. Execute this plan on a clean tree **after the IAP work is committed**. SQL-only items can go anytime.
 
-Already done this session: offline-sync data-loss fix, children RLS (client names), cosign-visibility RLS (supervisors can read the note they cosign).
+Already done (2026-07-11): offline-sync data-loss fix, children RLS (client names), cosign-visibility RLS (supervisors can read the note they cosign).
+
+## Status update — 2026-07-12 (shipped this session)
+
+- ✅ **#1 Session resume (P0)** — dashboard routes the primary to `resumeActiveSession`; `openActiveSession` rehydrates trials_run/correct/step_idx from the server so a reloaded session continues instead of stranding.
+- ✅ **#14 End-of-session race** — `drainThenSummary` loops `flush()` until the queue is empty (cap 8s) before opening the summary/SOAP, so it isn't generated from undercounted trials.
+- ✅ **#3 IOA math** — observer now stamps the primary's `trial_index`; summary pairs by index value and scores on prompt_level+response. ⚠️ needs a two-device IOA test + Ariana review before relying on the numbers.
+- ✅ **#7 Timezone** — `mvLocalDate()` for all date-only writes.
+- ✅ **#9 Duplicate function names** — BCBA `addStep`/`removeStep` → `addTaStep`/`removeTaStep`; practice-invite `closeInviteModal` → `closeMemberInviteModal`.
+- ✅ **#13 Save & continue editing** — now persists CPT/parent-present via `saveSessionDetails`.
+- ◑ **#8 (partial)** — relabeled the "recent mastery" metric to "recent average correct"; the auto-advancing mastery evaluator is still TODO (needs Ariana's criteria).
+- 🟡 **#16 Signed-SOAP lock** — migration `20260712_bcba_soap_signature_lock.sql` written; **run it in Supabase**.
+- ⏸ **#17 Cosigned-session trial lock — DEFERRED.** A naive RLS gate returns 403, which the offline queue treats as "auth expired, retry forever," jamming the queue. Fix the offline flush to distinguish a permanent RLS block from a transient 401/403 first, then gate inserts on `status <> 'cosigned'`.
+- ⏸ **#12 Rate behavior type** — left as-is: the def modal reuses the type `<select>` for editing (sets `bdmType.value` from an existing def), so removing the option would silently retype existing rate defs to "frequency". Implement a rate entry mode or render the option conditionally instead.
+
+**Still open:** #4 (SOAP fabrication — verify prior partial fix), #5 (%correct vs %independent — trial-entry UX change), #8-full (mastery evaluator), #6 (tiered pricing — needs Stripe), #10 (undo last trial — needs trials UPDATE policy), #11 (parent "My BCBA" zeros — view/RPC change), #15 (RBT sidebar gating).
 
 ---
 
