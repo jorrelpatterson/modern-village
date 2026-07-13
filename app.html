@@ -2470,10 +2470,13 @@ function renderActiveSessionsCard(sessions){
     var when = new Date(s.start_time).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
     var prov = s.provider && s.provider.profiles ? (s.provider.profiles.name || s.provider.profiles.email) : '(unknown)';
     var child = s.practice_clients && s.practice_clients.children ? s.practice_clients.children.name : '(unknown)';
-    h += '<div onclick="joinAsIoaObserver(\x27'+s.id+'\x27,\x27'+esc(prov)+'\x27)" style="border:1px solid var(--sage-dark);background:var(--sage-light);border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center">'+
+    var mine = S.practiceMember && s.provider_id === S.practiceMember.id;
+    var onclick = mine ? 'resumeActiveSession(\x27'+s.id+'\x27)' : 'joinAsIoaObserver(\x27'+s.id+'\x27,\x27'+esc(prov)+'\x27)';
+    var sub = mine ? ('your session &middot; started '+when+' &middot; tap to resume') : (esc(prov)+' &middot; started '+when+' &middot; tap to join as IOA observer');
+    h += '<div onclick="'+onclick+'" style="border:1px solid var(--sage-dark);background:var(--sage-light);border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center">'+
       '<div><div style="font-weight:700;font-size:14px">'+esc(child)+'</div>'+
-      '<div style="font-size:11px;color:var(--sage-dark);margin-top:2px">'+esc(prov)+' &middot; started '+when+' &middot; tap to join as IOA observer</div></div>'+
-      '<span style="font-size:18px">&#128065;</span>'+
+      '<div style="font-size:11px;color:var(--sage-dark);margin-top:2px">'+sub+'</div></div>'+
+      '<span style="font-size:18px">'+(mine ? '&#9654;&#65039;' : '&#128065;')+'</span>'+
       '</div>';
   });
   h += '</div>';
@@ -2527,7 +2530,7 @@ async function openPracticeDashboard(){
   var cR = await sb.from('practice_clients').select('id,status').eq('practice_id', S.practiceMember.practice_id);
   var mR = await sb.from('practice_members').select('id', { count:'exact', head:true }).eq('practice_id', S.practiceMember.practice_id).eq('active', true);
   var activeSR = await sb.from('sessions')
-    .select('id,start_time,location,provider:practice_members!provider_id(profiles(name,email)),practice_clients!inner(practice_id,children(name))')
+    .select('id,provider_id,start_time,location,provider:practice_members!provider_id(profiles(name,email)),practice_clients!inner(practice_id,children(name))')
     .eq('status', 'in_progress')
     .eq('practice_clients.practice_id', S.practiceMember.practice_id)
     .order('start_time', { ascending: false });
@@ -3731,9 +3734,23 @@ async function archiveProgram(programId){
 function confirmEndSession(){
   if(!activeSession) return;
   if(!confirm('End session? You\x27ll see a summary before it\x27s saved.')) return;
-  mvOffline.flush().finally(function(){
-    setTimeout(function(){ openSessionSummary(activeSession.id, true); }, 600);
-  });
+  drainThenSummary(activeSession.id);
+}
+
+async function drainThenSummary(sid){
+  showToast('Saving trials...');
+  var start = Date.now();
+  // Block until the offline queue is actually empty so the summary/SOAP is not
+  // generated from undercounted trials. flush() only drains 25 ops per call and
+  // no-ops while a sync is already running, so loop until the queue clears (cap 8s).
+  while((mvOffline.queueCount > 0 || mvOffline.syncing) && (Date.now() - start) < 8000){
+    await mvOffline.flush();
+    if(mvOffline.queueCount > 0 || mvOffline.syncing) await new Promise(function(r){ setTimeout(r, 300); });
+  }
+  if(mvOffline.queueCount > 0){
+    showToast(mvOffline.queueCount + ' record(s) still uploading; summary may be incomplete until they finish');
+  }
+  openSessionSummary(sid, true);
 }
 
 var summaryState = { sessionId: null, fromActive: false, ioaByTarget: null };
@@ -4371,6 +4388,11 @@ function exitIoaMode(){
   document.getElementById('activeSessionPage').classList.remove('open');
 }
 
+async function resumeActiveSession(sessionId){
+  document.getElementById('practiceDashboardPage').classList.remove('open');
+  await openActiveSession(sessionId);
+}
+
 async function openActiveSession(sessionId){
   var sR = await sb.from('sessions')
     .select('id,practice_client_id,start_time,location,cpt_code,practice_clients(children(name))')
@@ -4395,13 +4417,36 @@ async function openActiveSession(sessionId){
       step_idx: 0
     };
   });
+  // Resume support: if this session already has trials (e.g. the page was reloaded
+  // mid-session), rehydrate each target counter from the server so the session
+  // continues instead of restarting at trial 1.
+  var exR = await sb.from('trials')
+    .select('target_id,response')
+    .eq('session_id', sessionId)
+    .is('ioa_observer_id', null);
+  if(exR.data && exR.data.length){
+    var byTarget = {};
+    exR.data.forEach(function(tr){
+      var b = byTarget[tr.target_id] || (byTarget[tr.target_id] = { run:0, correct:0 });
+      b.run += 1;
+      if(tr.response === 'correct') b.correct += 1;
+    });
+    targets.forEach(function(t){
+      var b = byTarget[t.id];
+      if(b){
+        t.trials_run = b.run;
+        t.trials_correct = b.correct;
+        if(t.target_type === 'task_analysis' && t.steps.length > 0) t.step_idx = b.run % t.steps.length;
+      }
+    });
+  }
   activeSession = {
     id: sR.data.id,
     practice_client_id: sR.data.practice_client_id,
     child_name: sR.data.practice_clients.children.name,
     targets: targets,
     current_target_idx: targets.length > 0 ? 0 : -1,
-    trial_in_target: 0,
+    trial_in_target: targets.length > 0 ? targets[0].trials_run : 0,
     started_at: new Date(sR.data.start_time),
     last_behavior_label: null
   };
