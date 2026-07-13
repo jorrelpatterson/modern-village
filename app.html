@@ -2973,7 +2973,7 @@ async function submitAddClient(){
     payer_name: payer,
     prior_auth_number: pa,
     status: 'intake',
-    intake_date: new Date().toISOString().slice(0,10)
+    intake_date: mvLocalDate()
   }).select().single();
   if(ins.error){ showToast(ins.error.message); return; }
   var authRows = auths.map(function(a){ return { practice_client_id: ins.data.id, cpt_code: a.cpt_code, weekly_hours_authorized: a.weekly_hours_authorized }; });
@@ -2997,7 +2997,7 @@ async function dischargeClient(practiceClientId){
   if(reason === null) return;
   var upd = await sb.from('practice_clients').update({
     status: 'discharged',
-    discharge_date: new Date().toISOString().slice(0,10),
+    discharge_date: mvLocalDate(),
     discharge_reason: reason || null
   }).eq('id', practiceClientId);
   if(upd.error){ showToast(upd.error.message); return; }
@@ -4093,7 +4093,7 @@ async function saveSoap(quiet){
       provider_id: S.user.id,
       child_id: s.practice_clients.child_id,
       session_id: soapState.sessionId,
-      session_date: new Date(s.start_time).toISOString().slice(0,10),
+      session_date: mvLocalDate(s.start_time),
       duration_minutes: s.end_time ? Math.round((new Date(s.end_time) - new Date(s.start_time))/60000) : null,
       cpt_code: s.cpt_code || null,
       session_type: 'session',
@@ -4155,7 +4155,7 @@ async function submitSession(){
         provider_id: S.user.id,
         child_id: childId,
         session_id: summaryState.sessionId,
-        session_date: new Date().toISOString().slice(0,10),
+        session_date: mvLocalDate(),
         duration_minutes: Math.round((new Date() - activeSession.started_at)/60000),
         cpt_code: cpt,
         session_type: 'session',
@@ -5189,7 +5189,7 @@ function printTargetGraph(){
 }
 
 async function openAnnotationModal(){
-  var dateStr = prompt('Annotation date (YYYY-MM-DD):', new Date().toISOString().slice(0,10));
+  var dateStr = prompt('Annotation date (YYYY-MM-DD):', mvLocalDate());
   if(!dateStr) return;
   var note = prompt('Note text:');
   if(!note) return;
@@ -5215,7 +5215,7 @@ var phaseChangeEditing = null;
 async function openPhaseChangeModal(id){
   phaseChangeEditing = null;
   document.getElementById('pcmTitle').textContent = 'Add phase change';
-  document.getElementById('pcmDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('pcmDate').value = mvLocalDate();
   document.getElementById('pcmLabel').value = 'BIP change';
   document.getElementById('pcmNotes').value = '';
   if(id){
@@ -5703,7 +5703,7 @@ async function renderAnalysisBehaviorsTab(){
   var byDayByClient = {};
   recordings.forEach(function(r){
     var pcId = defToPc[r.behavior_definition_id];
-    var dayKey = new Date(r.timestamp).toISOString().slice(0,10);
+    var dayKey = mvLocalDate(r.timestamp);
     if(!byDayByClient[dayKey]) byDayByClient[dayKey] = {};
     var occ = 0;
     if(r.recording_type === 'frequency' || r.recording_type === 'abc') occ = (r.count || (r.recording_type === 'abc' ? 1 : 0));
@@ -10607,6 +10607,7 @@ function openMilestones(){
   el.innerHTML='<button onclick="closeMilestones()" style="background:none;border:none;font-size:16px;color:var(--sage-dark);cursor:pointer;padding:6px 0 10px;font-weight:700">&larr; Back</button>'+h;
 }
 function closeMilestones(){var el=document.getElementById('milestonesOverlay');if(el)el.remove();}
+function mvLocalDate(d){d=d?new Date(d):new Date();var y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+dd}
 function openLegal(page){var titles={privacy:'Privacy Policy',terms:'Terms of Use'};var ov=document.getElementById('legalOverlay');if(!ov){ov=document.createElement('div');ov.id='legalOverlay';document.body.appendChild(ov);}ov.style.cssText='position:fixed;inset:0;z-index:3200;background:var(--cream,#FDF8F0);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top) + 12px) 20px calc(env(safe-area-inset-bottom) + 24px)';ov.innerHTML='<button onclick="document.getElementById(\x27legalOverlay\x27).remove()" style="background:none;border:none;font-size:16px;color:var(--sage-dark);cursor:pointer;padding:6px 0 10px;font-weight:700">&larr; Back</button><div style="font-family:Fraunces,serif;font-size:22px;font-weight:800;margin-bottom:12px">'+(titles[page]||'Legal')+'</div><div id="legalBody" style="font-size:13px;color:var(--warm-gray);line-height:1.6">Loading…</div>';fetch('https://www.modernvillage.app/'+page+'.html').then(function(r){return r.text()}).then(function(html){var m=html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);var el=document.getElementById('legalBody');if(el)el.innerHTML=m?m[1]:html}).catch(function(){var el=document.getElementById('legalBody');if(el)el.textContent='Unable to load right now — please view it at modernvillage.app/'+page+'.html'})}
 
 // ═══ CHILD/TEEN LOGIN ═══
