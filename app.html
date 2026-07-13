@@ -4011,9 +4011,9 @@ async function generateSoapFromSession(){
     var startedAt = new Date(s.start_time);
     var durMin = s.end_time ? Math.round((new Date(s.end_time) - startedAt) / 60000) : 0;
     var prompt = 'Write a clinical SOAP note for an ABA session. Output STRICTLY in this format with no other text:\n\n'+
-      '===SUBJECTIVE===\n[2-3 sentences about caregiver report / child\x27s presentation at session start. Note the child was '+(s.parent_present?'with parent present':'in standard session')+'.]\n\n'+
+      '===SUBJECTIVE===\n[State only what is known: the child was '+(s.parent_present?'seen with parent/caregiver present':'seen in a standard session')+'. Do NOT invent a caregiver report or presentation details — if none were recorded, write exactly: No caregiver report was recorded for this session.]\n\n'+
       '===OBJECTIVE===\n[Concrete session data — write 3-5 sentences summarizing the trial counts, % correct, prompt-level distribution, and behavior occurrences below. Use third-person clinical language.]\n\n'+
-      '===ASSESSMENT===\n[3-4 sentences interpreting the data clinically: progress vs targets, behavior reduction/increase trends, generalization observations.]\n\n'+
+      '===ASSESSMENT===\n[2-3 sentences interpreting ONLY this session\x27s data: performance on the targets run and behaviors recorded below. Do NOT claim cross-session trends, generalization, or maintenance — only one session of data is provided.]\n\n'+
       '===PLAN===\n[3-4 sentences on next steps: which targets to continue, prompt level adjustments, BIP changes if behaviors trending up, next session focus.]\n\n'+
       'Session context:\n'+
       '- Client: '+childName+'\n'+
@@ -4033,7 +4033,7 @@ async function generateSoapFromSession(){
       body: JSON.stringify({
         model: 'claude-sonnet-5',
         max_tokens: 1200,
-        system: 'You are a clinical documentation assistant for Board Certified Behavior Analysts (BCBAs). Generate professional, insurance-ready SOAP notes from ABA session data. Use clinical ABA terminology. Third person. Specific behavioral observations. Always output ALL FOUR sections separated by ===SUBJECTIVE=== ===OBJECTIVE=== ===ASSESSMENT=== ===PLAN=== markers exactly as shown — never omit a section.',
+        system: 'You are a clinical documentation assistant for Board Certified Behavior Analysts (BCBAs). Generate professional, insurance-ready SOAP notes ONLY from the ABA session data provided. Use clinical ABA terminology, third person. CRITICAL: never state, infer, or invent any observation, caregiver report, trend, generalization, or detail not explicitly present in the provided data — an insurance-billed note must be factual. If a section has no supporting data, say it was not recorded. Always output ALL FOUR sections separated by ===SUBJECTIVE=== ===OBJECTIVE=== ===ASSESSMENT=== ===PLAN=== markers exactly as shown — never omit a section.',
         messages: [{ role: 'user', content: prompt }]
       })
     });
@@ -4054,8 +4054,11 @@ async function generateSoapFromSession(){
     var asm = extract('ASSESSMENT', 'PLAN');
     var pln = extract('PLAN', null);
     if(!sub && !obj && !asm && !pln){
-      // Parsing failed -- dump raw into Objective as fallback
-      obj = text;
+      // Parsing failed -- do NOT dump raw model output into the clinical Objective field; surface a retry.
+      soapState.generating = false;
+      renderSoapEditor();
+      showToast('Could not generate a structured note — please try again');
+      return;
     }
     if(!soapState.note) soapState.note = {};
     soapState.note.soap_subjective = sub;
