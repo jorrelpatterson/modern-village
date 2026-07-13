@@ -1298,6 +1298,15 @@ export default {
     if (!checkRate(ip, 'ai')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
     const user = await verifyToken(authToken, env);
     if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+    // Durable per-user daily quota (fail-open: if the bump_ai_usage RPC isn't applied yet, allow the request).
+    try {
+      const q = await fetch(env.SUPABASE_URL + '/rest/v1/rpc/bump_ai_usage', {
+        method: 'POST',
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_uid: user.id, p_cap: 200 })
+      });
+      if (q.ok) { const allowed = await q.json(); if (allowed === false) return new Response('{"error":"Daily AI limit reached — please try again tomorrow."}', { status: 429, headers: h }); }
+    } catch (e) {}
 
     body.model = 'claude-sonnet-5';
     if (body.max_tokens > 8000) body.max_tokens = 8000;
