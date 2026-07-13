@@ -321,11 +321,16 @@ export default {
         else if (k === 'v1') sig = v;
       });
       if (!ts || !sig) return new Response('{"error":"Missing signature"}', { status: 400, headers: h });
+      // Reject stale/replayed events (Stripe recommends a 5-minute tolerance).
+      if (Math.abs(Math.floor(Date.now() / 1000) - Number(ts)) > 300) return new Response('{"error":"Timestamp out of tolerance"}', { status: 400, headers: h });
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey('raw', encoder.encode(env.STRIPE_WEBHOOK_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
       const signed = await crypto.subtle.sign('HMAC', key, encoder.encode(ts + '.' + rawBody));
       const expected = Array.from(new Uint8Array(signed)).map(function(b){ return b.toString(16).padStart(2, '0'); }).join('');
-      if (expected !== sig) return new Response('{"error":"Bad signature"}', { status: 400, headers: h });
+      // Constant-time comparison of the two hex signatures.
+      let sigDiff = expected.length ^ sig.length;
+      for (let i = 0; i < expected.length && i < sig.length; i++) sigDiff |= expected.charCodeAt(i) ^ sig.charCodeAt(i);
+      if (sigDiff !== 0) return new Response('{"error":"Bad signature"}', { status: 400, headers: h });
       // Verified. Parse event.
       let event;
       try { event = JSON.parse(rawBody); } catch { return new Response('{"error":"Invalid JSON"}', { status: 400, headers: h }); }
@@ -445,14 +450,16 @@ export default {
 
     // === FEEDBACK NOTIFICATION ===
     if (url.pathname === '/feedback-notify') {
+      if (!checkRate(ip, 'email')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
       try {
+        const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         const feedbackBody = (
           '<h1 style="font-size:20px;font-weight:800;color:#2D2D2D;margin:0 0 12px">New Feedback ' + (body.type === 'bug' ? '&#128027;' : body.type === 'improvement' ? '&#128161;' : body.type === 'question' ? '&#10067;' : '&#128172;') + '</h1>' +
           '<div style="background:#FDF8F0;border-radius:12px;padding:16px;margin:12px 0;border-left:4px solid ' + (body.type === 'bug' ? '#C4745A' : '#7A9E7E') + '">' +
-          '<div style="font-size:11px;font-weight:600;color:#9E9790;text-transform:uppercase;margin-bottom:8px">' + (body.type || 'feedback').toUpperCase() + ' &mdash; ' + (body.page || 'unknown page') + '</div>' +
-          '<p style="margin:0;font-size:15px;color:#2D2D2D;line-height:1.6">' + (body.content || '').substring(0, 500) + '</p>' +
+          '<div style="font-size:11px;font-weight:600;color:#9E9790;text-transform:uppercase;margin-bottom:8px">' + esc((body.type || 'feedback').toUpperCase()) + ' &mdash; ' + esc(body.page || 'unknown page') + '</div>' +
+          '<p style="margin:0;font-size:15px;color:#2D2D2D;line-height:1.6">' + esc((body.content || '').substring(0, 500)) + '</p>' +
           '</div>' +
-          '<div style="font-size:13px;color:#9E9790;margin-top:12px">From: ' + (body.user || 'anonymous') + ' (' + (body.role || 'unknown') + ')</div>'
+          '<div style="font-size:13px;color:#9E9790;margin-top:12px">From: ' + esc(body.user || 'anonymous') + ' (' + esc(body.role || 'unknown') + ')</div>'
         );
         await fetch('https://api.resend.com/emails', {
           method: 'POST',
@@ -1165,11 +1172,13 @@ export default {
     if (url.pathname === '/push/notify-reply') {
       const user = await verifyToken(authToken, env);
       if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      if (!checkRate(ip, 'email')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
       const { author_user_id, post_id } = body;
       if (!author_user_id) return new Response('{"error":"Missing author_user_id"}', { status: 400, headers: h });
-      if (author_user_id === user.id) return new Response('{"ok":true,"skipped":"self-reply"}', { headers: h });
-      const result = await sendPushToUser(env, author_user_id, 'Someone replied 💬', 'Your post got a new reply.', 'community_reply', { dedupKey: post_id ? ('r-' + post_id + '-' + Date.now()) : null, data: { post_id: post_id || null } });
-      return new Response(JSON.stringify({ ok: true, ...result }), { headers: h });
+      if (author_user_id === user.id) return new Response('{"ok":true}', { headers: h });
+      // Deterministic dedup (no Date.now, so repeat replies collapse); generic response (no delivery oracle).
+      await sendPushToUser(env, author_user_id, 'Someone replied 💬', 'Your post got a new reply.', 'community_reply', { dedupKey: 'r-' + (post_id || author_user_id) + '-' + user.id, data: { post_id: post_id || null } });
+      return new Response('{"ok":true}', { headers: h });
     }
 
     // ═══ PUSH: NOTIFY NEW STRATEGY CARD (admin-only broadcast) ═══
