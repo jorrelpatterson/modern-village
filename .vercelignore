@@ -8,3 +8,7 @@ ios/
 resources/
 www/
 .superpowers/
+
+# Village Behavioral Services is a separate site / separate Vercel project.
+# Keep it out of the modernvillage.app deploy.
+village-behavioral-services/

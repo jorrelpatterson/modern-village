@@ -45,3 +45,6 @@ AuthKey_*.p8
 jorrel-os.json
 wrangler.toml
 ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+
+# Claude Code local session state (transcripts/subagent logs) — not repo content
+modern-village-claude-state/

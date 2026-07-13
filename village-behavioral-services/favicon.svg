@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Village Behavioral Services">
+  <rect width="64" height="64" rx="15" fill="#2f5d50"/>
+  <path d="M32 48 V30" stroke="#e9f0ec" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M32 33 C32 24 25 19 17 19 C17 28 24 33 32 33 Z" fill="#c4704f"/>
+  <path d="M32 30 C32 21 39 15 48 15 C48 25 40 30 32 30 Z" fill="#8fb3a3"/>
+  <circle cx="32" cy="50" r="2.4" fill="#e9f0ec"/>
+</svg>
