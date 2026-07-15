@@ -4205,6 +4205,7 @@ async function submitSession(){
   document.getElementById('activeSessionPage').classList.remove('open');
   showToast('Session submitted');
   if(currentClient) renderClientPrograms();
+  checkMasteryForSession(summaryState.sessionId);
 }
 
 async function saveSessionDetails(){
@@ -5099,6 +5100,28 @@ async function promoteTargetToMastered(targetId, silent){
   try { await sb.from('phase_changes').insert({ target_id: targetId, occurred_at: new Date().toISOString(), label: 'Mastered', notes: silent ? 'Auto-promoted on meeting mastery criteria' : 'Promoted after meeting mastery criteria' }); } catch(e){}
   if(!silent){ showToast('Target promoted to mastered'); renderTargetGraph(); }
   return true;
+}
+
+// After a session, re-check its targets for mastery: auto-promote automatic goals,
+// nudge for manual ones. The per-target graph banner is the durable surface.
+async function checkMasteryForSession(sessionId){
+  try {
+    var stR = await sb.from('session_targets').select('targets(id,name,status,mastery_criteria)').eq('session_id', sessionId);
+    var rows = (stR.data || []).filter(function(r){ return r.targets && r.targets.status !== 'mastered' && r.targets.status !== 'in_maintenance' && r.targets.status !== 'closed'; });
+    var promoted = [], review = [];
+    for(var i=0;i<rows.length;i++){
+      var tgt = rows[i].targets;
+      var trR = await sb.from('trials').select('prompt_level,session_id,timestamp').eq('target_id', tgt.id).is('superseded_by', null).is('ioa_observer_id', null).order('timestamp', { ascending: true }).limit(2000);
+      var mev = mvEvaluateMastery(tgt, trR.data || []);
+      if(!mev.met) continue;
+      if(mev.mode === 'automatic'){ if(await promoteTargetToMastered(tgt.id, true)) promoted.push(tgt.name); }
+      else review.push(tgt.name);
+    }
+    var parts = [];
+    if(promoted.length) parts.push(promoted.length+' auto-promoted to mastered');
+    if(review.length) parts.push('ready for mastery review: '+review.join(', '));
+    if(parts.length) showToast('Mastery — '+parts.join('; '));
+  } catch(e){ console.error('mastery check failed', e); }
 }
 
 async function openTargetGraph(targetId){
