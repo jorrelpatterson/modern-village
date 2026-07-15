@@ -2502,6 +2502,21 @@ function renderPendingCosignCard(sessions){
   return h;
 }
 
+function renderNeedsReviewCard(targets){
+  if(!targets.length) return '';
+  var h = '<div style="margin-bottom:14px"><div class="label" style="margin-bottom:8px">Maintenance &mdash; needs review ('+targets.length+')</div>';
+  targets.forEach(function(t){
+    var child = t.programs && t.programs.practice_clients && t.programs.practice_clients.children ? t.programs.practice_clients.children.name : '';
+    h += '<div onclick="openTargetGraph(\x27'+t.id+'\x27)" style="border:1px solid var(--terracotta);background:var(--terracotta-light);border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-weight:700;font-size:14px">'+esc(t.name)+'</div>'+
+      '<div style="font-size:11px;color:var(--terracotta);margin-top:2px">'+esc(child)+' &middot; probes below criterion &middot; review</div></div>'+
+      '<span style="font-size:18px">&#9873;</span>'+
+      '</div>';
+  });
+  h += '</div>';
+  return h;
+}
+
 async function openCosignReview(sessionId){
   document.getElementById('practiceDashboardPage').classList.remove('open');
   summaryState = { sessionId: sessionId, fromActive: false, ioaByTarget: null, cosignMode: true };
@@ -2540,6 +2555,10 @@ async function openPracticeDashboard(){
     .is('cosigner_id', null)
     .eq('practice_clients.practice_id', S.practiceMember.practice_id)
     .order('end_time', { ascending: false });
+  var reviewR = await sb.from('targets')
+    .select('id,name,programs!inner(name,practice_clients!inner(practice_id,children(name)))')
+    .eq('status', 'needs_review')
+    .eq('programs.practice_clients.practice_id', S.practiceMember.practice_id);
   var clients = cR.data || [];
   var active = clients.filter(function(c){ return c.status === 'active'; }).length;
   var intake = clients.filter(function(c){ return c.status === 'intake'; }).length;
@@ -2565,6 +2584,7 @@ async function openPracticeDashboard(){
       '<button class="btn btn-s" onclick="openPracticeSettings()">Settings</button>'+
     '</div>'+
     renderActiveSessionsCard(activeSR.data || [])+
+    renderNeedsReviewCard(reviewR.data || [])+
     renderPendingCosignCard(cosignSR.data || [])+
     '</div>';
   el.innerHTML = h;
