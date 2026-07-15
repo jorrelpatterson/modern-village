@@ -3769,6 +3769,20 @@ function closeSessionSummary(){
   }
 }
 
+// Prompt-level breakdown of a set of trials — visualizes prompt fading. Only 'independent'
+// counts toward the mastery-relevant % (per clinical review: prompted = not independent).
+function mvPromptBreakdown(trials){
+  var defs = [['independent','Ind'],['verbal','Vb'],['gestural','Gest'],['partial_physical','PP'],['full_physical','FP'],['incorrect','Inc']];
+  var c = {};
+  (trials || []).forEach(function(x){
+    var k = x.prompt_level === 'independent' ? 'independent' : (x.prompt_level ? x.prompt_level : 'incorrect');
+    c[k] = (c[k] || 0) + 1;
+  });
+  var parts = [];
+  defs.forEach(function(d){ if(c[d[0]]) parts.push(d[1] + ' ' + c[d[0]]); });
+  return parts.join(' &middot; ');
+}
+
 async function renderSessionSummary(){
   var el = document.getElementById('sessionSummaryContent');
   el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading summary…</div>';
@@ -3844,18 +3858,16 @@ async function renderSessionSummary(){
   if(!stR.data || stR.data.length === 0){
     h += '<div style="padding:14px;background:var(--cream);border-radius:12px;font-size:13px;color:var(--warm-gray)">No targets in this session.</div>';
   } else {
-    h += '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:18px"><thead><tr style="border-bottom:1px solid var(--sand);text-align:left"><th style="padding:6px 4px">Target</th><th style="padding:6px 4px;text-align:right">Run/Plan</th><th style="padding:6px 4px;text-align:right">% correct</th><th style="padding:6px 4px;text-align:right">% indep</th><th style="padding:6px 4px;text-align:right">IOA</th></tr></thead><tbody>';
+    h += '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:18px"><thead><tr style="border-bottom:1px solid var(--sand);text-align:left"><th style="padding:6px 4px">Target</th><th style="padding:6px 4px;text-align:right">Run/Plan</th><th style="padding:6px 4px;text-align:right">% independent</th><th style="padding:6px 4px;text-align:right">IOA</th></tr></thead><tbody>';
     stR.data.forEach(function(row){
       var t = row.targets || {};
       var trials = trialsByTarget[row.target_id] || [];
       var total = trials.length;
-      var correct = trials.filter(function(x){ return x.response === 'correct'; }).length;
       var indep = trials.filter(function(x){ return x.prompt_level === 'independent'; }).length;
-      var pctCorrect = total > 0 ? Math.round((correct/total)*100) : 0;
       var pctIndep = total > 0 ? Math.round((indep/total)*100) : 0;
       var ioaPct = ioaByTarget[row.target_id];
       var ioaCell = ioaPct === undefined || ioaPct === null ? '—' : (ioaPct >= 80 ? '<span style="color:var(--sage-dark);font-weight:700">'+ioaPct+'%</span>' : '<span style="color:#7A6A10;font-weight:700">'+ioaPct+'%</span>');
-      h += '<tr style="border-bottom:1px solid var(--sand)"><td style="padding:8px 4px">'+esc(t.name)+'</td><td style="padding:8px 4px;text-align:right">'+total+'/'+(row.planned_trials||'?')+'</td><td style="padding:8px 4px;text-align:right">'+pctCorrect+'%</td><td style="padding:8px 4px;text-align:right">'+pctIndep+'%</td><td style="padding:8px 4px;text-align:right">'+ioaCell+'</td></tr>';
+      h += '<tr style="border-bottom:1px solid var(--sand)"><td style="padding:8px 4px">'+esc(t.name)+(mvPromptBreakdown(trials)?'<div style="font-size:10px;color:var(--warm-gray);margin-top:2px">'+mvPromptBreakdown(trials)+'</div>':'')+'</td><td style="padding:8px 4px;text-align:right">'+total+'/'+(row.planned_trials||'?')+'</td><td style="padding:8px 4px;text-align:right">'+pctIndep+'%</td><td style="padding:8px 4px;text-align:right">'+ioaCell+'</td></tr>';
     });
     h += '</tbody></table>';
   }
@@ -3967,7 +3979,7 @@ function renderSoapEditor(){
       '<textarea id="soap_'+fieldName+'" class="fi" rows="5" '+(canEdit?'':'readonly')+' style="font-size:13px;line-height:1.5'+(canEdit?'':';background:var(--cream)')+'">'+esc(value || '')+'</textarea></div>';
   }
   h += section('S — Subjective', 'parent / RBT observations, child\x27s mood at start', 'subjective', n.soap_subjective);
-  h += section('O — Objective', 'session data: trial counts, % correct, behavior occurrences', 'objective', n.soap_objective);
+  h += section('O — Objective', 'session data: trial counts, % independent, behavior occurrences', 'objective', n.soap_objective);
   h += section('A — Assessment', 'clinical interpretation of the data, progress vs goals', 'assessment', n.soap_assessment);
   h += section('P — Plan', 'next steps, intervention changes, what to run next session', 'plan', n.soap_plan);
   // Sign + save buttons
@@ -3993,18 +4005,16 @@ async function generateSoapFromSession(){
     var brR = await sb.from('behavior_recordings').select('behavior_definition_id,recording_type,count,duration_seconds,interval_data,function_category,notes,behavior_definitions(name)').eq('session_id', sessionId).is('superseded_by', null);
     var trialsByTarget = {};
     (trR.data || []).forEach(function(t){
-      if(!trialsByTarget[t.target_id]) trialsByTarget[t.target_id] = { total: 0, correct: 0, independent: 0 };
+      if(!trialsByTarget[t.target_id]) trialsByTarget[t.target_id] = { total: 0, independent: 0 };
       var b = trialsByTarget[t.target_id];
       b.total += 1;
-      if(t.response === 'correct') b.correct += 1;
       if(t.prompt_level === 'independent') b.independent += 1;
     });
     var targetSummary = (stR.data || []).map(function(row){
       var t = row.targets || {};
-      var stats = trialsByTarget[row.target_id] || { total: 0, correct: 0, independent: 0 };
-      var pctCorrect = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
+      var stats = trialsByTarget[row.target_id] || { total: 0, independent: 0 };
       var pctIndep = stats.total > 0 ? Math.round((stats.independent / stats.total) * 100) : 0;
-      return '- '+t.name+' ('+t.target_type+'): '+stats.total+' trials run, '+pctCorrect+'% correct, '+pctIndep+'% independent';
+      return '- '+t.name+' ('+t.target_type+'): '+stats.total+' trials run, '+pctIndep+'% independent';
     }).join('\n');
     var behaviorsByDef = {};
     (brR.data || []).forEach(function(br){
@@ -4036,7 +4046,7 @@ async function generateSoapFromSession(){
     var durMin = s.end_time ? Math.round((new Date(s.end_time) - startedAt) / 60000) : 0;
     var prompt = 'Write a clinical SOAP note for an ABA session. Output STRICTLY in this format with no other text:\n\n'+
       '===SUBJECTIVE===\n[State only what is known: the child was '+(s.parent_present?'seen with parent/caregiver present':'seen in a standard session')+'. Do NOT invent a caregiver report or presentation details — if none were recorded, write exactly: No caregiver report was recorded for this session.]\n\n'+
-      '===OBJECTIVE===\n[Concrete session data — write 3-5 sentences summarizing the trial counts, % correct, prompt-level distribution, and behavior occurrences below. Use third-person clinical language.]\n\n'+
+      '===OBJECTIVE===\n[Concrete session data — write 3-5 sentences summarizing the trial counts, % independent, prompt-level distribution, and behavior occurrences below. Use third-person clinical language.]\n\n'+
       '===ASSESSMENT===\n[2-3 sentences interpreting ONLY this session\x27s data: performance on the targets run and behaviors recorded below. Do NOT claim cross-session trends, generalization, or maintenance — only one session of data is provided.]\n\n'+
       '===PLAN===\n[3-4 sentences on next steps: which targets to continue, prompt level adjustments, BIP changes if behaviors trending up, next session focus.]\n\n'+
       'Session context:\n'+
@@ -5072,13 +5082,13 @@ async function renderTargetGraph(){
   var bySession = {};
   trials.forEach(function(tr){
     var sid = tr.session_id;
-    if(!bySession[sid]) bySession[sid] = { date: tr.sessions && tr.sessions.start_time ? new Date(tr.sessions.start_time) : new Date(tr.timestamp), total: 0, correct: 0 };
+    if(!bySession[sid]) bySession[sid] = { date: tr.sessions && tr.sessions.start_time ? new Date(tr.sessions.start_time) : new Date(tr.timestamp), total: 0, independent: 0 };
     bySession[sid].total += 1;
-    if(tr.response === 'correct') bySession[sid].correct += 1;
+    if(tr.prompt_level === 'independent') bySession[sid].independent += 1;
   });
   var sessions = Object.keys(bySession).map(function(sid){
     var s = bySession[sid];
-    return { date: s.date, pct: s.total > 0 ? (s.correct / s.total) * 100 : 0 };
+    return { date: s.date, pct: s.total > 0 ? (s.independent / s.total) * 100 : 0 };
   }).sort(function(a,b){ return a.date - b.date; });
   function togBtn(label, on, fn){
     return '<button onclick="'+fn+'()" style="padding:6px 12px;border-radius:14px;border:2px solid '+(on?'var(--sage-dark)':'var(--sand)')+';background:'+(on?'var(--sage-light)':'white')+';color:'+(on?'var(--sage-dark)':'var(--warm-gray)')+';font-size:12px;font-weight:700;cursor:pointer">'+(on?'✓ ':'')+label+'</button>';
@@ -5087,6 +5097,7 @@ async function renderTargetGraph(){
     '<div class="tg-print-hide" style="display:flex;justify-content:space-between;align-items:start;gap:8px;margin-bottom:6px"><div>'+
     '<div style="font-family:Fraunces,serif;font-size:20px;font-weight:700">'+esc(t.name)+'</div>'+
     '<div style="font-size:13px;color:var(--warm-gray)">'+esc((t.programs && t.programs.name) || '')+' · '+sessions.length+' sessions · '+trials.length+' trials</div>'+
+    (mvPromptBreakdown(trials)?'<div style="font-size:11px;color:var(--warm-gray);margin-top:2px">Prompt levels: '+mvPromptBreakdown(trials)+'</div>':'')+
     '</div><button class="btn btn-s" style="font-size:12px;padding:6px 10px" onclick="printTargetGraph()">&#128424; Print / PDF</button></div>'+
     '<div class="tg-print-show" style="display:none;margin-bottom:14px">'+
     '<div style="font-family:Fraunces,serif;font-size:22px;font-weight:700">'+esc(t.name)+'</div>'+
@@ -11242,7 +11253,7 @@ async function openMyBcba(){
       prog.targets.forEach(function(t){
         var pct = t.trial_count > 0 ? Math.round((t.correct_count / t.trial_count) * 100) : 0;
         h += '<div style="margin-top:10px;padding:10px;background:var(--cream);border-radius:10px"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px;font-weight:700">'+esc(t.target_name)+'</div><span class="log-tag">'+t.target_status.replace(/_/g,' ')+'</span></div>'+
-          '<div style="font-size:11px;color:var(--warm-gray);margin-top:4px">'+t.trial_count+' trials &middot; '+pct+'% correct</div></div>';
+          '<div style="font-size:11px;color:var(--warm-gray);margin-top:4px">'+t.trial_count+' trials &middot; '+pct+'% independent</div></div>';
       });
       h += '</div>';
     });
@@ -11305,7 +11316,7 @@ async function renderTargetSparkline(targetId){
   var pathD = points.map(function(y, i){ return (i === 0 ? 'M' : 'L') + (i*step).toFixed(1) + ',' + ((100-y)/100 * hht).toFixed(1); }).join(' ');
   var lastPct = Math.round(points[points.length-1]);
   wrap.innerHTML = '<svg width="100%" height="'+hht+'" viewBox="0 0 '+w+' '+hht+'" preserveAspectRatio="none"><path d="'+pathD+'" fill="none" stroke="var(--sage-dark)" stroke-width="2"/></svg>'+
-    '<div style="font-size:11px;color:var(--warm-gray);text-align:right">latest: '+lastPct+'% correct</div>';
+    '<div style="font-size:11px;color:var(--warm-gray);text-align:right">latest: '+lastPct+'% independent</div>';
 }
 
 function openSessionNoteForm(){
