@@ -1,0 +1,44 @@
+{
+  "identifier" : "A1B2C3D4-0000-0000-0000-000000000001",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : {
+    "_applicationInternalID" : "",
+    "_developerTeamID" : "",
+    "_lastSynchronizedDate" : 0
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "A1B2C3D4-0000-0000-0000-000000000002",
+      "localizations" : [],
+      "name" : "Modern Village Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "19.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "A1B2C3D4-0000-0000-0000-000000000003",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited AI coaching and family features",
+              "displayName" : "Modern Village Pro",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "mv_pro_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "mv_pro_monthly",
+          "subscriptionGroupID" : "A1B2C3D4-0000-0000-0000-000000000002",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
