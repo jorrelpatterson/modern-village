@@ -18,13 +18,17 @@ Already done (2026-07-11): offline-sync data-loss fix, children RLS (client name
 - ✅ **#16 Signed-SOAP lock** — migration `20260712_bcba_soap_signature_lock.sql` written and **run in Supabase (2026-07-12)**.
 - ✅ **#15 RBT access** — practice tools now gate on membership (`S.practiceMember`), not `profiles.role`, so RBTs reach the module and can start/record sessions; per-role write actions and RLS are unchanged.
 - ✅ **#11 Parent "My BCBA" zeros** — migration `20260712_bcba_parent_progress_views.sql` written and **run in Supabase (2026-07-13)**. Flips the two aggregate views to run as owner with an explicit access WHERE (`user_has_child_access` / `is_practice_member` / `is_admin`), so parent trial/behavior counts are no longer forced to 0 by invoker RLS.
-- ⏸ **#17 Cosigned-session trial lock — DEFERRED.** A naive RLS gate returns 403, which the offline queue treats as "auth expired, retry forever," jamming the queue. Fix the offline flush to distinguish a permanent RLS block from a transient 401/403 first, then gate inserts on `status <> 'cosigned'`.
-- ⏸ **#12 Rate behavior type** — left as-is: the def modal reuses the type `<select>` for editing (sets `bdmType.value` from an existing def), so removing the option would silently retype existing rate defs to "frequency". Implement a rate entry mode or render the option conditionally instead.
+- ✅ **#17 Cosigned-session trial lock — SHIPPED 2026-07-14.** `flush()` now holds a 42501 RLS block (instead of retrying forever), and `20260714_bcba_cosigned_trial_lock.sql` gates trial/behavior inserts on `status <> 'cosigned'`.
+- ✅ **#12 Rate behavior type — SHIPPED 2026-07-14.** Removed from the new-behavior dropdown; `editBehaviorDef` injects a marked "(legacy)" option for existing retired-type defs so editing round-trips instead of silently retyping.
 
 - ✅ **#5 %independent scoring** — shipped 2026-07-14. Independent is the single score (dropped the redundant %correct column; relabeled summary/graph/SOAP/parent views); added a prompt-level breakdown that visualizes fading. Built from `docs/BCBA-CLINICAL-RULES-ANSWERS.md` (Section A).
 - ✅ **#8 mastery — fully shipped 2026-07-14.** Evaluator + per-goal criteria form + promotion (`mvEvaluateMastery`, target-graph banner + Promote, auto-promote for automatic goals, session-end review nudge) **and** the maintenance-probe engine (promote → `in_maintenance`; probe = trials on a maintenance target; `checkProbesForSession` flags `needs_review` on consecutive sub-criterion probes; dashboard "needs review" card + graph Return-to-treatment/Keep-maintaining; `mvNextProbeDue` due hint). No migration (mastery_criteria is jsonb; status is unconstrained). Minor deferral: a practice-wide "probes due soon" list.
 
-**Still open:** #4 (SOAP fabrication — verify prior partial fix), #6 (tiered pricing — needs Stripe), #10 (undo last trial — needs trials UPDATE policy).
+- ✅ **#4 SOAP fabrication — SHIPPED 2026-07-14.** `generateSoapFromSession` was already safe (constrained prompt + no raw-dump on parse fail); `generateSessionNarrative` now constrained (only-from-provided-data, no forced word-count padding).
+- ✅ **#10 Undo last trial — SHIPPED 2026-07-14** (needs migration `20260714_bcba_trial_undo_policy.sql`).
+- ✅ **Practice-wide "probes due" dashboard card — SHIPPED 2026-07-14.**
+
+**Still open:** #6 (tiered pricing — needs your Stripe setup). Everything else in this backlog is shipped.
 
 ---
 
