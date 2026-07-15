@@ -1580,7 +1580,6 @@ select.fi{appearance:none;background:white url("data:image/svg+xml,%3Csvg xmlns=
       <option value="duration">Duration (timer)</option>
       <option value="interval">Interval (sample over time)</option>
       <option value="abc">ABC (incidents with context)</option>
-      <option value="rate">Rate (count per unit time)</option>
     </select>
     <label class="fl" style="margin-top:12px">Classification *</label>
     <select id="bdmClass" class="fi">
@@ -3326,6 +3325,7 @@ async function openBehaviorDefModal(){
   document.getElementById('bdmTitle').textContent = 'New behavior';
   document.getElementById('bdmName').value = '';
   document.getElementById('bdmDef').value = '';
+  Array.prototype.slice.call(document.getElementById('bdmType').querySelectorAll('option[data-legacy]')).forEach(function(o){ o.remove(); });
   document.getElementById('bdmType').value = 'frequency';
   document.getElementById('bdmClass').value = 'challenging';
   document.getElementById('bdmPairsWrap').style.display = 'none';
@@ -3341,7 +3341,18 @@ async function editBehaviorDef(id){
   document.getElementById('bdmTitle').textContent = 'Edit behavior';
   document.getElementById('bdmName').value = r.data.name;
   document.getElementById('bdmDef').value = r.data.operational_definition;
-  document.getElementById('bdmType').value = r.data.recording_type;
+  var bdmTypeSel = document.getElementById('bdmType');
+  Array.prototype.slice.call(bdmTypeSel.querySelectorAll('option[data-legacy]')).forEach(function(o){ o.remove(); });
+  // A retired type (e.g. 'rate') is no longer offered for new behaviors; inject it when
+  // editing so the behavior round-trips instead of being silently retyped to the first option.
+  if(r.data.recording_type && !Array.prototype.some.call(bdmTypeSel.options, function(o){ return o.value === r.data.recording_type; })){
+    var lopt = document.createElement('option');
+    lopt.value = r.data.recording_type;
+    lopt.textContent = r.data.recording_type + ' (legacy)';
+    lopt.setAttribute('data-legacy', '1');
+    bdmTypeSel.appendChild(lopt);
+  }
+  bdmTypeSel.value = r.data.recording_type;
   document.getElementById('bdmClass').value = r.data.classification || 'challenging';
   document.getElementById('bdmPairsWrap').style.display = (r.data.classification === 'replacement' ? 'block' : 'none');
   document.getElementById('bdmClass').onchange = onClassChange;
