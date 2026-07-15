@@ -2516,6 +2516,20 @@ function renderNeedsReviewCard(targets){
   return h;
 }
 
+function renderProbesDueCard(targets){
+  if(!targets.length) return '';
+  var h = '<div style="margin-bottom:14px"><div class="label" style="margin-bottom:8px">Probes due ('+targets.length+')</div>';
+  targets.forEach(function(t){
+    h += '<div onclick="openTargetGraph(\x27'+t.id+'\x27)" style="border:1px solid var(--sage-dark);background:var(--sage-light);border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-weight:700;font-size:14px">'+esc(t.name)+'</div>'+
+      '<div style="font-size:11px;color:var(--sage-dark);margin-top:2px">'+esc(t.child)+' &middot; maintenance probe due</div></div>'+
+      '<span style="font-size:18px">&#9203;</span>'+
+      '</div>';
+  });
+  h += '</div>';
+  return h;
+}
+
 async function openCosignReview(sessionId){
   document.getElementById('practiceDashboardPage').classList.remove('open');
   summaryState = { sessionId: sessionId, fromActive: false, ioaByTarget: null, cosignMode: true };
@@ -2558,6 +2572,29 @@ async function openPracticeDashboard(){
     .select('id,name,programs!inner(name,practice_clients!inner(practice_id,children(name)))')
     .eq('status', 'needs_review')
     .eq('programs.practice_clients.practice_id', S.practiceMember.practice_id);
+  var maintR = await sb.from('targets')
+    .select('id,name,promoted_at,maintenance_criteria,programs!inner(practice_clients!inner(practice_id,children(name)))')
+    .eq('status', 'in_maintenance')
+    .eq('programs.practice_clients.practice_id', S.practiceMember.practice_id);
+  var probesDue = [];
+  var maintTargets = maintR.data || [];
+  if(maintTargets.length){
+    var mids = maintTargets.map(function(t){ return t.id; });
+    var lastTrR = await sb.from('trials').select('target_id,timestamp').in('target_id', mids).is('superseded_by', null).is('ioa_observer_id', null).order('timestamp', { ascending: false }).limit(1000);
+    var lastByTarget = {};
+    (lastTrR.data || []).forEach(function(tr){ var d = tr.timestamp ? new Date(tr.timestamp).getTime() : 0; if(d > (lastByTarget[tr.target_id] || 0)) lastByTarget[tr.target_id] = d; });
+    var nowMs = Date.now();
+    maintTargets.forEach(function(t){
+      var mc = t.maintenance_criteria || {};
+      var freq = mc.probe_frequency || 'monthly';
+      var days = freq === 'weekly' ? 7 : (freq === 'biweekly' ? 14 : (freq === 'twice_monthly' ? 15 : 30));
+      var base = lastByTarget[t.id] || (t.promoted_at ? new Date(t.promoted_at).getTime() : 0);
+      if(base && nowMs >= base + days*86400000){
+        var child = t.programs && t.programs.practice_clients && t.programs.practice_clients.children ? t.programs.practice_clients.children.name : '';
+        probesDue.push({ id: t.id, name: t.name, child: child });
+      }
+    });
+  }
   var clients = cR.data || [];
   var active = clients.filter(function(c){ return c.status === 'active'; }).length;
   var intake = clients.filter(function(c){ return c.status === 'intake'; }).length;
@@ -2584,6 +2621,7 @@ async function openPracticeDashboard(){
     '</div>'+
     renderActiveSessionsCard(activeSR.data || [])+
     renderNeedsReviewCard(reviewR.data || [])+
+    renderProbesDueCard(probesDue)+
     renderPendingCosignCard(cosignSR.data || [])+
     '</div>';
   el.innerHTML = h;
