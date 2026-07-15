@@ -74,6 +74,11 @@ Q5: *"up to the BCBA … I like to probe 2–5 times per month … dropdown opti
 - **#5 Section A:** %independent is the single score everywhere; %correct column removed; prompt-level breakdown (Ind/Vb/Gest/PP/FP/Inc) on session summary + target graph; SOAP generator + parent views aligned.
 - **#8 mastery core:** per-goal criteria form (threshold · N · session/week/month · min-trials · manual/automatic · first-trial rule); `mvEvaluateMastery()`; target-graph mastery banner + Promote; auto-promotion for `automatic` goals; `checkMasteryForSession()` re-evaluates a session's targets on submit (auto-promote + "ready for review" nudge). Promotion writes `status='mastered'`, `promoted_at`, and a "Mastered" phase-change marker.
 
-**Deferred (documented for the next pass):**
-- **Maintenance-probe engine (B6/B7/Q5):** the criteria form stores probe frequency/count, but nothing yet schedules probes, detects due ones, or counts consecutive failures to raise the "flag for review". Q5 defaults to encode: probe passes when the opportunity is independent; flag threshold is a per-goal dropdown (default 2 consecutive fails).
-- **Persistent dashboard mastery-review queue:** today the manual-review nudge is a session-end toast + the durable per-target graph banner. A practice-wide "N targets ready for review" card would need a persisted flag (e.g. `mastery_criteria.review_suggested_at`) to avoid the 1000-row bulk-trial query cap.
+**Maintenance-probe engine (B6/B7/Q5) — SHIPPED 2026-07-14:**
+- Promotion lands a target in `in_maintenance` (which the pre-session picker already offers), so it is probed by including it in a session — each trial is a probe opportunity.
+- Criteria form adds a `2×/month` frequency and a `flag_threshold` dropdown (consecutive failed probes before flagging; default 2).
+- `checkProbesForSession()` runs on submit: for each maintenance target worked, if the last `flag_threshold` probe sessions (since `promoted_at`) are all below the mastery %independent bar, it sets `status='needs_review'` + a "Maintenance flag" phase-change marker. Never auto-drops (B7).
+- Probe pass = the probe session meets the mastery %independent bar (single-opportunity probe → independent = pass, per Q5).
+- Surfaces: target-graph shows "Mastered · in maintenance · next probe due ~date" (`mvNextProbeDue`) and, when flagged, Return-to-treatment / Keep-maintaining (`setTargetStatus`); the practice dashboard shows a "Maintenance — needs review" card.
+
+**Still deferred (minor):** a practice-wide "probes due soon" reminder list (per-target due date is already shown on each target's graph).

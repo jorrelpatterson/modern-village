@@ -22,9 +22,9 @@ Already done (2026-07-11): offline-sync data-loss fix, children RLS (client name
 - ⏸ **#12 Rate behavior type** — left as-is: the def modal reuses the type `<select>` for editing (sets `bdmType.value` from an existing def), so removing the option would silently retype existing rate defs to "frequency". Implement a rate entry mode or render the option conditionally instead.
 
 - ✅ **#5 %independent scoring** — shipped 2026-07-14. Independent is the single score (dropped the redundant %correct column; relabeled summary/graph/SOAP/parent views); added a prompt-level breakdown that visualizes fading. Built from `docs/BCBA-CLINICAL-RULES-ANSWERS.md` (Section A).
-- ◑ **#8 mastery** — evaluator + per-goal criteria form + promotion shipped 2026-07-14 (`mvEvaluateMastery`, target-graph banner + Promote, auto-promote for automatic goals, session-end review nudge). **Remaining: the maintenance-probe engine** (schedule probes, detect due, consecutive-fail → flag for review — B6/B7/Q5). No migration needed (mastery_criteria is jsonb; status is unconstrained).
+- ✅ **#8 mastery — fully shipped 2026-07-14.** Evaluator + per-goal criteria form + promotion (`mvEvaluateMastery`, target-graph banner + Promote, auto-promote for automatic goals, session-end review nudge) **and** the maintenance-probe engine (promote → `in_maintenance`; probe = trials on a maintenance target; `checkProbesForSession` flags `needs_review` on consecutive sub-criterion probes; dashboard "needs review" card + graph Return-to-treatment/Keep-maintaining; `mvNextProbeDue` due hint). No migration (mastery_criteria is jsonb; status is unconstrained). Minor deferral: a practice-wide "probes due soon" list.
 
-**Still open:** #4 (SOAP fabrication — verify prior partial fix), #8-maintenance (probe scheduling + consecutive-fail flag), #6 (tiered pricing — needs Stripe), #10 (undo last trial — needs trials UPDATE policy).
+**Still open:** #4 (SOAP fabrication — verify prior partial fix), #6 (tiered pricing — needs Stripe), #10 (undo last trial — needs trials UPDATE policy).
 
 ---
 
