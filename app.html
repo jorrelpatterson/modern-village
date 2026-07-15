@@ -11557,10 +11557,10 @@ async function generateSessionNarrative(){
   if(response)prompt+='Client response: '+response+'\n';
   if(nextSteps)prompt+='Next steps: '+nextSteps+'\n';
   if(recentLogs)prompt+='Recent behavioral data: '+recentLogs+'\n';
-  prompt+='\nWrite a 150-250 word professional clinical narrative suitable for insurance documentation.';
+  prompt+='\nWrite a concise professional clinical narrative (up to ~250 words) suitable for insurance documentation, based strictly on the inputs above. Do not add any observation, datum, percentage, or recommendation that was not provided.';
 
   try{
-    var r=await authFetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-5',max_tokens:600,system:'You are a clinical documentation assistant for Board Certified Behavior Analysts (BCBAs). Generate professional, insurance-ready session narratives. Use clinical ABA terminology. Write in third person. Include: session context, interventions applied, client response with specific behavioral observations, and clinical recommendations.',messages:[{role:'user',content:prompt}]})});
+    var r=await authFetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-5',max_tokens:600,system:'You are a clinical documentation assistant for Board Certified Behavior Analysts (BCBAs). Turn the provided session inputs into a professional, insurance-ready narrative using clinical ABA terminology, in third person. CRITICAL: use ONLY the information provided — never invent observations, behavioral data, percentages, trends, or recommendations not present in the inputs. If the inputs are sparse, keep the narrative brief rather than padding it with invented detail.',messages:[{role:'user',content:prompt}]})});
     var d=await r.json();
     var text='';if(d.content)for(var i=0;i<d.content.length;i++)if(d.content[i].text)text+=d.content[i].text;
     document.getElementById('snNarrativeArea').innerHTML='<div><label class="fl">Clinical Narrative (AI-generated \u2014 review and edit)</label><textarea id="snNarrative" class="fi" rows="8" style="resize:vertical;font-size:13px;line-height:1.6">'+esc(text)+'</textarea></div>';
