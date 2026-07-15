@@ -2329,9 +2329,21 @@ var mvOffline = {
         });
         if(resp.ok || resp.status === 409){
           await self._deleteOp(op.id);
-        } else if(resp.status === 401 || resp.status === 403 || resp.status === 408 || resp.status === 429){
-          // Auth expired or transient throttle — do NOT drop clinical data. Refresh the token and retry next cycle.
-          try { await sb.auth.refreshSession(); } catch(e){}
+        } else if(resp.status === 401 || resp.status === 403){
+          var blockBody = await resp.text();
+          if(blockBody.indexOf('42501') >= 0){
+            // Permanent RLS block (e.g. a trial into a cosigned/locked session). Never retry —
+            // it would jam the queue behind it forever. Hold it in the failed list instead.
+            self.failedOps.push({ op: op, status: resp.status, body: blockBody });
+            await self._deleteOp(op.id);
+            showToast('Some data couldn\x27t sync (record locked) — please contact support');
+          } else {
+            // Auth expired — do NOT drop clinical data. Refresh the token and retry next cycle.
+            try { await sb.auth.refreshSession(); } catch(e){}
+            break;
+          }
+        } else if(resp.status === 408 || resp.status === 429){
+          // Transient throttle/timeout — retry next cycle.
           break;
         } else if(resp.status >= 400 && resp.status < 500){
           // Genuine validation error — hold it in the failed list (never silently deleted-and-hidden) and keep going.
