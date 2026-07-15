@@ -5053,6 +5053,54 @@ async function renderTargets(){
 
 var targetGraphState = { targetId: null, showAverage: true, showMeanOfDay: false, showTrendLine: false, showStdDev: false };
 
+// ── Mastery evaluation (clinical rules per docs/BCBA-CLINICAL-RULES-ANSWERS.md) ──
+function mvMonthKey(ms){ var d = new Date(ms); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function mvWeekKey(ms){ var d = new Date(ms); var day = (d.getDay()+6)%7; var monday = new Date(d.getFullYear(), d.getMonth(), d.getDate()-day); return mvLocalDate(monday); }
+
+// Mastery = N consecutive qualifying windows (session/week/month), each with %independent >=
+// threshold. A window pools all its trials; windows below min_trials are skipped, not failed.
+function mvEvaluateMastery(target, trials){
+  var m = (target && target.mastery_criteria) || {};
+  var threshold = m.threshold_pct != null ? m.threshold_pct : (m.response_pct != null ? m.response_pct : 80);
+  var windowCount = m.window_count != null ? m.window_count : (m.consecutive_sessions != null ? m.consecutive_sessions : 3);
+  var windowType = m.window_type || 'session';
+  var minTrials = m.min_trials_per_window != null ? m.min_trials_per_window : 5;
+  var ftiRequired = !!m.first_trial_independent;
+  var byWindow = {};
+  (trials || []).forEach(function(tr){
+    var d = tr.timestamp ? new Date(tr.timestamp).getTime() : 0;
+    var key = windowType === 'session' ? (tr.session_id || ('t'+d)) : (windowType === 'week' ? mvWeekKey(d) : mvMonthKey(d));
+    var w = byWindow[key] || (byWindow[key] = { order: 0, total: 0, independent: 0, sessions: {} });
+    w.total += 1;
+    if(tr.prompt_level === 'independent') w.independent += 1;
+    if(d > w.order) w.order = d;
+    var sid = tr.session_id || key;
+    var s = w.sessions[sid];
+    if(!s || d < s.firstTs) w.sessions[sid] = { firstTs: d, firstIndependent: (tr.prompt_level === 'independent') };
+  });
+  var windows = Object.keys(byWindow).map(function(k){
+    var w = byWindow[k];
+    w.pct = w.total > 0 ? (w.independent / w.total) * 100 : 0;
+    w.ftiOk = Object.keys(w.sessions).every(function(sid){ return w.sessions[sid].firstIndependent; });
+    return w;
+  }).sort(function(a,b){ return a.order - b.order; });
+  var qualifying = windows.filter(function(w){ return w.total >= minTrials; });
+  var recent = windowCount > 0 ? qualifying.slice(-windowCount) : [];
+  var met = recent.length >= windowCount && windowCount > 0 && recent.every(function(w){
+    return w.pct >= threshold && (!ftiRequired || w.ftiOk);
+  });
+  return { met: met, threshold: threshold, windowType: windowType, windowCount: windowCount, minTrials: minTrials, ftiRequired: ftiRequired, mode: m.mastery_mode || 'manual', qualifyingCount: qualifying.length, recent: recent };
+}
+
+async function promoteTargetToMastered(targetId, silent){
+  if(!silent && !confirm('Mark this target as mastered? It moves off active treatment into maintenance.')) return false;
+  var upd = await sb.from('targets').update({ status: 'mastered', promoted_at: new Date().toISOString() }).eq('id', targetId);
+  if(upd.error){ if(!silent) showToast(upd.error.message); return false; }
+  try { await sb.from('phase_changes').insert({ target_id: targetId, occurred_at: new Date().toISOString(), label: 'Mastered', notes: silent ? 'Auto-promoted on meeting mastery criteria' : 'Promoted after meeting mastery criteria' }); } catch(e){}
+  if(!silent){ showToast('Target promoted to mastered'); renderTargetGraph(); }
+  return true;
+}
+
 async function openTargetGraph(targetId){
   targetGraphState = { targetId: targetId, showAverage: true, showMeanOfDay: false, showTrendLine: false, showStdDev: false };
   document.getElementById('targetGraphPage').classList.add('open');
@@ -5062,7 +5110,7 @@ async function openTargetGraph(targetId){
 async function renderTargetGraph(){
   var el = document.getElementById('targetGraphContent');
   el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--warm-gray)">Loading…</div>';
-  var tR = await sb.from('targets').select('id,name,target_type,programs(name)').eq('id', targetGraphState.targetId).single();
+  var tR = await sb.from('targets').select('id,name,target_type,status,promoted_at,mastery_criteria,programs(name)').eq('id', targetGraphState.targetId).single();
   if(tR.error){ el.innerHTML = '<div style="padding:20px;color:var(--terracotta)">'+esc(tR.error.message)+'</div>'; return; }
   var t = tR.data;
   document.getElementById('tgTitle').textContent = t.name;
@@ -5137,7 +5185,24 @@ async function renderTargetGraph(){
     anList += '</div>';
   }
   if(canWrite) anList += '<button class="btn btn-s tg-print-hide" style="margin-top:8px;font-size:12px;padding:6px 12px" onclick="openAnnotationModal()">+ Add annotation</button>';
-  el.innerHTML = hdr + chart + pcList + anList + '</div>';
+  var mev = mvEvaluateMastery(t, trials);
+  var active = t.status !== 'mastered' && t.status !== 'in_maintenance' && t.status !== 'closed';
+  if(active && mev.met && mev.mode === 'automatic'){
+    var ok = await promoteTargetToMastered(t.id, true);
+    if(ok){ t.status = 'mastered'; active = false; showToast('Auto-promoted to mastered (met criteria)'); }
+  }
+  var masteryBanner = '';
+  if(t.status === 'mastered'){
+    masteryBanner = '<div style="background:var(--sage-light);border:1px solid var(--sage-dark);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--sage-dark)"><strong>Mastered</strong>'+(t.promoted_at?' &middot; '+new Date(t.promoted_at).toLocaleDateString():'')+'.</div>';
+  } else if(active && mev.met){
+    masteryBanner = '<div style="background:var(--sage-light);border:1px solid var(--sage-dark);border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:10px">'+
+      '<div style="font-size:13px;color:var(--sage-dark)"><strong>Mastery criteria met</strong> &mdash; '+mev.recent.length+' consecutive '+mev.windowType+'(s) &ge;'+mev.threshold+'% independent'+(mev.ftiRequired?', first-trial rule ok':'')+'.</div>'+
+      (canWrite?'<button class="btn btn-p" style="white-space:nowrap;font-size:13px;padding:8px 12px" onclick="promoteTargetToMastered(\x27'+t.id+'\x27)">Promote</button>':'')+
+      '</div>';
+  } else if(active && mev.qualifyingCount > 0){
+    masteryBanner = '<div style="background:var(--cream);border:1px solid var(--sand);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--warm-gray)">Toward mastery: '+mev.qualifyingCount+' qualifying '+mev.windowType+'(s); need '+mev.windowCount+' consecutive &ge;'+mev.threshold+'% independent.</div>';
+  }
+  el.innerHTML = hdr + masteryBanner + chart + pcList + anList + '</div>';
 }
 
 function renderTargetGraphSvg(sessions, phaseChanges, annotations){
@@ -5398,12 +5463,23 @@ function renderCriteriaFields(t){
   var m = (t && t.mastery_criteria) || {};
   var b = (t && t.baseline_criteria) || {};
   var mt = (t && t.maintenance_criteria) || {};
+  var mThresh = m.threshold_pct != null ? m.threshold_pct : (m.response_pct != null ? m.response_pct : 80);
+  var mCount = m.window_count != null ? m.window_count : (m.consecutive_sessions != null ? m.consecutive_sessions : 3);
+  var mWin = m.window_type || 'session';
+  var mMin = m.min_trials_per_window != null ? m.min_trials_per_window : 5;
+  var mMode = m.mastery_mode || 'manual';
   document.getElementById('tmMastery').innerHTML =
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
-    '<div><label class="fl">% correct</label><input id="tmM_pct" class="fi" type="number" min="0" max="100" value="'+(m.response_pct||80)+'"></div>'+
-    '<div><label class="fl">Consecutive sessions</label><input id="tmM_cons" class="fi" type="number" min="1" value="'+(m.consecutive_sessions||3)+'"></div>'+
+    '<div><label class="fl">% independent</label><input id="tmM_pct" class="fi" type="number" min="0" max="100" value="'+mThresh+'"></div>'+
+    '<div><label class="fl">Across (N)</label><input id="tmM_cons" class="fi" type="number" min="1" value="'+mCount+'"></div>'+
     '</div>'+
-    '<label style="display:flex;gap:8px;margin-top:8px;font-size:13px"><input id="tmM_fti" type="checkbox" '+(m.first_trial_independent?'checked':'')+'> First trial independent required</label>';
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'+
+    '<div><label class="fl">consecutive</label><select id="tmM_win" class="fi"><option value="session"'+(mWin==='session'?' selected':'')+'>sessions</option><option value="week"'+(mWin==='week'?' selected':'')+'>weeks</option><option value="month"'+(mWin==='month'?' selected':'')+'>months</option></select></div>'+
+    '<div><label class="fl">Min trials to count</label><input id="tmM_min" class="fi" type="number" min="1" value="'+mMin+'"></div>'+
+    '</div>'+
+    '<div style="margin-top:8px"><label class="fl">Mastery decision</label><select id="tmM_mode" class="fi"><option value="manual"'+(mMode==='manual'?' selected':'')+'>Manual &mdash; suggest &amp; require confirmation</option><option value="automatic"'+(mMode==='automatic'?' selected':'')+'>Automatic &mdash; promote when met</option></select></div>'+
+    '<label style="display:flex;gap:8px;margin-top:8px;font-size:13px"><input id="tmM_fti" type="checkbox" '+(m.first_trial_independent?'checked':'')+'> First trial of each session must be independent</label>'+
+    '<div style="font-size:11px;color:var(--warm-gray);margin-top:6px">e.g. &ldquo;80% independent across 16 consecutive sessions&rdquo;, or &ldquo;80% across 2 consecutive months&rdquo; where each month&#39;s pooled average must clear the bar.</div>';
   document.getElementById('tmBaseline').innerHTML =
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
     '<div><label class="fl">Sessions</label><input id="tmB_sess" class="fi" type="number" min="1" value="'+(b.sessions||3)+'"></div>'+
@@ -5464,9 +5540,14 @@ async function submitTarget(){
     target_type: type,
     data_collection_config: readDataConfig(),
     mastery_criteria: {
+      threshold_pct: parseInt(document.getElementById('tmM_pct').value, 10) || 80,
+      window_type: document.getElementById('tmM_win').value,
+      window_count: parseInt(document.getElementById('tmM_cons').value, 10) || 3,
+      min_trials_per_window: parseInt(document.getElementById('tmM_min').value, 10) || 5,
+      mastery_mode: document.getElementById('tmM_mode').value,
+      first_trial_independent: document.getElementById('tmM_fti').checked,
       response_pct: parseInt(document.getElementById('tmM_pct').value, 10) || 80,
-      consecutive_sessions: parseInt(document.getElementById('tmM_cons').value, 10) || 3,
-      first_trial_independent: document.getElementById('tmM_fti').checked
+      consecutive_sessions: parseInt(document.getElementById('tmM_cons').value, 10) || 3
     },
     baseline_criteria: {
       sessions: parseInt(document.getElementById('tmB_sess').value, 10) || 3,
@@ -5607,7 +5688,7 @@ async function openPracticeSettings(){
     '<h3 style="font-family:Fraunces,serif;font-size:20px;margin-bottom:6px">Default mastery criteria</h3>'+
     '<div style="font-size:12px;color:var(--warm-gray);margin-bottom:12px">These apply when you create a new goal. Each goal can override them in the goal\x27s settings.</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
-    '<div><label class="fl">% correct</label><input id="psM_pct" class="fi" type="number" min="0" max="100" value="'+((s.default_mastery && s.default_mastery.response_pct)||80)+'"></div>'+
+    '<div><label class="fl">% independent</label><input id="psM_pct" class="fi" type="number" min="0" max="100" value="'+((s.default_mastery && s.default_mastery.response_pct)||80)+'"></div>'+
     '<div><label class="fl">Consecutive sessions</label><input id="psM_cons" class="fi" type="number" min="1" value="'+((s.default_mastery && s.default_mastery.consecutive_sessions)||3)+'"></div>'+
     '</div>'+
     '<h3 style="font-family:Fraunces,serif;font-size:20px;margin:24px 0 12px">Daily SOAP requirement</h3>'+
