@@ -4206,6 +4206,7 @@ async function submitSession(){
   showToast('Session submitted');
   if(currentClient) renderClientPrograms();
   checkMasteryForSession(summaryState.sessionId);
+  checkProbesForSession(summaryState.sessionId);
 }
 
 async function saveSessionDetails(){
@@ -5095,7 +5096,7 @@ function mvEvaluateMastery(target, trials){
 
 async function promoteTargetToMastered(targetId, silent){
   if(!silent && !confirm('Mark this target as mastered? It moves off active treatment into maintenance.')) return false;
-  var upd = await sb.from('targets').update({ status: 'mastered', promoted_at: new Date().toISOString() }).eq('id', targetId);
+  var upd = await sb.from('targets').update({ status: 'in_maintenance', promoted_at: new Date().toISOString() }).eq('id', targetId);
   if(upd.error){ if(!silent) showToast(upd.error.message); return false; }
   try { await sb.from('phase_changes').insert({ target_id: targetId, occurred_at: new Date().toISOString(), label: 'Mastered', notes: silent ? 'Auto-promoted on meeting mastery criteria' : 'Promoted after meeting mastery criteria' }); } catch(e){}
   if(!silent){ showToast('Target promoted to mastered'); renderTargetGraph(); }
@@ -5122,6 +5123,65 @@ async function checkMasteryForSession(sessionId){
     if(review.length) parts.push('ready for mastery review: '+review.join(', '));
     if(parts.length) showToast('Mastery — '+parts.join('; '));
   } catch(e){ console.error('mastery check failed', e); }
+}
+
+// After a session, evaluate maintenance targets that were probed: if the last
+// flag_threshold probe sessions are all below the mastery bar, flag for review.
+async function checkProbesForSession(sessionId){
+  try {
+    var stR = await sb.from('session_targets').select('targets(id,name,status,promoted_at,mastery_criteria,maintenance_criteria)').eq('session_id', sessionId);
+    var rows = (stR.data || []).filter(function(r){ return r.targets && r.targets.status === 'in_maintenance'; });
+    var flagged = [];
+    for(var i=0;i<rows.length;i++){
+      var tgt = rows[i].targets;
+      var mc = tgt.maintenance_criteria || {};
+      var flagThreshold = mc.flag_threshold != null ? mc.flag_threshold : 2;
+      var mm = tgt.mastery_criteria || {};
+      var threshold = mm.threshold_pct != null ? mm.threshold_pct : (mm.response_pct != null ? mm.response_pct : 80);
+      var promotedAt = tgt.promoted_at ? new Date(tgt.promoted_at).getTime() : 0;
+      var trR = await sb.from('trials').select('prompt_level,session_id,timestamp').eq('target_id', tgt.id).is('superseded_by', null).is('ioa_observer_id', null).order('timestamp', { ascending: true }).limit(2000);
+      var bySession = {};
+      (trR.data || []).forEach(function(tr){
+        var d = tr.timestamp ? new Date(tr.timestamp).getTime() : 0;
+        var s = bySession[tr.session_id] || (bySession[tr.session_id] = { order: 0, total: 0, independent: 0 });
+        s.total += 1; if(tr.prompt_level === 'independent') s.independent += 1; if(d > s.order) s.order = d;
+      });
+      var probes = Object.keys(bySession).map(function(k){ var s = bySession[k]; s.pct = s.total>0?(s.independent/s.total)*100:0; return s; })
+        .filter(function(s){ return s.order >= promotedAt; })
+        .sort(function(a,b){ return a.order - b.order; });
+      var recent = probes.slice(-flagThreshold);
+      if(recent.length >= flagThreshold && flagThreshold > 0 && recent.every(function(s){ return s.pct < threshold; })){
+        var upd = await sb.from('targets').update({ status: 'needs_review' }).eq('id', tgt.id);
+        if(!upd.error){
+          try { await sb.from('phase_changes').insert({ target_id: tgt.id, occurred_at: new Date().toISOString(), label: 'Maintenance flag', notes: flagThreshold+' consecutive probes below '+threshold+'% independent' }); } catch(e){}
+          flagged.push(tgt.name);
+        }
+      }
+    }
+    if(flagged.length) showToast('Maintenance — flagged for review: '+flagged.join(', '));
+  } catch(e){ console.error('probe check failed', e); }
+}
+
+async function setTargetStatus(targetId, status){
+  var upd = await sb.from('targets').update({ status: status }).eq('id', targetId);
+  if(upd.error){ showToast(upd.error.message); return; }
+  showToast('Updated');
+  renderTargetGraph();
+}
+
+// Next maintenance probe due, from probe_frequency and the last probe (trial) after promotion.
+function mvNextProbeDue(t, trials){
+  var mc = (t && t.maintenance_criteria) || {};
+  var freq = mc.probe_frequency || 'monthly';
+  var days = freq === 'weekly' ? 7 : (freq === 'biweekly' ? 14 : (freq === 'twice_monthly' ? 15 : 30));
+  var promotedAt = t.promoted_at ? new Date(t.promoted_at).getTime() : 0;
+  var lastProbe = 0;
+  (trials || []).forEach(function(tr){ var d = tr.timestamp ? new Date(tr.timestamp).getTime() : 0; if(d >= promotedAt && d > lastProbe) lastProbe = d; });
+  var base = lastProbe || promotedAt;
+  if(!base) return '';
+  var due = base + days*86400000;
+  if(Date.now() >= due) return 'probe due now';
+  return 'next probe ~' + new Date(due).toLocaleDateString();
 }
 
 async function openTargetGraph(targetId){
@@ -5209,14 +5269,20 @@ async function renderTargetGraph(){
   }
   if(canWrite) anList += '<button class="btn btn-s tg-print-hide" style="margin-top:8px;font-size:12px;padding:6px 12px" onclick="openAnnotationModal()">+ Add annotation</button>';
   var mev = mvEvaluateMastery(t, trials);
-  var active = t.status !== 'mastered' && t.status !== 'in_maintenance' && t.status !== 'closed';
+  var active = t.status === 'baseline' || t.status === 'in_treatment';
   if(active && mev.met && mev.mode === 'automatic'){
     var ok = await promoteTargetToMastered(t.id, true);
-    if(ok){ t.status = 'mastered'; active = false; showToast('Auto-promoted to mastered (met criteria)'); }
+    if(ok){ t.status = 'in_maintenance'; active = false; showToast('Auto-promoted to mastered (met criteria)'); }
   }
   var masteryBanner = '';
-  if(t.status === 'mastered'){
-    masteryBanner = '<div style="background:var(--sage-light);border:1px solid var(--sage-dark);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--sage-dark)"><strong>Mastered</strong>'+(t.promoted_at?' &middot; '+new Date(t.promoted_at).toLocaleDateString():'')+'.</div>';
+  if(t.status === 'needs_review'){
+    masteryBanner = '<div style="background:var(--terracotta-light);border:1px solid var(--terracotta);border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'+
+      '<div style="font-size:13px;color:var(--terracotta)"><strong>Flagged in maintenance</strong> &mdash; recent probes fell below criterion.</div>'+
+      (canWrite?'<div style="display:flex;gap:6px"><button class="btn btn-s" style="font-size:12px;padding:6px 10px" onclick="setTargetStatus(\x27'+t.id+'\x27,\x27in_treatment\x27)">Return to treatment</button><button class="btn btn-s" style="font-size:12px;padding:6px 10px" onclick="setTargetStatus(\x27'+t.id+'\x27,\x27in_maintenance\x27)">Keep maintaining</button></div>':'')+
+      '</div>';
+  } else if(t.status === 'in_maintenance' || t.status === 'mastered'){
+    var dueTxt = mvNextProbeDue(t, trials);
+    masteryBanner = '<div style="background:var(--sage-light);border:1px solid var(--sage-dark);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--sage-dark)"><strong>Mastered</strong>'+(t.promoted_at?' &middot; '+new Date(t.promoted_at).toLocaleDateString():'')+' &middot; in maintenance'+(dueTxt?' &middot; '+dueTxt:'')+'.</div>';
   } else if(active && mev.met){
     masteryBanner = '<div style="background:var(--sage-light);border:1px solid var(--sage-dark);border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:10px">'+
       '<div style="font-size:13px;color:var(--sage-dark)"><strong>Mastery criteria met</strong> &mdash; '+mev.recent.length+' consecutive '+mev.windowType+'(s) &ge;'+mev.threshold+'% independent'+(mev.ftiRequired?', first-trial rule ok':'')+'.</div>'+
@@ -5510,9 +5576,10 @@ function renderCriteriaFields(t){
     '</div>';
   document.getElementById('tmMaintenance').innerHTML =
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
-    '<div><label class="fl">Probe frequency</label><select id="tmMt_freq" class="fi"><option value="weekly" '+(mt.probe_frequency==='weekly'?'selected':'')+'>Weekly</option><option value="biweekly" '+(mt.probe_frequency==='biweekly'?'selected':'')+'>Biweekly</option><option value="monthly" '+(mt.probe_frequency==='monthly'?'selected':'')+'>Monthly</option></select></div>'+
+    '<div><label class="fl">Probe frequency</label><select id="tmMt_freq" class="fi"><option value="weekly" '+(mt.probe_frequency==='weekly'?'selected':'')+'>Weekly</option><option value="biweekly" '+(mt.probe_frequency==='biweekly'?'selected':'')+'>Biweekly</option><option value="twice_monthly" '+(mt.probe_frequency==='twice_monthly'?'selected':'')+'>2&times;/month</option><option value="monthly" '+(mt.probe_frequency==='monthly'?'selected':'')+'>Monthly</option></select></div>'+
     '<div><label class="fl">Probes required</label><input id="tmMt_probes" class="fi" type="number" min="1" value="'+(mt.probes_required||2)+'"></div>'+
-    '</div>';
+    '</div>'+
+    '<div style="margin-top:8px"><label class="fl">Flag for review after (consecutive probes below criterion)</label><select id="tmMt_flag" class="fi"><option value="1" '+(String(mt.flag_threshold)==='1'?'selected':'')+'>1 failed probe</option><option value="2" '+(mt.flag_threshold==null||String(mt.flag_threshold)==='2'?'selected':'')+'>2 failed probes</option><option value="3" '+(String(mt.flag_threshold)==='3'?'selected':'')+'>3 failed probes</option></select></div>';
 }
 
 function renderSteps(){
@@ -5578,7 +5645,8 @@ async function submitTarget(){
     },
     maintenance_criteria: {
       probe_frequency: document.getElementById('tmMt_freq').value,
-      probes_required: parseInt(document.getElementById('tmMt_probes').value, 10) || 2
+      probes_required: parseInt(document.getElementById('tmMt_probes').value, 10) || 2,
+      flag_threshold: parseInt(document.getElementById('tmMt_flag').value, 10) || 2
     }
   };
   var saved;
