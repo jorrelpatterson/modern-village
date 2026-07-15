@@ -40,26 +40,28 @@ Answers received 2026-07-14. This is the source of truth for building backlog #5
 
 ---
 
-## STILL OPEN — B2 (blocks the mastery evaluator)
+## B2 — mastery model → RESOLVED (follow-up answered 2026-07-14)
 
-**Ariana, B2:** *"That depends on how the goal is written. Every BCBA will write them differently. Some will write '80% across 2 consecutive months' which means the average data for each month would have to be 80% or higher for mastery. Some will write '80% across 16 consecutive sessions'."*
+**Follow-up answers:** Q1 model works. **Q2: "Average of trials per session would have to hit 80%"** (each session's own %independent must clear the bar — the *each-window* reading, not pooled-across-sessions). **Q3: weeks are wanted.** **Q4: no minimum sessions per pooled window** — the min-trials rule is enough on its own.
 
-This is the one answer that doesn't fully resolve. It tells us mastery is **not one fixed rule** — there are at least two goal-writing shapes:
-- **Session-based:** "80% across 16 consecutive sessions"  (each session? or the average of 16? — she didn't say)
-- **Period-based:** "80% across 2 consecutive months"  (confirmed: the *aggregate/average* within each month must be ≥ threshold)
+**Key simplification from Q2:** we do NOT need a separate `each` vs `aggregate` toggle. Every case collapses to **"N consecutive windows, each window's %independent ≥ threshold"** — the window is just the unit:
+- a **session** window scores on its own trials → "each session ≥ 80%"  (her Q2)
+- a **week / month** window pools all trials in that calendar period → "each month's average ≥ 80%"  (her B2 monthly example)
 
-So the earlier "averaging is a bug" framing was too simple: **averaging is the correct model for the monthly-goal style, and per-session is correct for the session style.** The app has to let the BCBA pick, not hardcode one.
+### Final mastery-criteria model (replaces flat `{response_pct, consecutive_sessions}`)
+- `threshold_pct` — %independent bar (default 80)
+- `window_type` — `session` | `week` | `month`
+- `window_count` — N consecutive windows (e.g. 16 sessions, 2 months)
+- `min_trials_per_window` — a window with fewer trials is **skipped, not failed** (default 5, editable down for natural-environment goals per B3; Q4: no separate min-sessions gate)
+- `first_trial_independent` — if set, the first trial of each qualifying **session** must be independent (B4)
+- `mastery_mode` — `manual` (default) | `automatic` (B5)
 
-### Proposed structured model (needs Ariana to confirm — see follow-up)
-Replace the flat `{response_pct, consecutive_sessions}` with:
-- `threshold_pct` — e.g. 80
-- `window_type` — `sessions` | `weeks` | `months`
-- `window_count` — N consecutive windows
-- `evaluation` — `each` (every window ≥ threshold) | `aggregate` (pool the window's trials into one %)
-- `min_trials_per_window` — default 5 (from B3)
+**Evaluator:** per window, %independent = independent trials ÷ all primary trials in that window; ignore windows below `min_trials_per_window`; mastery met when the most recent `window_count` qualifying windows are calendar-consecutive and each ≥ `threshold_pct` (plus the first-trial rule if set). Build-time edge calls (documented, not re-asked): empty/below-min windows are skipped rather than breaking the streak; `first_trial_independent` applies per session even inside week/month windows.
 
-This covers both of her examples:
-- "80% / 2 consecutive months, monthly average" → threshold 80, months, 2, **aggregate**
-- "80% / 16 consecutive sessions" → threshold 80, sessions, 16, **each** *or* **aggregate** (default TBD)
+### Maintenance probing (Q5 + B6/B7) → configurable per goal
+Q5: *"up to the BCBA … I like to probe 2–5 times per month … dropdown options."*
+- `probe_frequency` (dropdown: weekly / biweekly / 2× month / monthly …) and `probes_required` — already on the target; surface as dropdowns.
+- Probe passes when the opportunity is **independent** (default; single cold opportunity).
+- Flag-for-review threshold is a per-goal dropdown (default: 2 consecutive failed probes). On trip → **flag for review, never auto-drop** (B7).
 
-Once B2 + the maintenance-probe definition are confirmed, both features build directly from this doc.
+**Status: both #5 (scoring) and #8 (mastery) are fully specced. No further clinical input needed — remaining edges are engineering defaults.**
