@@ -65,3 +65,15 @@ Q5: *"up to the BCBA … I like to probe 2–5 times per month … dropdown opti
 - Flag-for-review threshold is a per-goal dropdown (default: 2 consecutive failed probes). On trip → **flag for review, never auto-drop** (B7).
 
 **Status: both #5 (scoring) and #8 (mastery) are fully specced. No further clinical input needed — remaining edges are engineering defaults.**
+
+---
+
+## Build status — 2026-07-14
+
+**Shipped (app.html, no migration — mastery_criteria is jsonb, targets.status is unconstrained):**
+- **#5 Section A:** %independent is the single score everywhere; %correct column removed; prompt-level breakdown (Ind/Vb/Gest/PP/FP/Inc) on session summary + target graph; SOAP generator + parent views aligned.
+- **#8 mastery core:** per-goal criteria form (threshold · N · session/week/month · min-trials · manual/automatic · first-trial rule); `mvEvaluateMastery()`; target-graph mastery banner + Promote; auto-promotion for `automatic` goals; `checkMasteryForSession()` re-evaluates a session's targets on submit (auto-promote + "ready for review" nudge). Promotion writes `status='mastered'`, `promoted_at`, and a "Mastered" phase-change marker.
+
+**Deferred (documented for the next pass):**
+- **Maintenance-probe engine (B6/B7/Q5):** the criteria form stores probe frequency/count, but nothing yet schedules probes, detects due ones, or counts consecutive failures to raise the "flag for review". Q5 defaults to encode: probe passes when the opportunity is independent; flag threshold is a per-goal dropdown (default 2 consecutive fails).
+- **Persistent dashboard mastery-review queue:** today the manual-review nudge is a session-end toast + the durable per-target graph banner. A practice-wide "N targets ready for review" card would need a persisted flag (e.g. `mastery_criteria.review_suggested_at`) to avoid the 1000-row bulk-trial query cap.

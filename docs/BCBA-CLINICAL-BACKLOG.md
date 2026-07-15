@@ -21,7 +21,10 @@ Already done (2026-07-11): offline-sync data-loss fix, children RLS (client name
 - ⏸ **#17 Cosigned-session trial lock — DEFERRED.** A naive RLS gate returns 403, which the offline queue treats as "auth expired, retry forever," jamming the queue. Fix the offline flush to distinguish a permanent RLS block from a transient 401/403 first, then gate inserts on `status <> 'cosigned'`.
 - ⏸ **#12 Rate behavior type** — left as-is: the def modal reuses the type `<select>` for editing (sets `bdmType.value` from an existing def), so removing the option would silently retype existing rate defs to "frequency". Implement a rate entry mode or render the option conditionally instead.
 
-**Still open:** #4 (SOAP fabrication — verify prior partial fix), #5 (%correct vs %independent — trial-entry UX change), #8-full (mastery evaluator), #6 (tiered pricing — needs Stripe), #10 (undo last trial — needs trials UPDATE policy).
+- ✅ **#5 %independent scoring** — shipped 2026-07-14. Independent is the single score (dropped the redundant %correct column; relabeled summary/graph/SOAP/parent views); added a prompt-level breakdown that visualizes fading. Built from `docs/BCBA-CLINICAL-RULES-ANSWERS.md` (Section A).
+- ◑ **#8 mastery** — evaluator + per-goal criteria form + promotion shipped 2026-07-14 (`mvEvaluateMastery`, target-graph banner + Promote, auto-promote for automatic goals, session-end review nudge). **Remaining: the maintenance-probe engine** (schedule probes, detect due, consecutive-fail → flag for review — B6/B7/Q5). No migration needed (mastery_criteria is jsonb; status is unconstrained).
+
+**Still open:** #4 (SOAP fabrication — verify prior partial fix), #8-maintenance (probe scheduling + consecutive-fail flag), #6 (tiered pricing — needs Stripe), #10 (undo last trial — needs trials UPDATE policy).
 
 ---
 
