@@ -2359,6 +2359,23 @@ var mvOffline = {
     });
   },
 
+  async removeByClientUuid(uuid){
+    var self = this;
+    if(!self.db) return;
+    try {
+      var all = await new Promise(function(resolve){
+        var tx = self.db.transaction(self.STORE, 'readonly');
+        var req = tx.objectStore(self.STORE).getAll();
+        req.onsuccess = function(){ resolve(req.result || []); };
+        req.onerror = function(){ resolve([]); };
+      });
+      for(var i=0;i<all.length;i++){
+        if(all[i].payload && all[i].payload.client_uuid === uuid){ await self._deleteOp(all[i].id); }
+      }
+      await self._refreshCount();
+    } catch(e){ console.error('removeByClientUuid failed', e); }
+  },
+
   statusBadge(){
     if(!this.online) return { status: 'offline', queueCount: this.queueCount };
     if(this.failedOps && this.failedOps.length) return { status: 'failed', queueCount: this.queueCount, failed: this.failedOps.length };
@@ -4454,7 +4471,7 @@ function renderTrialEntryIoa(target){
   return '<div style="max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px">'+
     '<button onclick="recordTrialIoa(\x27independent\x27,\x27correct\x27)" style="width:100%;padding:28px 12px;background:var(--sage-light);color:var(--sage-dark);border:2px solid var(--sage-dark);border-radius:16px;font-size:18px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;min-height:96px"><span style="font-size:36px;line-height:1">+</span><span>Independent</span></button>'+
     '<button onclick="openPromptSheet(true)" style="width:100%;padding:28px 12px;background:rgba(232,200,74,0.18);color:#7A6A10;border:2px solid #7A6A10;border-radius:16px;font-size:18px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;min-height:96px"><span style="font-size:36px;line-height:1">−</span><span>Needed help</span></button>'+
-    '</div>';
+    '</div>' + (activeSession && activeSession.lastTrial ? '<div style="text-align:center;margin-top:12px"><button onclick="undoLastTrial()" style="background:none;border:none;color:var(--terracotta);font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline">&#8630; Undo last trial</button></div>' : '');
 }
 
 function recordTrialIoa(promptLevel, response){
@@ -4467,6 +4484,7 @@ function recordTrialIoa(promptLevel, response){
   if(t.target_type === 'task_analysis' && t.steps.length > 0){
     stepId = t.steps[t.step_idx % t.steps.length].id;
   }
+  var cuuidI = mvUuid();
   mvOffline.enqueue({
     table: 'trials',
     payload: {
@@ -4477,12 +4495,15 @@ function recordTrialIoa(promptLevel, response){
       response: response,
       trial_index: trialIndex,
       ioa_observer_id: S.practiceMember.id,
-      client_uuid: mvUuid()
+      client_uuid: cuuidI
     }
   });
+  var advancedStepI = (t.target_type === 'task_analysis' && t.steps.length > 0);
   t.trials_run += 1;
-  if(response === 'correct') t.trials_correct += 1;
-  if(t.target_type === 'task_analysis' && t.steps.length > 0) t.step_idx = (t.step_idx + 1) % t.steps.length;
+  var countedCorrectI = (response === 'correct');
+  if(countedCorrectI) t.trials_correct += 1;
+  if(advancedStepI) t.step_idx = (t.step_idx + 1) % t.steps.length;
+  activeSession.lastTrial = { uuid: cuuidI, targetIdx: 0, countedCorrect: countedCorrectI, advancedStep: advancedStepI, ioa: true };
   renderActiveSessionIoa();
 }
 
@@ -4596,7 +4617,8 @@ function renderTrialEntry(target){
     '<button onclick="openPromptSheet(false)" style="width:100%;padding:28px 12px;background:rgba(232,200,74,0.18);color:#7A6A10;border:2px solid #7A6A10;border-radius:16px;font-size:18px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;min-height:96px"><span style="font-size:36px;line-height:1">−</span><span>Needed help</span></button>'+
     '</div>';
   var lastBehavior = activeSession && activeSession.last_behavior_label ? '<div style="text-align:center;margin-top:14px;font-size:11px;color:var(--warm-gray)">Recently logged: '+esc(activeSession.last_behavior_label)+'</div>' : '';
-  return stepLabel + buttons + lastBehavior;
+  var undoLink = activeSession && activeSession.lastTrial ? '<div style="text-align:center;margin-top:12px"><button onclick="undoLastTrial()" style="background:none;border:none;color:var(--terracotta);font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline">&#8630; Undo last trial</button></div>' : '';
+  return stepLabel + buttons + undoLink + lastBehavior;
 }
 
 var promptSheetIoa = false;
@@ -4640,6 +4662,7 @@ function recordTrial(promptLevel, response){
   if(t.target_type === 'task_analysis' && t.steps.length > 0){
     stepId = t.steps[t.step_idx % t.steps.length].id;
   }
+  var cuuid = mvUuid();
   mvOffline.enqueue({
     table: 'trials',
     payload: {
@@ -4649,19 +4672,48 @@ function recordTrial(promptLevel, response){
       prompt_level: promptLevel,
       response: response,
       trial_index: trialIndex,
-      client_uuid: mvUuid()
+      client_uuid: cuuid
     }
   });
+  var advancedStep = (t.target_type === 'task_analysis' && t.steps.length > 0);
   t.trials_run += 1;
-  if(response === 'correct') t.trials_correct += 1;
-  if(t.target_type === 'task_analysis' && t.steps.length > 0){
+  var countedCorrect = (response === 'correct');
+  if(countedCorrect) t.trials_correct += 1;
+  if(advancedStep){
     t.step_idx = (t.step_idx + 1) % t.steps.length;
   }
   activeSession.trial_in_target = t.trials_run;
+  activeSession.lastTrial = { uuid: cuuid, targetIdx: activeSession.current_target_idx, countedCorrect: countedCorrect, advancedStep: advancedStep, ioa: false };
   renderActiveSession();
   if(t.trials_run >= t.planned_trials){
     showToast('Target complete (' + t.trials_run + '/' + t.planned_trials + ')');
   }
+}
+
+function undoLastTrial(){
+  var lt = activeSession && activeSession.lastTrial;
+  if(!lt){ showToast('Nothing to undo'); return; }
+  var t = activeSession.targets[lt.targetIdx];
+  if(t){
+    t.trials_run = Math.max(0, t.trials_run - 1);
+    if(lt.countedCorrect) t.trials_correct = Math.max(0, t.trials_correct - 1);
+    if(lt.advancedStep && t.steps && t.steps.length > 0) t.step_idx = (t.step_idx - 1 + t.steps.length) % t.steps.length;
+    if(!lt.ioa) activeSession.trial_in_target = t.trials_run;
+  }
+  activeSession.lastTrial = null;
+  mvOffline.removeByClientUuid(lt.uuid);
+  voidTrialByUuid(activeSession.id, lt.uuid);
+  if(lt.ioa) renderActiveSessionIoa(); else renderActiveSession();
+  showToast('Last trial undone');
+}
+
+// Void an already-synced trial by marking it superseded by itself (excluded from every
+// superseded_by IS NULL query). No-op if the trial has not reached the server yet.
+async function voidTrialByUuid(sessionId, uuid){
+  try {
+    var r = await sb.from('trials').select('id').eq('session_id', sessionId).eq('client_uuid', uuid).maybeSingle();
+    if(r.data && r.data.id){ await sb.from('trials').update({ superseded_by: r.data.id }).eq('id', r.data.id); }
+  } catch(e){ console.error('void trial failed', e); }
 }
 
 function updateSessionTimer(){
