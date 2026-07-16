@@ -1,7 +1,6 @@
 const ALLOWED_ORIGINS = [
   'https://modernvillage.app',
-  'https://www.modernvillage.app',
-  'http://localhost:3000'
+  'https://www.modernvillage.app'
 ];
 
 const ALLOWED_EMAIL_RECIPIENTS = [
@@ -45,15 +44,43 @@ export function computeIapProfilePatch(subscriber, profileRow, nowMs) {
 
 function getCors(request) {
   const origin = request.headers.get('Origin') || '';
-  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    'Access-Control-Allow-Origin': allowed,
+  const headers = {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
     'Content-Type': 'application/json'
   };
+  // Echo Origin only for allow-listed sites; otherwise omit ACAO so browsers block the
+  // cross-origin read. Server-to-server callers (webhooks) send no Origin and are unaffected.
+  if (ALLOWED_ORIGINS.includes(origin)) headers['Access-Control-Allow-Origin'] = origin;
+  return headers;
+}
+
+// Verify a Svix-signed webhook (Resend). Fails closed when the signing secret is unset.
+async function verifySvix(secret, headers, rawBody) {
+  if (!secret) return false;
+  const id = headers.get('svix-id') || headers.get('webhook-id') || '';
+  const ts = headers.get('svix-timestamp') || headers.get('webhook-timestamp') || '';
+  const sigHeader = headers.get('svix-signature') || headers.get('webhook-signature') || '';
+  if (!id || !ts || !sigHeader) return false;
+  if (Math.abs(Math.floor(Date.now() / 1000) - Number(ts)) > 300) return false; // 5-min replay window
+  let secretBytes;
+  try { secretBytes = Uint8Array.from(atob(secret.replace(/^whsec_/, '')), function(c){ return c.charCodeAt(0); }); }
+  catch { return false; }
+  const key = await crypto.subtle.importKey('raw', secretBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signed = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(id + '.' + ts + '.' + rawBody));
+  const expected = btoa(String.fromCharCode.apply(null, new Uint8Array(signed)));
+  // svix-signature is a space-separated list of "v1,<base64sig>" entries; any match verifies.
+  let ok = false;
+  sigHeader.split(' ').forEach(function(part){
+    const comma = part.indexOf(',');
+    const val = comma >= 0 ? part.substring(comma + 1) : part;
+    let diff = expected.length ^ val.length;
+    for (let i = 0; i < expected.length && i < val.length; i++) diff |= expected.charCodeAt(i) ^ val.charCodeAt(i);
+    if (diff === 0) ok = true;
+  });
+  return ok;
 }
 
 
@@ -390,13 +417,16 @@ export default {
       return new Response('{"received":true}', { headers: h });
     }
 
-    let body;
+    let body, rawBody;
     if (request.method === 'POST') {
-      try { body = await request.json(); } catch { return new Response('{"error":"Invalid JSON"}', { status: 400, headers: h }); }
+      try { rawBody = await request.text(); body = JSON.parse(rawBody); } catch { return new Response('{"error":"Invalid JSON"}', { status: 400, headers: h }); }
     }
 
-    // ═══ RESEND WEBHOOK (email tracking — no auth required) ═══
+    // ═══ RESEND WEBHOOK (email tracking — Svix-signed; requires RESEND_WEBHOOK_SECRET) ═══
     if (url.pathname === '/webhook/resend') {
+      if (!(await verifySvix(env.RESEND_WEBHOOK_SECRET, request.headers, rawBody))) {
+        return new Response('{"error":"Unauthorized"}', { status: 401, headers: h });
+      }
       const event = body;
       if (!event || !event.type) return new Response('{"ok":true}', { headers: h });
       const emailId = event.data && event.data.email_id;
@@ -448,26 +478,24 @@ export default {
       return new Response('{"received":true}', { headers: h });
     }
 
-    // === FEEDBACK NOTIFICATION ===
+    // === FEEDBACK NOTIFICATION (PHI-free: the submission lives in the DB; this email is a bare nudge) ===
     if (url.pathname === '/feedback-notify') {
       if (!checkRate(ip, 'email')) return new Response('{"error":"Rate limited"}', { status: 429, headers: h });
       try {
         const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const kind = esc((body && body.type) || 'feedback');
         const feedbackBody = (
-          '<h1 style="font-size:20px;font-weight:800;color:#2D2D2D;margin:0 0 12px">New Feedback ' + (body.type === 'bug' ? '&#128027;' : body.type === 'improvement' ? '&#128161;' : body.type === 'question' ? '&#10067;' : '&#128172;') + '</h1>' +
-          '<div style="background:#FDF8F0;border-radius:12px;padding:16px;margin:12px 0;border-left:4px solid ' + (body.type === 'bug' ? '#C4745A' : '#7A9E7E') + '">' +
-          '<div style="font-size:11px;font-weight:600;color:#9E9790;text-transform:uppercase;margin-bottom:8px">' + esc((body.type || 'feedback').toUpperCase()) + ' &mdash; ' + esc(body.page || 'unknown page') + '</div>' +
-          '<p style="margin:0;font-size:15px;color:#2D2D2D;line-height:1.6">' + esc((body.content || '').substring(0, 500)) + '</p>' +
-          '</div>' +
-          '<div style="font-size:13px;color:#9E9790;margin-top:12px">From: ' + esc(body.user || 'anonymous') + ' (' + esc(body.role || 'unknown') + ')</div>'
+          '<h1 style="font-size:20px;font-weight:800;color:#2D2D2D;margin:0 0 12px">New in-app feedback</h1>' +
+          '<p style="margin:0 0 12px;font-size:15px;color:#2D2D2D;line-height:1.6">A new <strong>' + kind + '</strong> submission was received. Its content is intentionally omitted from this email &mdash; review it in the admin panel.</p>' +
+          '<div style="font-size:14px"><a href="https://modernvillage.app/admin.html" style="color:#5C7F60;font-weight:600">Open the admin panel &rarr;</a></div>'
         );
         await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             from: 'Modern Village <hello@modernvillage.app>',
-            to: 'jorrelpatterson@gmail.com',
-            subject: '[MV Feedback] ' + (body.type || 'feedback') + ': ' + (body.content || '').substring(0, 60),
+            to: 'hello@modernvillage.app',
+            subject: 'New in-app feedback received',
             html: emailWrapper(feedbackBody)
           })
         });
@@ -559,6 +587,41 @@ export default {
       });
 
       return new Response(JSON.stringify({ success: true, user_id: newUser.id }), { headers: h });
+    }
+
+    // === ADMIN: SET / REMOVE ADMIN ROLE (requires super admin) ===
+    // Client sessions can no longer write profiles.admin_role or is_admin (frozen by
+    // trg_protect_admin_flag); role changes must flow through here on the service key.
+    if (url.pathname === '/admin/set-role') {
+      const user = await verifyToken(authToken, env);
+      if (!user) return new Response('{"error":"Auth required"}', { status: 401, headers: h });
+      const roleCheck = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + user.id + '&select=is_admin,admin_role', {
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY }
+      });
+      const roleData = await roleCheck.json();
+      if (!roleData.length || !roleData[0].is_admin || roleData[0].admin_role !== 'super') {
+        return new Response('{"error":"Super admin access required"}', { status: 403, headers: h });
+      }
+      const targetId = body.target_id;
+      if (!targetId) return new Response('{"error":"target_id required"}', { status: 400, headers: h });
+      if (targetId === user.id) return new Response('{"error":"Cannot change your own admin role"}', { status: 400, headers: h });
+      let patch;
+      if (body.remove) {
+        patch = { is_admin: false, admin_role: null };
+      } else {
+        const ALLOWED_ROLES = ['super', 'marketing', 'billing', 'content', 'sub_admin'];
+        if (ALLOWED_ROLES.indexOf(body.admin_role) < 0) {
+          return new Response('{"error":"Invalid admin_role"}', { status: 400, headers: h });
+        }
+        patch = { admin_role: body.admin_role };
+      }
+      const patchRes = await fetch(env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + targetId, {
+        method: 'PATCH',
+        headers: { 'apikey': env.SUPABASE_SERVICE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(patch)
+      });
+      if (!patchRes.ok) return new Response('{"error":"Update failed"}', { status: 400, headers: h });
+      return new Response('{"success":true}', { headers: h });
     }
 
     // === ADMIN: RESET USER PASSWORD (requires admin session) ===
