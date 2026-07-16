@@ -66,7 +66,7 @@ Phase I deliverables: a validated AI engine, a published ABC-extraction benchmar
 
 **Modern Village Services LLC** is a US-registered for-profit small business based in Southern California. The platform is live in production at modernvillage.app with active subscribers and a complete vertically-integrated product (consumer app, BCBA clinical workflow, district admin portal, lead-gen and outreach systems).
 
-**Jorrel Patterson — Founder, Principal Investigator.** Full-stack engineer; sole architect and builder of the current platform: AI coaching engine, behavioral data pipeline, offline-first BCBA workflow, HIPAA-compliant infrastructure (Supabase, Cloudflare Workers, Vercel). Commits primary employment to Phase I R&D.
+**Jorrel Patterson — Founder, Principal Investigator.** Full-stack engineer; sole architect and builder of the current platform: AI coaching engine, behavioral data pipeline, offline-first BCBA workflow, HIPAA-eligible cloud infrastructure (Supabase, Cloudflare Workers, Vercel). Commits primary employment to Phase I R&D.
 
 **Ariana Patterson, BCBA — Co-Founder, Clinical Co-Investigator.** Board Certified Behavior Analyst with active clinical practice. Designed the behavioral-data ontology, operational definitions for ABC structuring, and clinical workflows for session notes, ABC graphs, and skill-target progress monitoring. Will serve as clinical co-PI and lead the BCBA review panel for Objective 1, the ABC corpus validation for Objective 2, and the blinded outcome scoring for Objective 3. Commits 20+ hr/wk during the award period.
 

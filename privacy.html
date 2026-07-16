@@ -51,7 +51,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--charco
   <div class="legal-banner">Modern Village LLC ("Modern Village," "we," "us," or "our") is committed to protecting the privacy and security of your personal information and your children's information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform at modernvillage.app.</div>
 
   <h2>1. HIPAA Privacy</h2>
-  <p>Modern Village may collect, store, and process Protected Health Information ("PHI") as defined under the Health Insurance Portability and Accountability Act of 1996 ("HIPAA"). When we act as a Business Associate to healthcare providers on our platform, we comply with the HIPAA Privacy Rule, Security Rule, and Breach Notification Rule.</p>
+  <p>Modern Village may collect, store, and process Protected Health Information ("PHI") as defined under the Health Insurance Portability and Accountability Act of 1996 ("HIPAA"). When we act as a Business Associate to healthcare providers on our platform, our handling of PHI is governed by our Business Associate Agreement, and we implement administrative, technical, and physical safeguards designed to meet the requirements of the HIPAA Privacy, Security, and Breach Notification Rules.</p>
   <p>PHI collected through Provider sessions is governed by the applicable Provider's Notice of Privacy Practices and our <a href="/baa.html">Business Associate Agreement</a>. We do not use PHI from Provider sessions for marketing purposes or sell PHI to third parties.</p>
 
   <h2>2. Information We Collect</h2>
@@ -99,18 +99,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--charco
   <p>We implement administrative, technical, and physical safeguards to protect your information, including:</p>
   <ul>
     <li>Encryption in transit (TLS/HTTPS on all connections)</li>
-    <li>Encryption at rest (AES-256 via Supabase Pro)</li>
+    <li>Encryption at rest for stored data via our managed database provider</li>
     <li>Row-Level Security policies ensuring users can only access their own data</li>
     <li>JWT authentication on all API endpoints</li>
     <li>Rate limiting to prevent abuse</li>
-    <li>Audit logging of all PHI access</li>
+    <li>Audit logging of sensitive administrative and clinical actions</li>
     <li>30-minute session timeout for idle sessions</li>
     <li>Regular security assessments</li>
   </ul>
   <p>No method of electronic transmission or storage is 100% secure. While we strive to use commercially acceptable means to protect your information, we cannot guarantee absolute security.</p>
 
   <h2>6. AI Coach & Data Processing</h2>
-  <p>When you use the AI Coach, your messages and your child's profile information are sent to Anthropic's Claude API to generate responses. We use Anthropic's API with zero data retention settings, meaning Anthropic does not store or use your data to train their models. AI conversations are stored in our database to maintain your conversation history and improve service quality.</p>
+  <p>When you use the AI Coach, your messages and your child's profile information are sent to Anthropic's Claude API to generate responses, subject to Anthropic's commercial API data-usage terms. AI conversations are stored in our database to maintain your conversation history and improve service quality.</p>
 
   <h2>7. Children's Privacy</h2>
   <p>Modern Village is designed for use by parents and caregivers of children — not by children directly. We do not knowingly collect personal information from children under 13 without parental consent. All child information is provided by the parent or guardian through the child profile feature.</p>
@@ -128,7 +128,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--charco
     <li><strong>Data Portability:</strong> Request a copy of your data in a portable format</li>
     <li><strong>Opt-Out:</strong> Opt out of non-essential communications</li>
   </ul>
-  <p>To exercise any of these rights, contact us at <a href="mailto:hello@modernvillage.app">hello@modernvillage.app</a>. We will respond to your request within 45 days.</p>
+  <p>To exercise any of these rights, contact us at <a href="mailto:hello@modernvillage.app">hello@modernvillage.app</a>. We will respond to your request within 30 days, or within the timeframe required by applicable law.</p>
 
   <h2>10. California Residents (CCPA/CPRA)</h2>
   <p>If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA) and the California Privacy Rights Act (CPRA), including:</p>
