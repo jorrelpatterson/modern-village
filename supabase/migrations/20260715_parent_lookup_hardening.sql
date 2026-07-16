@@ -38,9 +38,9 @@ BEGIN
     RAISE EXCEPTION 'Not authorized: must be an active BCBA-level practice member';
   END IF;
 
-  -- Audit every lookup (who, what email) — audit_logs has RLS with no client
+  -- Audit every lookup (who, what email) — phi_audit_log has RLS with no client
   -- policies, but this SECURITY DEFINER function runs as postgres and bypasses it.
-  INSERT INTO public.audit_logs(actor_id, action, target_table, detail)
+  INSERT INTO public.phi_audit_log(actor_id, action, target_table, detail)
   VALUES (auth.uid(), 'parent_lookup', 'profiles', jsonb_build_object('email', lower(p_email)));
 
   RETURN QUERY

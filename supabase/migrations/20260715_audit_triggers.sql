@@ -1,9 +1,9 @@
 -- ═══════════════════════════════════════════════════
 -- HIPAA §164.312(b) — Audit controls: row-change triggers on PHI tables
 -- 2026-07-15
--- Writes an audit_logs row for every modification (INSERT/UPDATE/DELETE) of the
+-- Writes a phi_audit_log row for every modification (INSERT/UPDATE/DELETE) of the
 -- sensitive clinical tables, capturing actor (auth.uid()), action, table, and row id.
--- Depends on 20260715_audit_logs.sql (the audit_logs sink).
+-- Depends on 20260715_audit_logs.sql (which creates the phi_audit_log sink).
 --
 -- SCOPE: Postgres cannot trigger on SELECT, so this covers MODIFICATION auditing only.
 -- READ auditing (who viewed which record) must be done at the app/worker layer — the
@@ -26,7 +26,7 @@ SET search_path = public
 AS $$
 BEGIN
   BEGIN
-    INSERT INTO public.audit_logs(actor_id, action, target_table, target_id, detail)
+    INSERT INTO public.phi_audit_log(actor_id, action, target_table, target_id, detail)
     VALUES (
       auth.uid(),
       lower(TG_TABLE_NAME) || '.' || lower(TG_OP),
