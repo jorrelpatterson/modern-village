@@ -12,7 +12,7 @@ sub_admin/operations). Scale the formality as the team grows.
 - Maintain a current **Risk Analysis** ([RISK-ANALYSIS.md](RISK-ANALYSIS.md)); reassess annually and after material change.
 - Risk management: remediate identified risks on a prioritized basis; track status in the risk register.
 - **Sanction policy:** workforce members who violate these policies are subject to warning, access revocation, or termination proportional to the violation. Record sanctions.
-- **Information system activity review:** review `audit_logs` and Supabase/Cloudflare logs periodically for anomalous PHI access.
+- **Information system activity review:** review `phi_audit_log` and Supabase/Cloudflare logs periodically for anomalous PHI access.
 
 ## 2. Assigned Security Responsibility (§164.308(a)(2))
 - **Security Official: Jorrel Patterson.** Responsible for developing and maintaining these safeguards. (Privacy Officer: also Jorrel Patterson.)
@@ -44,7 +44,7 @@ sub_admin/operations). Scale the formality as the team grows.
 
 ## 9. Technical safeguards (§164.312) — how MV implements them
 - **Access control:** Supabase Row-Level Security on all PHI tables; role-keyed admin access; per-user data isolation; JWT auth on all API endpoints; automatic session expiry.
-- **Audit controls:** `audit_logs` table + row-change triggers on clinical tables; RPC-level logging of parent lookups. (Read-level auditing is being expanded.)
+- **Audit controls:** `phi_audit_log` table + row-change triggers on clinical tables; RPC-level logging of parent lookups. (Read-level auditing is being expanded.)
 - **Integrity:** signed SOAP notes and cosigned sessions are immutable at the database level.
 - **Transmission security:** TLS on all connections; identifiers minimized before any third-party (AI) call; webhooks signature-verified.
 - **Encryption at rest:** provided by the managed database platform (contingent on the Supabase HIPAA-tier BAA — see BAA-TRACKER.md).
