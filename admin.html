@@ -2155,13 +2155,26 @@ async function createVA(){
 }
 
 async function updateVARole(userId, newRole){
-  await sb.from('profiles').update({admin_role:newRole}).eq('id',userId);
+  // admin_role is server-only (trg_protect_admin_flag); route through the worker.
+  var token = (await sb.auth.getSession()).data.session.access_token;
+  var r = await fetch('https://village-api.jorrelpatterson.workers.dev/admin/set-role', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body: JSON.stringify({target_id:userId, admin_role:newRole})
+  });
+  if(!r.ok){var e=await r.json().catch(function(){return{}});showToast(e.error||'Role update failed');loadTeam();return}
   showToast('Role updated');
 }
 
 async function removeVA(userId, email){
   if(!confirm('Remove admin access for '+email+'? They will no longer be able to log into the admin panel.'))return;
-  await sb.from('profiles').update({is_admin:false,admin_role:null}).eq('id',userId);
+  var token = (await sb.auth.getSession()).data.session.access_token;
+  var r = await fetch('https://village-api.jorrelpatterson.workers.dev/admin/set-role', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body: JSON.stringify({target_id:userId, remove:true})
+  });
+  if(!r.ok){var e=await r.json().catch(function(){return{}});showToast(e.error||'Remove failed');return}
   showToast('Admin access removed');
   loadTeam();
 }
