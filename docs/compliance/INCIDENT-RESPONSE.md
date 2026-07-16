@@ -17,13 +17,13 @@ Breach Notification Rule (16 CFR Part 318)** may apply instead — confirm with 
 
 ## 1. Detect & report
 Any suspected incident (unauthorized access, lost/stolen device, misdirected PHI, vendor breach,
-anomalous `audit_logs` activity, exposed credentials) is reported **immediately** to the Security
+anomalous `phi_audit_log` activity, exposed credentials) is reported **immediately** to the Security
 Official. Do not delay to investigate first.
 
 ## 2. Contain
 - Revoke/rotate affected credentials and API keys (Supabase service key, worker secrets, admin sessions).
 - Disable compromised accounts (`/admin/set-role` remove; Supabase revoke sessions).
-- Preserve evidence: capture `audit_logs`, Supabase/Cloudflare logs, timestamps — do not wipe.
+- Preserve evidence: capture `phi_audit_log`, Supabase/Cloudflare logs, timestamps — do not wipe.
 
 ## 3. Assess whether it is a reportable Breach (§164.402 four-factor test)
 Presume a breach of unsecured PHI is reportable **unless** a low-probability-of-compromise is
