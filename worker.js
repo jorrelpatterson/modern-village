@@ -1214,6 +1214,16 @@ export default {
         })
       });
       if (!upsertR.ok) return new Response(JSON.stringify({ error: 'Failed to register', status: upsertR.status }), { status: 500, headers: h });
+      // A physical device belongs to whoever is logged in RIGHT NOW. If this same
+      // token is still active under a DIFFERENT account (e.g. a prior login on this
+      // device), disable those rows so the device stops receiving that account's
+      // pushes — otherwise one phone gets a duplicate of every scheduled push per
+      // stale account. (Bug: empty account left an active token → double dailies.)
+      await fetch(env.SUPABASE_URL + '/rest/v1/push_tokens?token=eq.' + encodeURIComponent(token) + '&user_id=neq.' + authedUser.id + '&disabled_at=is.null', {
+        method: 'PATCH',
+        headers: { ...supaH },
+        body: JSON.stringify({ disabled_at: new Date().toISOString() })
+      });
       return new Response('{"ok":true}', { headers: h });
     }
 
